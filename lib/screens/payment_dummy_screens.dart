@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/meal_model.dart';
@@ -139,9 +141,8 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                 : 'lunch');
 
     // Validate one last time
-    final String? validationError = MealPlanValidator.validateMealPlan(
-        widget.selectedStudent, planType,
-        isExpress: widget.isExpressOrder);
+    final String? validationError =
+        MealPlanValidator.validateMealPlan(widget.selectedStudent, planType);
 
     if (validationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -190,7 +191,16 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
 
       // Assign the meal plan to the student
       final StudentProfileService profileService = StudentProfileService();
+
+      // If this is a breakfast or lunch plan (not express), use April 14, 2025 as start date
+      DateTime actualStartDate = widget.startDate;
+      if (planType == 'breakfast' || planType == 'lunch') {
+        // Set standardized plan start date to April 14, 2025
+        actualStartDate = DateTime(2025, 4, 14);
+      }
+
       final success = await profileService.assignMealPlan(
+        actualStartDate,
         widget.selectedStudent.id,
         planType,
         widget.endDate,
@@ -248,6 +258,16 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                   onPressed: () {
                     // Close dialog
                     Navigator.pop(context);
+                    log("PhonePeDummyScreen startDate: ${widget.startDate}");
+                    log("PhonePeDummyScreen endDate: ${widget.endDate}");
+
+                    // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
+                    DateTime actualStartDate = widget.startDate;
+                    if (planType == 'breakfast' || planType == 'lunch') {
+                      // Set standardized plan start date to April 14, 2025
+                      actualStartDate = DateTime(2025, 4, 14);
+                    }
+
                     // Navigate directly to MySubscriptionScreen with Upcoming Meals tab (index 0)
                     Navigator.pushAndRemoveUntil(
                       context,
@@ -255,6 +275,10 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                         builder: (_) => MySubscriptionScreen(
                           defaultTabIndex: 0,
                           selectedStudentId: widget.selectedStudent.id,
+                          startDate: widget.startDate,
+
+                          // actualStartDate,
+                          endDate: widget.endDate,
                         ),
                       ),
                       (route) => false, // Remove all previous routes
@@ -440,9 +464,8 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
                 : 'lunch');
 
     // Validate one last time
-    final String? validationError = MealPlanValidator.validateMealPlan(
-        widget.selectedStudent, planType,
-        isExpress: widget.isExpressOrder);
+    final String? validationError =
+        MealPlanValidator.validateMealPlan(widget.selectedStudent, planType);
 
     if (validationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -491,7 +514,16 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
 
       // Assign the meal plan to the student
       final StudentProfileService profileService = StudentProfileService();
+
+      // If this is a breakfast or lunch plan (not express), use April 14, 2025 as start date
+      DateTime actualStartDate = widget.startDate;
+      if (planType == 'breakfast' || planType == 'lunch') {
+        // Set standardized plan start date to April 14, 2025
+        actualStartDate = DateTime(2025, 4, 14);
+      }
+
       final success = await profileService.assignMealPlan(
+        actualStartDate,
         widget.selectedStudent.id,
         planType,
         widget.endDate,
@@ -549,6 +581,14 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
                   onPressed: () {
                     // Close dialog
                     Navigator.pop(context);
+
+                    // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
+                    DateTime actualStartDate = widget.startDate;
+                    if (planType == 'breakfast' || planType == 'lunch') {
+                      // Set standardized plan start date to April 14, 2025
+                      actualStartDate = DateTime(2025, 4, 14);
+                    }
+
                     // Navigate directly to MySubscriptionScreen with Upcoming Meals tab (index 0)
                     Navigator.pushAndRemoveUntil(
                       context,
@@ -556,6 +596,8 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
                         builder: (_) => MySubscriptionScreen(
                           defaultTabIndex: 0,
                           selectedStudentId: widget.selectedStudent.id,
+                          startDate: actualStartDate,
+                          endDate: widget.endDate,
                         ),
                       ),
                       (route) => false, // Remove all previous routes
@@ -743,9 +785,8 @@ class _StartwellWalletDummyScreenState
                 : 'lunch');
 
     // Validate one last time
-    final String? validationError = MealPlanValidator.validateMealPlan(
-        widget.selectedStudent, planType,
-        isExpress: widget.isExpressOrder);
+    final String? validationError =
+        MealPlanValidator.validateMealPlan(widget.selectedStudent, planType);
 
     if (validationError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -794,7 +835,16 @@ class _StartwellWalletDummyScreenState
 
       // Assign the meal plan to the student
       final StudentProfileService profileService = StudentProfileService();
+
+      // If this is a breakfast or lunch plan (not express), use April 14, 2025 as start date
+      DateTime actualStartDate = widget.startDate;
+      if (planType == 'breakfast' || planType == 'lunch') {
+        // Set standardized plan start date to April 14, 2025
+        actualStartDate = DateTime(2025, 4, 14);
+      }
+
       final success = await profileService.assignMealPlan(
+        actualStartDate,
         widget.selectedStudent.id,
         planType,
         widget.endDate,
@@ -852,11 +902,21 @@ class _StartwellWalletDummyScreenState
                   onPressed: () {
                     // Close dialog
                     Navigator.pop(context);
+
+                    // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
+                    DateTime actualStartDate = widget.startDate;
+                    if (planType == 'breakfast' || planType == 'lunch') {
+                      // Set standardized plan start date to April 14, 2025
+                      actualStartDate = DateTime(2025, 4, 14);
+                    }
+
                     // Navigate directly to MySubscriptionScreen with Upcoming Meals tab (index 0)
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
                         builder: (_) => MySubscriptionScreen(
+                          startDate: actualStartDate,
+                          endDate: widget.endDate,
                           defaultTabIndex: 0,
                           selectedStudentId: widget.selectedStudent.id,
                         ),

@@ -4,40 +4,58 @@ import 'package:startwell/models/student_model.dart';
 class MealPlanValidator {
   /// Check if current time is within the Express order window (12:00 AM - 8:00 AM IST)
   static bool isWithinExpressWindow() {
-    final now = DateTime.now()
-        .toUtc()
-        .add(const Duration(hours: 5, minutes: 30)); // Convert to IST
+    final now = DateTime.now().toLocal();
     return now.hour >= 0 && now.hour < 8;
+  }
+
+  /// Get the appropriate Active Plan label for display on student profile cards
+  static String getActivePlanLabel(Student student) {
+    if (student.hasActiveBreakfast && student.hasActiveLunch) {
+      return "Active Plan: Lunch + Breakfast";
+    }
+    if (student.hasActiveLunch) {
+      return "Active Plan: Lunch";
+    }
+    if (student.hasActiveBreakfast) {
+      return "Active Plan: Breakfast";
+    }
+    return "";
   }
 
   /// Validate if a meal plan can be assigned to a student
   /// Returns null if valid, or an error message if invalid
-  static String? validateMealPlan(Student student, String selectedPlanType,
-      {bool isExpress = false}) {
-    // Check if student has both active plans
-    if (student.hasActiveBreakfast && student.hasActiveLunch) {
-      return '${student.name} already has active breakfast and lunch meal plans. You can choose a new plan once the current ones end.';
+  static String? validateMealPlan(Student student, String selectedPlanType) {
+    final bool isExpress = selectedPlanType == 'express';
+    final bool hasBothPlans =
+        student.hasActiveBreakfast && student.hasActiveLunch;
+
+    // If student already has both plans, don't allow a new plan
+    if (hasBothPlans) {
+      return 'Student ${student.name} already has an active breakfast and lunch meal plan. You can choose a new plan once the current one ends.';
     }
 
-    // Check breakfast plan conflicts
+    // If selecting breakfast and student already has breakfast plan (not both plans)
     if (selectedPlanType == 'breakfast' && student.hasActiveBreakfast) {
-      return '${student.name} already has an active breakfast meal plan. You can choose a new breakfast plan once the current one ends.';
+      return 'Student ${student.name} already has an active breakfast meal plan. You can choose a new breakfast plan once the current one ends. You can still select a lunch plan for this student.';
     }
 
-    // Check lunch plan conflicts
-    if ((selectedPlanType == 'lunch' || isExpress) && student.hasActiveLunch) {
-      return '${student.name} already has an active lunch meal plan. You can choose a new lunch plan once the current one ends.';
+    // If selecting lunch and student already has lunch plan (not both plans)
+    if (selectedPlanType == 'lunch' && student.hasActiveLunch) {
+      return 'Student ${student.name} already has an active lunch meal plan. You can choose a new lunch plan once the current one ends. You can still select a breakfast plan for this student.';
     }
 
-    // Express order time window check
     if (isExpress) {
-      if (!isWithinExpressWindow()) {
+      final now = DateTime.now().toLocal();
+      final isAllowedWindow = now.hour >= 0 && now.hour < 8;
+      if (student.hasActiveLunch) {
+        return 'Student ${student.name} already has an active lunch meal plan. You cannot select an Express 1-Day plan until the current one ends.';
+      }
+      if (!isAllowedWindow) {
         return 'Express 1-Day plan can only be selected between 12:00 AM and 8:00 AM IST.';
       }
     }
 
-    // Plan selection is valid
-    return null;
+    return null; // ✅ Plan allowed
   }
 
   /// Get formatted end date string for active plans

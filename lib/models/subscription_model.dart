@@ -47,10 +47,16 @@ class Subscription {
       return endDate; // Return end date to indicate subscription has ended
     }
 
+    // If the start date is in the future, that's our next delivery date
+    if (startDate.isAfter(today)) {
+      return startDate;
+    }
+
     // Use the date calculator for accurate delivery date calculation
     return DeliveryDateCalculator.getNextValidDeliveryDate(
       selectedWeekdays: selectedWeekdays,
-      startDate: startDate,
+      startDate:
+          today, // Use today's date as the base, not the subscription start date
       isExpress: planType == 'express',
       isSingleDay: duration == SubscriptionDuration.singleDay,
     );
@@ -183,6 +189,34 @@ class Subscription {
       duration: duration ?? this.duration,
       selectedWeekdays: selectedWeekdays ?? this.selectedWeekdays,
     );
+  }
+
+  // Override toString for better logging
+  @override
+  String toString() {
+    final String dateFormat = 'MM/dd';
+    final String formattedStart = DateFormat(dateFormat).format(startDate);
+    final String formattedEnd = DateFormat(dateFormat).format(endDate);
+    final String weekdays = selectedWeekdays.isEmpty
+        ? 'M-F'
+        : selectedWeekdays.map((day) {
+            switch (day) {
+              case 1:
+                return 'M';
+              case 2:
+                return 'T';
+              case 3:
+                return 'W';
+              case 4:
+                return 'T';
+              case 5:
+                return 'F';
+              default:
+                return day.toString();
+            }
+          }).join(',');
+
+    return 'Subscription(id: $id, studentId: $studentId, plan: $planType, meal: $mealName, period: $formattedStart-$formattedEnd, days: $weekdays)';
   }
 }
 

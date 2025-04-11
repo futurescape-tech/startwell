@@ -177,29 +177,40 @@ class StudentProfileService {
 
   // Assign meal plan to a student
   Future<bool> assignMealPlan(
-      String studentId, String planType, DateTime endDate,
+      DateTime startDate, String studentId, String planType, DateTime endDate,
       {String? mealPreference, List<int>? selectedWeekdays}) async {
     await _ensureInitialized();
 
     final int index =
         _studentProfiles.indexWhere((profile) => profile.id == studentId);
     if (index >= 0) {
-      // Update student with meal plan info
+      // Get existing student to preserve plan info
+      final existingStudent = _studentProfiles[index];
+
+      // Update student with meal plan info, preserving existing plans
       _studentProfiles[index] = _studentProfiles[index].copyWith(
         mealPlanType: planType,
         mealPlanEndDate: endDate,
-        // Also set the legacy fields for backward compatibility
-        hasActiveBreakfast: planType == 'breakfast',
-        hasActiveLunch: planType == 'lunch' || planType == 'express',
-        breakfastPlanEndDate: planType == 'breakfast' ? endDate : null,
-        lunchPlanEndDate:
-            (planType == 'lunch' || planType == 'express') ? endDate : null,
-        // Set meal preferences based on plan type
-        breakfastPreference: planType == 'breakfast' ? mealPreference : null,
-        lunchPreference: planType == 'lunch' || planType == 'express'
+        // Set the specific plan type without affecting the other plan
+        hasActiveBreakfast:
+            planType == 'breakfast' ? true : existingStudent.hasActiveBreakfast,
+        hasActiveLunch: (planType == 'lunch' || planType == 'express')
+            ? true
+            : existingStudent.hasActiveLunch,
+        breakfastPlanEndDate: planType == 'breakfast'
+            ? endDate
+            : existingStudent.breakfastPlanEndDate,
+        lunchPlanEndDate: (planType == 'lunch' || planType == 'express')
+            ? endDate
+            : existingStudent.lunchPlanEndDate,
+        // Set meal preferences based on plan type, preserving existing preferences
+        breakfastPreference: planType == 'breakfast'
             ? mealPreference
-            : null,
-        selectedWeekdays: selectedWeekdays,
+            : existingStudent.breakfastPreference,
+        lunchPreference: (planType == 'lunch' || planType == 'express')
+            ? mealPreference
+            : existingStudent.lunchPreference,
+        selectedWeekdays: selectedWeekdays ?? existingStudent.selectedWeekdays,
       );
 
       await _saveStudentProfiles();

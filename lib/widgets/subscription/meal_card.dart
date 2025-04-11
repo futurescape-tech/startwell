@@ -89,6 +89,7 @@ class MealCard extends StatelessWidget {
     final canCancel = _isCancelEnabled();
     final swapTooltip = _getSwapTooltipMessage();
     final cancelTooltip = _getCancelTooltipMessage();
+    final isBreakfast = planType == 'breakfast';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -112,30 +113,46 @@ class MealCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          RichText(
-                            text: TextSpan(
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                color: AppTheme.textDark,
+                          Row(
+                            children: [
+                              Icon(
+                                isBreakfast
+                                    ? Icons.breakfast_dining
+                                    : Icons.lunch_dining,
+                                size: 16,
+                                color: isBreakfast
+                                    ? AppTheme.purple
+                                    : Colors.green.shade700,
                               ),
-                              children: [
-                                const WidgetSpan(
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 18,
-                                    color: AppTheme.purple,
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      color: AppTheme.textDark,
+                                    ),
+                                    children: [
+                                      const WidgetSpan(
+                                        child: Icon(
+                                          Icons.person,
+                                          size: 18,
+                                          color: AppTheme.purple,
+                                        ),
+                                        alignment: PlaceholderAlignment.middle,
+                                      ),
+                                      const TextSpan(text: " Student: "),
+                                      TextSpan(
+                                        text: studentName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  alignment: PlaceholderAlignment.middle,
                                 ),
-                                const TextSpan(text: " Student: "),
-                                TextSpan(
-                                  text: studentName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           RichText(
@@ -238,7 +255,7 @@ class MealCard extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                           children: [
-                            const WidgetSpan(
+                            WidgetSpan(
                               child: Icon(
                                 Icons.event,
                                 size: 18,
@@ -249,6 +266,7 @@ class MealCard extends StatelessWidget {
                             const TextSpan(text: " Scheduled Date: "),
                             TextSpan(
                               text: formattedDate,
+                              // formattedDate,
                               style: TextStyle(
                                 color: AppTheme.textDark,
                                 fontWeight: FontWeight.w700,
@@ -403,14 +421,19 @@ class MealCard extends StatelessWidget {
   }
 
   Widget _buildStatusBanner(bool isScheduled) {
+    final isBreakfast = planType == 'breakfast';
+    final List<Color> gradientColors = isScheduled
+        ? isBreakfast
+            ? [AppTheme.purple.withOpacity(0.7), AppTheme.purple]
+            : [Colors.green.shade300, Colors.green.shade500]
+        : [Colors.orange.shade300, Colors.orange.shade500];
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isScheduled
-              ? [Colors.green.shade300, Colors.green.shade500]
-              : [Colors.orange.shade300, Colors.orange.shade500],
+          colors: gradientColors,
         ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(12),
@@ -419,7 +442,7 @@ class MealCard extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          isScheduled ? 'SCHEDULED' : 'SKIPPED',
+          isBreakfast ? 'BREAKFAST' : 'LUNCH',
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,

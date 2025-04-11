@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +10,7 @@ import 'package:startwell/utils/meal_plan_validator.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:startwell/screens/manage_student_profile_screen.dart';
+import 'package:startwell/widgets/common/veg_icon.dart';
 
 class SubscriptionSelectionScreen extends StatefulWidget {
   final MealSelectionManager selectionManager;
@@ -205,8 +208,8 @@ class _SubscriptionSelectionScreenState
   // Get meal item text based on meal type
   String _getMealItemsText() {
     return widget.mealType == 'breakfast'
-        ? '🟩 Breakfast Item 1, Breakfast Item 2, Seasonal Fruits'
-        : '🟩 Lunch Item 1, Lunch Item 2, Salad';
+        ? 'Breakfast Item 1, Breakfast Item 2, Seasonal Fruits'
+        : 'Lunch Item 1, Lunch Item 2, Salad';
   }
 
   // Check if current time is within Express window (12:00 AM to 8:00 AM IST)
@@ -1540,12 +1543,22 @@ class _SubscriptionSelectionScreenState
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    _getMealItemsText(),
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: AppTheme.textMedium,
-                                    ),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      const VegIcon(),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          _getMealItemsText(),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            color: AppTheme.textMedium,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 12),
                                 ],
@@ -1657,6 +1670,14 @@ class _SubscriptionSelectionScreenState
                               !MealPlanValidator.isWithinExpressWindow())
                       ? null
                       : () {
+                          log("endDate: $_endDate");
+                          log("startDate: $_startDate");
+                          log("mealDates: $_mealDates");
+                          log("selectedWeekdays: $_selectedWeekdays");
+                          log("selectedPlanIndex: $_selectedPlanIndex");
+                          log("isCustomPlan: $_isCustomPlan");
+                          log("isExpressOrder: ${widget.isExpressOrder}");
+
                           Navigator.push(
                             context,
                             MaterialPageRoute(

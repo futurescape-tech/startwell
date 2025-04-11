@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/themes/app_theme.dart';
@@ -8,11 +10,15 @@ import 'package:startwell/widgets/subscription/cancelled_meals_tab.dart';
 class MySubscriptionScreen extends StatefulWidget {
   final int defaultTabIndex;
   final String? selectedStudentId;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
   const MySubscriptionScreen({
     Key? key,
     this.defaultTabIndex = 0,
     this.selectedStudentId,
+    required this.startDate,
+    required this.endDate,
   }) : super(key: key);
 
   @override
@@ -26,6 +32,9 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
   @override
   void initState() {
     super.initState();
+    log("MySubscriptionScreen startDate: ${widget.startDate}");
+    log("MySubscriptionScreen endDate: ${widget.endDate}");
+    log("MySubscriptionScreen defaultTabIndex: ${widget.defaultTabIndex}");
     _tabController = TabController(
         length: 3, vsync: this, initialIndex: widget.defaultTabIndex);
   }
@@ -67,7 +76,10 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          UpcomingMealsTab(selectedStudentId: widget.selectedStudentId),
+          UpcomingMealsTab(
+              selectedStudentId: widget.selectedStudentId,
+              startDate: widget.startDate ?? DateTime.now(),
+              endDate: widget.endDate ?? DateTime.now()),
           const DeliveredMealsTab(),
           const CancelledMealsTab(),
         ],

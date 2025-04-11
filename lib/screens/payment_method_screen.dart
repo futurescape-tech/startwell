@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/meal_model.dart';
@@ -457,6 +459,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   void _navigateToPaymentScreen() {
     switch (_selectedPaymentMethod) {
       case 0:
+        log("PhonePe");
+        log("endDate: ${widget.endDate}");
+        log("startDate: ${widget.startDate}");
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -477,6 +482,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         );
         break;
       case 1:
+        log("Razorpay");
+        log("endDate: ${widget.endDate}");
+        log("startDate: ${widget.startDate}");
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -497,6 +505,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         );
         break;
       case 2:
+        log("Startwell Wallet");
+        log("endDate: ${widget.endDate}");
+        log("startDate: ${widget.startDate}");
         Navigator.push(
           context,
           MaterialPageRoute(

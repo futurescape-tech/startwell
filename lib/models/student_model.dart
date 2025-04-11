@@ -168,4 +168,21 @@ class Student {
         .map((json) => Student.fromJson(json as Map<String, dynamic>))
         .toList();
   }
+
+  // Override toString for better logging
+  @override
+  String toString() {
+    String activePlans = '';
+    if (hasActiveBreakfast && hasActiveLunch) {
+      activePlans = 'B+L';
+    } else if (hasActiveBreakfast) {
+      activePlans = 'B';
+    } else if (hasActiveLunch) {
+      activePlans = 'L';
+    } else {
+      activePlans = 'None';
+    }
+
+    return 'Student(id: $id, name: $name, plans: $activePlans)';
+  }
 }

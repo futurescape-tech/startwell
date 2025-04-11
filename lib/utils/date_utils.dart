@@ -43,7 +43,10 @@ class DeliveryDateCalculator {
 
     // 4. Custom Plan with specific weekdays
     if (selectedWeekdays.isNotEmpty) {
-      return getNextCustomWeekdayDate(adjustedBaseDate, selectedWeekdays);
+      // Ensure selectedWeekdays are sorted
+      final sortedWeekdays = List<int>.from(selectedWeekdays)..sort();
+      // Find the next date that matches one of our selected weekdays
+      return getNextCustomWeekdayDate(adjustedBaseDate, sortedWeekdays);
     }
 
     // 5. Regular Plan (Mon-Fri)
@@ -66,10 +69,15 @@ class DeliveryDateCalculator {
   /// Find next date matching one of the selected weekdays
   static DateTime getNextCustomWeekdayDate(
       DateTime baseDate, List<int> selectedWeekdays) {
-    // Sort weekdays to find the earliest next one
-    final sortedWeekdays = [...selectedWeekdays]..sort();
+    // Ensure the weekdays are sorted
+    final sortedWeekdays = List<int>.from(selectedWeekdays)..sort();
 
-    // First try to find a match in the current week
+    if (sortedWeekdays.isEmpty) {
+      // If no weekdays selected, use regular Mon-Fri behavior
+      return getNextWeekdayFromMonToFri(baseDate);
+    }
+
+    // First try to find a match starting from today
     for (int i = 0; i < 7; i++) {
       final checkDate = baseDate.add(Duration(days: i));
 
@@ -82,8 +90,9 @@ class DeliveryDateCalculator {
     // If we couldn't find a match in the next 7 days,
     // find the first selected weekday in the following week
     int daysUntilFirstDay = (sortedWeekdays.first - baseDate.weekday + 7) % 7;
-    if (daysUntilFirstDay == 0)
+    if (daysUntilFirstDay == 0) {
       daysUntilFirstDay = 7; // Ensure we go to next week
+    }
 
     return baseDate.add(Duration(days: daysUntilFirstDay));
   }

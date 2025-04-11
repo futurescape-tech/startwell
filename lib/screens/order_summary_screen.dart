@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +10,7 @@ import 'package:startwell/utils/meal_plan_validator.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
 import 'package:startwell/screens/payment_method_screen.dart';
+import 'package:startwell/widgets/common/veg_icon.dart';
 
 class OrderSummaryScreen extends StatelessWidget {
   final String planType;
@@ -66,6 +69,8 @@ class OrderSummaryScreen extends StatelessWidget {
   // Navigate to Payment Methods screen
   void _navigateToPaymentMethods(BuildContext context, String planType) {
     print("Navigating to payment screen for $planType...");
+    log("endDate: $endDate");
+    log("startDate: $startDate");
 
     // Use the existing payment simulation logic inside a new PaymentMethodScreen
     Navigator.push(
@@ -234,8 +239,7 @@ class OrderSummaryScreen extends StatelessWidget {
                     // Validate the meal plan before proceeding
                     final String? validationError =
                         MealPlanValidator.validateMealPlan(
-                            selectedStudent, planType,
-                            isExpress: isExpressOrder);
+                            selectedStudent, planType);
 
                     if (validationError != null) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -362,14 +366,17 @@ class OrderSummaryScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Meal image with proper dimensions
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+              color: Colors.white,
+            ),
             child: meal.imageUrl.isNotEmpty
                 ? Image.asset(
                     meal.imageUrl,
-                    height: 160,
+                    height: 200,
                     width: double.infinity,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       print('Error loading meal image: $error');
                       return Container(
@@ -435,11 +442,7 @@ class OrderSummaryScreen extends StatelessWidget {
                 // Meal name with veg icon
                 Row(
                   children: [
-                    const Icon(
-                      Icons.stop,
-                      color: Colors.green,
-                      size: 14,
-                    ),
+                    const VegIcon(),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(

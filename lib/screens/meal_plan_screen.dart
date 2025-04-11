@@ -8,6 +8,7 @@ import 'package:startwell/services/meal_selection_manager.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
 import 'package:startwell/screens/meal_detail_page.dart';
+import 'package:startwell/widgets/common/veg_icon.dart';
 
 class MealPlanScreen extends StatefulWidget {
   const MealPlanScreen({super.key});
@@ -496,14 +497,17 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             // Meal image with Most Recommended tag overlay
             Stack(
               children: [
-                ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(12)),
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(12)),
+                  ),
                   child: Image.asset(
                     imageUrl,
                     width: double.infinity,
-                    height: 160,
-                    fit: BoxFit.cover,
+                    height: 200,
+                    fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
                         height: 160,
@@ -634,11 +638,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                   // Meal name with Veg icon
                   Row(
                     children: [
-                      Icon(
-                        Icons.stop,
-                        color: Colors.green,
-                        size: 14,
-                      ),
+                      const VegIcon(),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(

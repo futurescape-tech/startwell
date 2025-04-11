@@ -4,6 +4,7 @@ import 'package:startwell/models/meal_model.dart';
 import 'package:startwell/screens/subscription_selection_screen.dart';
 import 'package:startwell/services/meal_selection_manager.dart';
 import 'package:startwell/themes/app_theme.dart';
+import 'package:startwell/widgets/common/veg_icon.dart';
 
 class Review {
   final String name;
@@ -94,13 +95,17 @@ class MealDetailPage extends StatelessWidget {
               // Meal Image
               Stack(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(12)),
+                    ),
                     child: Image.asset(
                       meal['image'],
                       width: double.infinity,
                       height: 200,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           height: 200,
@@ -203,11 +208,7 @@ class MealDetailPage extends StatelessWidget {
               // Meal Name + Veg Icon
               Row(
                 children: [
-                  Icon(
-                    Icons.stop,
-                    size: 14,
-                    color: Colors.green,
-                  ),
+                  const VegIcon(),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(

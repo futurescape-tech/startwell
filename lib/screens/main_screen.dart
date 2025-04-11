@@ -71,6 +71,8 @@ class MainScreenState extends State<MainScreen> {
           const DashboardScreen(),
           const ManageStudentProfileScreen(isManagementMode: true),
           MySubscriptionScreen(
+              startDate: DateTime.now(),
+              endDate: DateTime.now(),
               defaultTabIndex: widget.initialTabIndex == 2 ? 0 : 0),
           const MealPlanScreen(),
         ],

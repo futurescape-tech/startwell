@@ -522,10 +522,10 @@ class _ManageStudentProfileScreenState
     }
   }
 
-  // Select student profile
+  // Select a student
   void _selectStudent(Student student) {
+    // If in management mode, just return
     if (widget.isManagementMode) {
-      // In management mode, don't select students
       return;
     }
 
@@ -542,9 +542,8 @@ class _ManageStudentProfileScreenState
                   : 'lunch');
 
       // Validate meal plan assignment
-      final String? validationError = MealPlanValidator.validateMealPlan(
-          student, planType,
-          isExpress: widget.isExpressOrder ?? false);
+      final String? validationError =
+          MealPlanValidator.validateMealPlan(student, planType);
 
       if (validationError != null) {
         // Show error message
@@ -1029,7 +1028,7 @@ class _ManageStudentProfileScreenState
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            MealPlanValidator.getActivePlanEndDateInfo(student),
+                            MealPlanValidator.getActivePlanLabel(student),
                             style: GoogleFonts.poppins(
                               fontSize: 13,
                               color: student.hasActiveBreakfast &&
