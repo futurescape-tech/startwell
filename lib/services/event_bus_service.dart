@@ -18,8 +18,9 @@ class EventBusService {
 
   // Fire events
   void fireMealCancelled(MealCancelledEvent event) {
-    log("EventBus: Firing meal cancelled event - ${event.subscriptionId} on ${event.date}");
+    log("cancel meal flow: Firing meal cancelled event - subscription: ${event.subscriptionId}, date: ${event.date}");
     _mealCancelledController.add(event);
+    log("cancel meal flow: Event dispatched to ${_mealCancelledController.hasListener ? 'active listeners' : 'no listeners'}");
   }
 
   // Dispose resources
@@ -33,9 +34,14 @@ class MealCancelledEvent {
   final String subscriptionId;
   final DateTime date;
   final bool shouldNavigateToTab;
+  final String? studentId;
 
   MealCancelledEvent(this.subscriptionId, this.date,
-      {this.shouldNavigateToTab = true});
+      {this.shouldNavigateToTab = true, this.studentId});
+
+  @override
+  String toString() =>
+      'MealCancelledEvent(subscriptionId: $subscriptionId, date: $date, studentId: ${studentId ?? 'unknown'}, shouldNavigateToTab: $shouldNavigateToTab)';
 }
 
 /// Global instance for easy access

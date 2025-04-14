@@ -28,18 +28,25 @@ class CancelledMeal {
 
   /// Factory constructor to create a CancelledMeal from a map (JSON data)
   factory CancelledMeal.fromMap(Map<String, dynamic> map) {
-    return CancelledMeal(
-      id: map['id'] as String,
-      subscriptionId: map['subscriptionId'] as String,
-      studentId: map['studentId'] as String,
-      studentName: map['studentName'] as String,
-      planType: map['planType'] as String,
-      mealName: map['name'] as String,
-      cancellationDate: map['date'] as DateTime,
-      timestamp: map['cancelledAt'] as DateTime,
-      cancelledBy: map['cancelledBy'] as String,
-      reason: map['reason'] as String?,
-    );
+    // Log conversion to help debug
+    try {
+      return CancelledMeal(
+        id: map['id'] as String,
+        subscriptionId: map['subscriptionId'] as String,
+        studentId: map['studentId'] as String,
+        studentName: map['studentName'] as String,
+        planType: map['planType'] as String,
+        mealName: map['name'] as String,
+        cancellationDate: map['date'] as DateTime,
+        timestamp: map['cancelledAt'] as DateTime,
+        cancelledBy: map['cancelledBy'] as String,
+        reason: map['reason'] as String?,
+      );
+    } catch (e) {
+      print('Error converting map to CancelledMeal: $e');
+      print('Map contents: $map');
+      rethrow;
+    }
   }
 
   /// Convert this CancelledMeal instance to a map (JSON data)

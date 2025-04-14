@@ -60,6 +60,26 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
     }
   }
 
+  // Method to manually refresh the cancelled meals tab
+  void refreshCancelledMealsTab() {
+    if (_cancelledMealsTabKey.currentState != null) {
+      log("Directly refreshing CancelledMealsTab data");
+      _cancelledMealsTabKey.currentState!.loadCancelledMeals();
+
+      // If the cancelled tab isn't currently visible, make sure it will refresh when shown later
+      if (_tabController.index != 2) {
+        log("Setting up to refresh CancelledMealsTab when it becomes visible");
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _cancelledMealsTabKey.currentState != null) {
+            _cancelledMealsTabKey.currentState!.loadCancelledMeals();
+          }
+        });
+      }
+    } else {
+      log("Cannot refresh CancelledMealsTab: key state is null");
+    }
+  }
+
   @override
   void initState() {
     super.initState();

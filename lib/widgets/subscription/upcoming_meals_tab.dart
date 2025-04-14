@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:developer' as dev;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -936,7 +937,15 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           Expanded(
                             child: GestureDetector(
                               onTap: canCancel
-                                  ? () => _showCancelMealDialog(subscription)
+                                  ? () {
+                                      // For calendar view, use the selected date
+                                      final DateTime targetDate =
+                                          _isCalendarView
+                                              ? _selectedDay
+                                              : subscription.nextDeliveryDate;
+                                      _showCancelMealDialogWithSubscription(
+                                          subscription, targetDate);
+                                    }
                                   : null,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -1531,7 +1540,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                             onTap: meal.canCancel
                                 ? () {
                                     Navigator.pop(context);
-                                    _showCancelMealDialog(meal.subscription);
+                                    _showCancelMealDialogWithSubscription(
+                                        meal.subscription, meal.date);
                                   }
                                 : null,
                             child: Container(
@@ -2099,642 +2109,191 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     );
   }
 
-  void _showCancelMealDialog(Subscription subscription) {
-    log("meal delete flow: Showing cancel meal dialog for subscription ${subscription.id}");
+  // Method to remove a cancelled meal from all views
+  void _removeCancelledMealFromViews(MealData cancelledMeal) {
+    log('[Meal Cancellation] Starting removal of cancelled meal from views: ${cancelledMeal.toString()}');
 
-    // For calendar view, use the selected date
-    final DateTime targetDate =
-        _isCalendarView ? _selectedDay : subscription.nextDeliveryDate;
-    final String cancellationReason = "Cancelled by Parent";
+    // Get the subscription ID
+    final String subscriptionId = cancelledMeal.subscription.id;
 
-    log("meal delete flow: Target date for cancellation: ${DateFormat('yyyy-MM-dd').format(targetDate)}");
+    log('[Meal Cancellation] Working with subscription ID: $subscriptionId');
 
-    // Find the student using ID from subscription or log error
-    Student? foundStudent;
+    // Update meal status
+    cancelledMeal.status = 'Cancelled';
+    log('[Meal Cancellation] Updated meal status to: ${cancelledMeal.status}');
 
-    // Try to find the student with matching ID
-    for (final student in _studentsWithMealPlans) {
-      if (student.id == subscription.studentId) {
-        foundStudent = student;
-        log("meal delete flow: Found matching student: ${student.name} (${student.id})");
+    // Add the date to cancelled dates set for UI indication
+    final DateTime deliveryDate = cancelledMeal.date;
+    _cancelledMealDates.add(deliveryDate);
+    log('[Meal Cancellation] Added ${DateFormat('yyyy-MM-dd').format(deliveryDate)} to cancelled dates');
+
+    // Find the date key for the meal in _mealsMap
+    DateTime? dateKey;
+    for (final date in _mealsMap.keys) {
+      if (date.year == deliveryDate.year &&
+          date.month == deliveryDate.month &&
+          date.day == deliveryDate.day) {
+        dateKey = date;
         break;
       }
     }
 
-    // If student not found, log and use a fallback
-    if (foundStudent == null) {
-      log("meal delete flow: ⚠️ Student not found with ID: ${subscription.studentId}");
-      log("meal delete flow: ⚠️ Available student IDs: ${_studentsWithMealPlans.map((s) => s.id).join(', ')}");
-      log("meal delete flow: ⚠️ Using fallback student. This could indicate a data sync issue.");
+    if (dateKey != null) {
+      log('[Meal Cancellation] Found date key: ${DateFormat('yyyy-MM-dd').format(dateKey)}');
 
-      // Use the first student as fallback if available
-      foundStudent = _studentsWithMealPlans.isNotEmpty
-          ? _studentsWithMealPlans.first
-          : Student(
-              id: subscription.studentId,
-              name: 'Unknown Student',
-              schoolName: 'Unknown School',
-              className: 'Unknown Class',
-              division: 'Unknown Division',
-              floor: 'Ground',
-              allergies: '',
-              schoolAddress: 'Unknown Address',
-              grade: '0',
-              section: 'A',
-              profileImageUrl: '',
-            );
+      // Get meals for this date
+      final List<MealData> mealsForDate = _mealsMap[dateKey] ?? [];
+
+      // Find the index of the cancelled meal
+      final int cancelledMealIndex = mealsForDate.indexWhere((meal) =>
+          meal.subscription.id == subscriptionId &&
+          meal.date.day == deliveryDate.day &&
+          meal.date.month == deliveryDate.month &&
+          meal.date.year == deliveryDate.year);
+
+      if (cancelledMealIndex != -1) {
+        log('[Meal Cancellation] Found meal at index: $cancelledMealIndex for date: ${DateFormat('yyyy-MM-dd').format(dateKey)}');
+
+        // If this is the only meal for that date, remove the whole entry
+        if (mealsForDate.length == 1) {
+          _mealsMap.remove(dateKey);
+          log('[Meal Cancellation] Removed entire entry for date: ${DateFormat('yyyy-MM-dd').format(dateKey)}');
+        }
+      } else {
+        log('[Meal Cancellation] Warning: Cancelled meal not found in _mealsMap for date: ${DateFormat('yyyy-MM-dd').format(dateKey)}');
+      }
+    } else {
+      log('[Meal Cancellation] Warning: Date key not found for cancelled meal: ${DateFormat('yyyy-MM-dd').format(deliveryDate)}');
     }
 
-    final Student student = foundStudent;
+    // Update UI
+    if (mounted) {
+      setState(() {
+        // Update _selectedDateMeals if the cancelled meal was for the selected day
+        if (_selectedDay.year == deliveryDate.year &&
+            _selectedDay.month == deliveryDate.month &&
+            _selectedDay.day == deliveryDate.day) {
+          _selectedDateMeals = _mealsMap[_selectedDay] ?? [];
+          log('[Meal Cancellation] Updated _selectedDateMeals, new count: ${_selectedDateMeals.length}');
+        }
+      });
+    } else {
+      log('[Meal Cancellation] Widget no longer mounted, skipping UI update');
+    }
+  }
 
+  // Show dialog to confirm cancelling a meal
+  void _showCancelMealDialog(MealData meal) {
+    log('cancel meal flow: confirmation popup opened');
+    log('cancel meal flow: Showing cancel meal dialog for: ${meal.name}');
+
+    // Extract the student ID from the subscription
+    final String studentId = meal.subscription.studentId;
+    log('cancel meal flow: Student ID for cancellation: $studentId');
+
+    // Show dialog to confirm cancellation
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'Cancel Meal',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: Colors.red.shade700,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.orange,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Are you sure you want to cancel this meal?',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-            Text(
-              'Meal Details:',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppTheme.textDark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildDialogDetailRow(
-              'Student:',
-              student.name,
-              Icons.person,
-            ),
-            const SizedBox(height: 4),
-            _buildDialogDetailRow(
-              'Meal:',
-              subscription.mealItemName,
-              Icons.restaurant_menu,
-            ),
-            const SizedBox(height: 4),
-            _buildDialogDetailRow(
-              'Date:',
-              DateFormat('EEE dd, MMM yyyy').format(targetDate),
-              Icons.calendar_today,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'This action cannot be undone. The meal will be removed from the upcoming schedule and added to your cancellation history.',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey.shade700,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-          ],
-        ),
+        title: const Text('Cancel Meal'),
+        content:
+            const Text('Are you sure you want to cancel this meal delivery?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
-            child: Text(
-              'No, Keep Meal',
-              style: GoogleFonts.poppins(
-                color: Colors.grey.shade700,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          ElevatedButton.icon(
             onPressed: () {
-              // Log: Button tapped
-              log("meal delete flow: Cancel meal button pressed");
+              log('cancel meal flow: User chose to keep meal');
+              Navigator.of(context).pop(); // Close dialog
+            },
+            child: const Text('Keep Meal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              log('cancel meal flow: User confirmed cancellation - cancel button clicked');
+              Navigator.of(context).pop(); // Close dialog
 
-              // Get the parent context BEFORE closing the dialog
-              final parentContext = context;
-              final parent = MySubscriptionScreen.of(parentContext);
+              // Show loading snackbar
+              _showSnackBar(
+                message: 'Cancelling meal...',
+                isLoading: true,
+              );
 
-              // Close the dialog first
-              Navigator.of(context).pop();
-              log("meal delete flow: Dialog closed");
+              // Get subscription ID from the meal
+              final String subscriptionId = meal.subscription.id;
+              log('cancel meal flow: cancel API triggered');
+              log('cancel meal flow: Cancelling meal with subscription ID: $subscriptionId');
 
-              // Delay the cancellation logic to allow dialog to finish closing
-              Future.delayed(Duration.zero, () async {
-                if (!mounted) {
-                  log("meal delete flow: Widget not mounted - exiting cancellation flow");
-                  return;
+              try {
+                // Call service to cancel the meal
+                final success = await _subscriptionService.cancelMealDelivery(
+                  subscriptionId,
+                  meal.date,
+                  studentId: studentId,
+                );
+
+                // Hide loading snackbar
+                if (mounted) {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 }
 
-                try {
-                  // Show loading SnackBar
-                  log("meal delete flow: Showing cancellation in progress SnackBar");
-                  _showSnackBar(
-                    message: 'Cancelling meal...',
-                    backgroundColor: Colors.orange,
-                    isLoading: true,
-                    duration: const Duration(seconds: 1),
-                  );
+                if (success) {
+                  log('cancel meal flow: API success');
+                  log('cancel meal flow: removing from upcoming meals');
 
-                  log("meal delete flow: Calling cancelMealDelivery for subscriptionId: ${subscription.id} on date: $targetDate");
+                  // Remove the cancelled meal from our data structures
+                  if (mounted) {
+                    _removeCancelledMealFromViews(meal);
 
-                  // Student is already set from earlier in the method
-                  log("meal delete flow: Student information: ${student.name} (${student.id})");
-                  log("meal delete flow: Subscription information: ${subscription.id}, studentId: ${subscription.studentId}");
-
-                  final success = await _subscriptionService.cancelMealDelivery(
-                    subscription.id,
-                    targetDate,
-                    // reason: "Cancelled by parent for ${student.name}",
-                  );
-
-                  if (!mounted) {
-                    log("meal delete flow: Widget unmounted after service call - aborting UI update");
-                    return;
-                  }
-
-                  if (success) {
-                    final normalizedDate = DateTime(
-                        targetDate.year, targetDate.month, targetDate.day);
-                    log("meal delete flow: Cancellation API call successful for: $normalizedDate");
-
-                    setState(() {
-                      log("meal delete flow: Adding date to _cancelledMealDates set");
-                      _cancelledMealDates.add(normalizedDate);
-
-                      log("meal delete flow: Calling _removeCancelledMealFromViews");
-                      _removeCancelledMealFromViews(
-                          subscription.id, normalizedDate);
-
-                      log("meal delete flow: Extending final delivery date for subscription");
-                      _adjustDeliveryForCancelledMeal(subscription, targetDate);
-                    });
-
-                    // Show success SnackBar
+                    // Show success message
                     _showSnackBar(
-                      message: 'Meal cancelled successfully!',
+                      message: 'Meal cancelled successfully',
                       backgroundColor: Colors.green,
                     );
 
-                    // Notify other components
-                    eventBus.fireMealCancelled(
-                        MealCancelledEvent(subscription.id, targetDate));
-                    log("meal delete flow: Fired MealCancelledEvent to event bus");
-
-                    // For debugging, log which student is associated with this subscription
-                    log("meal delete flow: Cancelled meal for student ID: ${subscription.studentId}");
-                    log("meal delete flow: Current selected student ID: $_selectedStudentId");
-
-                    // Use the stored parent reference to navigate
-                    // This approach avoids looking up ancestors in a potentially deactivated widget
-                    if (parent != null) {
-                      // Use microtask to ensure this runs in the next event loop
-                      Future.microtask(() {
-                        log("meal delete flow: Navigating to Cancelled Meals tab via parent widget");
-                        parent.navigateToCancelledMealsTab();
-                      });
-                    } else if (mySubscriptionScreenKey.currentState != null) {
-                      // Fallback to the global key approach
-                      Future.microtask(() {
-                        log("meal delete flow: Navigating to Cancelled Meals tab via global key");
-                        mySubscriptionScreenKey.currentState!
-                            .navigateToCancelledMealsTab();
-                      });
-                    } else {
-                      log("meal delete flow: Could not navigate to Cancelled Meals tab - both approaches failed");
-                    }
-
-                    // Mark this subscription as cancelled in local state
-                    // This is crucial to prevent the meal from reappearing
-                    final subscriptionIndex = _activeSubscriptions
-                        .indexWhere((s) => s.id == subscription.id);
-                    if (subscriptionIndex >= 0) {
-                      // Mark it as cancelled
-                      _activeSubscriptions[subscriptionIndex]
-                          .addCancelledDate(targetDate);
-                      log("meal delete flow: Marked subscription as cancelled in local state");
-                    }
-
-                    // Reload subscriptions after short delay to ensure UI is consistent
-                    if (_selectedStudentId != null) {
-                      log("meal delete flow: Scheduling reload of subscriptions for student: $_selectedStudentId");
-                      Future.delayed(Duration(milliseconds: 500), () {
-                        if (mounted) {
-                          setState(() {
-                            _isLoading = true;
-                          });
-
-                          _loadSubscriptionsForStudent(_selectedStudentId!,
-                                  skipCancelled: true)
-                              .then((_) {
-                            if (mounted) {
-                              setState(() {
-                                _isLoading = false;
-                              });
-                              log("meal delete flow: Reloaded subscriptions successfully");
-                            }
-                          });
-                        } else {
-                          log("meal delete flow: Widget unmounted during reload");
-                        }
-                      });
-                    } else {
-                      log("meal delete flow: _selectedStudentId is NULL - Cannot reload subscriptions");
-                    }
-                  } else {
-                    log("meal delete flow: cancelMealDelivery returned false");
-                    _showSnackBar(
-                      message: 'Failed to cancel meal. Please try again.',
-                      backgroundColor: Colors.red,
+                    // Fire the meal cancelled event to update the cancelled meals tab
+                    log('cancel meal flow: Firing event to update cancelled meals tab');
+                    final event = MealCancelledEvent(
+                      meal.subscription.id,
+                      meal.date,
+                      studentId: studentId,
+                      shouldNavigateToTab: true,
                     );
-                  }
-                } catch (e, stack) {
-                  log("meal delete flow: Exception during meal cancellation: $e");
-                  log("meal delete flow: Stack trace: $stack");
+                    eventBus.fireMealCancelled(event);
+                    log('cancel meal flow: adding to cancelled meals list');
 
+                    // Get reference to parent MySubscriptionScreen to navigate to Cancelled tab
+                    final parentScreen = MySubscriptionScreen.of(context);
+                    if (parentScreen != null) {
+                      log('cancel meal flow: navigating to Cancelled Meals tab');
+                      // Use Future.delayed to ensure this runs after the current build phase
+                      Future.delayed(Duration.zero, () {
+                        parentScreen.navigateToCancelledMealsTab();
+                      });
+                    } else {
+                      log('cancel meal flow: Could not find parent MySubscriptionScreen');
+                    }
+                  }
+                } else {
+                  log('cancel meal flow: API failure - returned false');
                   if (mounted) {
                     _showSnackBar(
-                      message: 'An error occurred: $e',
+                      message: 'Failed to cancel meal',
                       backgroundColor: Colors.red,
                     );
                   }
                 }
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.cancel),
-            label: Text(
-              'Cancel Meal',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-        ],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
-  }
-
-  // Remove cancelled meal from both views and refresh list data
-  void _removeCancelledMealFromViews(
-      String subscriptionId, DateTime normalizedDate) {
-    log("meal delete flow: Removing cancelled meal from views - subscription: $subscriptionId, date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}");
-
-    // Remove from meals map (for calendar view)
-    if (_mealsMap.containsKey(normalizedDate)) {
-      log("meal delete flow: Meal exists in _mealsMap for date ${DateFormat('yyyy-MM-dd').format(normalizedDate)}");
-
-      int beforeCount = _mealsMap[normalizedDate]?.length ?? 0;
-      _mealsMap[normalizedDate] = _mealsMap[normalizedDate]!
-          .where((meal) => meal.subscription.id != subscriptionId)
-          .toList();
-      int afterCount = _mealsMap[normalizedDate]?.length ?? 0;
-
-      log("meal delete flow: Removed ${beforeCount - afterCount} meals from _mealsMap");
-
-      // If no meals left for this date, remove the entry
-      if (_mealsMap[normalizedDate]!.isEmpty) {
-        _mealsMap.remove(normalizedDate);
-        log("meal delete flow: Removed entire date entry from _mealsMap as it's now empty");
-      }
-    } else {
-      log("meal delete flow: No meals found in _mealsMap for date ${DateFormat('yyyy-MM-dd').format(normalizedDate)}");
-    }
-
-    // Update selected day meals for calendar view
-    _updateSelectedDayMeals();
-    log("meal delete flow: Updated selected day meals for calendar view");
-
-    // Mark the subscription as cancelled for this date
-    for (var subscription in _activeSubscriptions) {
-      if (subscription.id == subscriptionId) {
-        log("meal delete flow: Found subscription to mark as cancelled: ${subscription.id}");
-        subscription.addCancelledDate(normalizedDate);
-        log("meal delete flow: Added date to subscription's cancelled dates list");
-        break;
-      }
-    }
-
-    // Remove the cancelled meal from _activeSubscriptions display list
-    // We need to be careful here - don't remove the subscription itself,
-    // just ensure it doesn't show for this date
-    log("meal delete flow: Ensuring subscription doesn't show in active list for this date");
-
-    // Add to cancelled meal dates set for UI marking
-    _cancelledMealDates.add(normalizedDate);
-    log("meal delete flow: Added date to _cancelledMealDates set for UI marking");
-
-    // Force a rebuild of the UI
-    setState(() {
-      log("meal delete flow: Forcing UI rebuild after cancellation");
-    });
-
-    // Then reload all data with skipCancelled=true to ensure cancelled meals don't reappear
-    Future.delayed(Duration(milliseconds: 200), () {
-      if (mounted) {
-        log("meal delete flow: Reloading subscriptions with skipCancelled=true");
-        _loadSubscriptionsForStudent(_selectedStudentId!, skipCancelled: true);
-      }
-    });
-  }
-
-  // Helper method to reload subscription data
-  void _reloadSubscriptionData() {
-    if (_selectedStudentId != null) {
-      // Use Future.microtask to avoid setState during build
-      Future.microtask(() {
-        if (mounted) {
-          log("Reloading subscription data after cancellation");
-          _loadSubscriptionsForStudent(_selectedStudentId!,
-              skipCancelled: true);
-        }
-      });
-    }
-  }
-
-  // Adjust delivery dates based on plan type
-  void _adjustDeliveryForCancelledMeal(
-      Subscription subscription, DateTime cancelledDate) {
-    // Determine if Regular or Custom Plan
-    final bool isCustomPlan = subscription.selectedWeekdays.isNotEmpty &&
-        subscription.selectedWeekdays.length < 5;
-
-    log("Adjusting delivery for cancelled meal: ${subscription.id}");
-    log("Plan type: ${isCustomPlan ? 'Custom' : 'Regular'}");
-    log("Cancelled date: ${DateFormat('yyyy-MM-dd').format(cancelledDate)}");
-
-    // Skip rescheduling for Express plans
-    if (subscription.planType == 'express') {
-      log("No rescheduling needed: Express 1-Day plans don't get rescheduled");
-      return;
-    }
-
-    // Get end date of the subscription
-    DateTime lastDeliveryDate = subscription.endDate;
-
-    // Calculate next valid delivery date after the end date
-    DateTime newLastDeliveryDate;
-
-    if (isCustomPlan) {
-      // For custom plans, use the selected weekdays
-      final weekdays = subscription.selectedWeekdays.isEmpty
-          ? [1, 2, 3, 4, 5]
-          : subscription.selectedWeekdays;
-
-      // Start looking from the day after the last delivery
-      DateTime nextDate = lastDeliveryDate.add(const Duration(days: 1));
-
-      // Find the next eligible weekday
-      while (!weekdays.contains(nextDate.weekday)) {
-        nextDate = nextDate.add(const Duration(days: 1));
-      }
-
-      newLastDeliveryDate = nextDate;
-    } else {
-      // For regular plans (Mon-Fri)
-      DateTime nextDate = lastDeliveryDate.add(const Duration(days: 1));
-
-      // Skip weekends for regular plans
-      while (nextDate.weekday > 5) {
-        nextDate = nextDate.add(const Duration(days: 1));
-      }
-
-      newLastDeliveryDate = nextDate;
-    }
-
-    log("Adjusted last delivery from ${DateFormat('yyyy-MM-dd').format(lastDeliveryDate)} to ${DateFormat('yyyy-MM-dd').format(newLastDeliveryDate)}");
-
-    // Normalize the date for UI processing
-    final normalizedNewDate = DateTime(newLastDeliveryDate.year,
-        newLastDeliveryDate.month, newLastDeliveryDate.day);
-
-    // Check if we already have meals on this date
-    if (_mealsMap.containsKey(normalizedNewDate)) {
-      log("New delivery date already has meals scheduled, no adjustments needed");
-      return;
-    }
-
-    // Create a new meal entry for the rescheduled date
-    // Find student name from our local data
-    String studentName = "Unknown Student";
-    for (final student in _studentsWithMealPlans) {
-      if (student.id == subscription.studentId) {
-        studentName = student.name;
-        break;
-      }
-    }
-
-    // Create a new meal data for the rescheduled date
-    final rescheduledMeal = MealData(
-      studentName: studentName,
-      name: subscription.mealName,
-      planType: subscription.planType,
-      items: subscription.getMealItems(),
-      status: "Scheduled",
-      subscription: subscription,
-      canSwap: subscription.planType != 'express',
-      canCancel: subscription.planType != 'express',
-      canPauseOrResume: subscription.planType != 'express',
-      date: normalizedNewDate,
-    );
-
-    // Add the new meal to our meals map (calendar view)
-    if (!_mealsMap.containsKey(normalizedNewDate)) {
-      _mealsMap[normalizedNewDate] = [];
-    }
-    _mealsMap[normalizedNewDate]!.add(rescheduledMeal);
-
-    // Update the selected day meals if the new date is the selected day
-    if (isSameDay(normalizedNewDate, _selectedDay)) {
-      _updateSelectedDayMeals();
-    }
-
-    // Update the subscription service with the adjusted delivery date
-    _subscriptionService
-        .adjustDeliveryDates(
-            subscription.id, cancelledDate, newLastDeliveryDate)
-        .then((success) {
-      if (success) {
-        log("Successfully adjusted delivery date in the database");
-      } else {
-        log("Failed to adjust delivery date in the database");
-      }
-    });
-
-    // Show a toast to inform the user about the rescheduled delivery
-    if (mounted) {
-      _showSnackBar(
-        message:
-            'Your cancelled meal has been rescheduled to ${DateFormat('EEE dd, MMM yyyy').format(normalizedNewDate)}',
-        duration: const Duration(seconds: 3),
-        backgroundColor: Colors.blue,
-      );
-    }
-  }
-
-  // Show dialog to confirm resuming a meal
-  void _showResumeMealDialog(Subscription subscription, DateTime targetDate) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Resume Meal',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Would you like to resume this meal delivery?',
-              style: GoogleFonts.poppins(),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Date: ${DateFormat('EEE dd, MMM yyyy').format(targetDate)}',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textDark,
-              ),
-            ),
-            Text(
-              'Meal: ${subscription.mealItemName}',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textDark,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(
-                color: Colors.grey.shade700,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              // Close the dialog first
-              Navigator.pop(context);
-
-              if (!mounted) return;
-
-              // Show loading indicator
-              _showSnackBar(
-                message: 'Resuming meal...',
-                duration: const Duration(seconds: 1),
-              );
-
-              try {
-                // Resume the meal for the specific date
-                final success = await _subscriptionService.resumeMealDelivery(
-                  subscription.id,
-                  targetDate,
-                );
-
-                if (!mounted) return;
-
-                if (success) {
-                  // Update meal status in the UI
-                  if (_isCalendarView) {
-                    final normalizedDate = DateTime(_selectedDay.year,
-                        _selectedDay.month, _selectedDay.day);
-                    if (_mealsMap.containsKey(normalizedDate)) {
-                      for (final meal in _mealsMap[normalizedDate]!) {
-                        if (meal.subscription.id == subscription.id) {
-                          setState(() {
-                            meal.status = "Scheduled";
-                            _updateSelectedDayMeals();
-                          });
-                        }
-                      }
-                    }
-                  } else {
-                    // Force reload for list view
-                    await _loadSubscriptionsForStudent(_selectedStudentId!,
-                        skipCancelled: true);
-                  }
-
-                  // Show success message
-                  _showSnackBar(
-                    message: 'Meal resumed successfully!',
-                    backgroundColor: Colors.green,
-                  );
-                } else {
-                  _showSnackBar(
-                    message: 'Failed to resume meal. Please try again.',
-                    backgroundColor: Colors.red,
-                  );
-                }
               } catch (e) {
-                log("Error resuming meal: $e");
+                log('cancel meal flow: API error exception: $e');
                 if (mounted) {
                   _showSnackBar(
-                    message: 'An error occurred: $e',
+                    message: 'Error cancelling meal: $e',
                     backgroundColor: Colors.red,
                   );
                 }
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(
-              'Resume',
-              style: GoogleFonts.poppins(),
-            ),
+            child: const Text('Cancel Meal'),
           ),
         ],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
       ),
     );
   }
@@ -2969,67 +2528,85 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   // Function to find and show the appropriate action dialog based on meal status
   void _showActionDialogForMeal(MealData meal) {
     if (meal.status == "Paused") {
-      _showResumeMealDialog(meal.subscription, meal.date);
+      // For paused meals, show the resume dialog
+      _showResumeMealDialogWithMeal(meal);
     } else {
-      _showCancelMealDialog(meal.subscription);
+      // For active meals, show the cancel dialog
+      _showCancelMealDialog(meal);
     }
   }
 
-  // Helper to get Student for a subscription
-  Future<Student?> _getStudentForSubscription(Subscription subscription) async {
-    // If we already have the student loaded, return it
-    if (_studentsWithMealPlans.any((s) => s.id == subscription.studentId)) {
-      return _studentsWithMealPlans
-          .firstWhere((s) => s.id == subscription.studentId);
-    }
-
-    // Otherwise load the student from the service
-    try {
-      final student =
-          await _studentProfileService.getStudentById(subscription.studentId);
-      return student;
-    } catch (e) {
-      log('Error loading student: $e');
-      return null;
-    }
+  // Show cancel meal dialog - overloaded version with Subscription and date
+  void _showCancelMealDialogWithSubscription(
+      Subscription subscription, DateTime targetDate) {
+    // Create MealData from subscription and date
+    final meal = _createMealDataFromSubscription(subscription, targetDate);
+    _showCancelMealDialog(meal);
   }
 
-  // Helper to build a detail row for dialogs
-  Widget _buildDialogDetailRow(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color: Colors.grey.shade700,
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-              color: AppTheme.textDark,
-            ),
-            softWrap: true,
-          ),
-        ),
-      ],
+  // Adapter method for showing cancel dialog using MealData
+  void showCancelDialogForMealData(MealData meal) {
+    log("meal delete flow: Using adapter method to show dialog for MealData");
+    _showCancelMealDialog(meal);
+  }
+
+  // Helper adapter for showing cancel dialog for MealData objects
+  void cancelMealDialogFromMealData(MealData meal) {
+    log("meal delete flow: Using MealData adapter to show dialog");
+    _showCancelMealDialog(meal);
+  }
+
+  // Helper to create a MealData object from a Subscription and date
+  MealData _createMealDataFromSubscription(
+      Subscription subscription, DateTime date) {
+    // Find the student for this subscription
+    final student = _studentsWithMealPlans.firstWhere(
+      (s) => s.id == subscription.studentId,
+      orElse: () => Student(
+        id: subscription.studentId,
+        name: "Unknown Student",
+        schoolName: "",
+        className: "",
+        division: "",
+        floor: "",
+        allergies: "",
+        schoolAddress: "",
+        grade: "",
+        section: "",
+        profileImageUrl: "",
+      ),
+    );
+
+    // Check if cancel/swap is allowed for this date
+    final bool canSwap = _isSwapAllowed(date, subscription.planType);
+    final bool canCancel = _isCancelAllowed(date, subscription.planType);
+    final bool canPauseResume =
+        _isPauseResumeAllowed(date, subscription.planType);
+
+    // Create a MealData object
+    return MealData(
+      studentName: student.name,
+      name: subscription.mealItemName,
+      planType: _getFormattedPlanType(subscription),
+      items: subscription.getMealItems(),
+      status: "Scheduled", // Default status
+      subscription: subscription,
+      canSwap: canSwap,
+      canCancel: canCancel,
+      canPauseOrResume: canPauseResume,
+      date: date,
     );
   }
 
-  // Show dialog to pause a meal
+  // Show dialog to pause a meal with Subscription and date
   void _showPauseMealDialog(Subscription subscription, DateTime targetDate) {
+    // Create MealData from subscription and date
+    final meal = _createMealDataFromSubscription(subscription, targetDate);
+    _showPauseMealDialogWithMeal(meal);
+  }
+
+  // Show dialog to pause a meal using MealData
+  void _showPauseMealDialogWithMeal(MealData meal) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -3050,14 +2627,14 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Date: ${DateFormat('EEE dd, MMM yyyy').format(targetDate)}',
+              'Date: ${DateFormat('EEE dd, MMM yyyy').format(meal.date)}',
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w500,
                 color: AppTheme.textDark,
               ),
             ),
             Text(
-              'Meal: ${subscription.mealItemName}',
+              'Meal: ${meal.name}',
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w500,
                 color: AppTheme.textDark,
@@ -3091,8 +2668,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
               try {
                 // Pause the meal for the specific date
                 final success = await _subscriptionService.pauseMealDelivery(
-                  subscription.id,
-                  targetDate,
+                  meal.subscription.id,
+                  meal.date,
                 );
 
                 if (!mounted) return;
@@ -3103,10 +2680,10 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                     final normalizedDate = DateTime(_selectedDay.year,
                         _selectedDay.month, _selectedDay.day);
                     if (_mealsMap.containsKey(normalizedDate)) {
-                      for (final meal in _mealsMap[normalizedDate]!) {
-                        if (meal.subscription.id == subscription.id) {
+                      for (final mealItem in _mealsMap[normalizedDate]!) {
+                        if (mealItem.subscription.id == meal.subscription.id) {
                           setState(() {
-                            meal.status = "Paused";
+                            mealItem.status = "Paused";
                             _updateSelectedDayMeals();
                           });
                         }
@@ -3141,10 +2718,142 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
+            ),
+            child: Text(
+              'Pause Meal',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show dialog to resume a meal (overloaded version with Subscription and date)
+  void _showResumeMealDialog(Subscription subscription, DateTime targetDate) {
+    // Create MealData from subscription and date
+    final meal = _createMealDataFromSubscription(subscription, targetDate);
+    _showResumeMealDialogWithMeal(meal);
+  }
+
+  // Show dialog to resume a meal using MealData
+  void _showResumeMealDialogWithMeal(MealData meal) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Resume Meal',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Would you like to resume this meal delivery?',
+              style: GoogleFonts.poppins(),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Date: ${DateFormat('EEE dd, MMM yyyy').format(meal.date)}',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textDark,
+              ),
+            ),
+            Text(
+              'Meal: ${meal.name}',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // Close the dialog first
+              Navigator.pop(context);
+
+              if (!mounted) return;
+
+              // Show loading indicator
+              _showSnackBar(
+                message: 'Resuming meal...',
+                duration: const Duration(seconds: 1),
+              );
+
+              try {
+                // Resume the meal for the specific date
+                final success = await _subscriptionService.resumeMealDelivery(
+                  meal.subscription.id,
+                  meal.date,
+                );
+
+                if (!mounted) return;
+
+                if (success) {
+                  // Update meal status in the UI
+                  if (_isCalendarView) {
+                    final normalizedDate = DateTime(_selectedDay.year,
+                        _selectedDay.month, _selectedDay.day);
+                    if (_mealsMap.containsKey(normalizedDate)) {
+                      for (final mealItem in _mealsMap[normalizedDate]!) {
+                        if (mealItem.subscription.id == meal.subscription.id) {
+                          setState(() {
+                            mealItem.status = "Scheduled";
+                            _updateSelectedDayMeals();
+                          });
+                        }
+                      }
+                    }
+                  } else {
+                    // Force reload for list view
+                    await _loadSubscriptionsForStudent(_selectedStudentId!,
+                        skipCancelled: true);
+                  }
+
+                  // Show success message
+                  _showSnackBar(
+                    message: 'Meal resumed successfully!',
+                    backgroundColor: Colors.green,
+                  );
+                } else {
+                  _showSnackBar(
+                    message: 'Failed to resume meal. Please try again.',
+                    backgroundColor: Colors.red,
+                  );
+                }
+              } catch (e) {
+                log("Error resuming meal: $e");
+                if (mounted) {
+                  _showSnackBar(
+                    message: 'An error occurred: $e',
+                    backgroundColor: Colors.red,
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
               foregroundColor: Colors.white,
             ),
             child: Text(
-              'Pause',
+              'Resume',
               style: GoogleFonts.poppins(),
             ),
           ),
@@ -3212,5 +2921,70 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
           ),
       ],
     );
+  }
+
+  // Helper to build a detail row for dialogs
+  Widget _buildDialogDetailRow(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: Colors.grey.shade700,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: AppTheme.textDark,
+            ),
+            softWrap: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper to get Student for a subscription
+  Future<Student?> _getStudentForSubscription(Subscription subscription) async {
+    // If we already have the student loaded, return it
+    if (_studentsWithMealPlans.any((s) => s.id == subscription.studentId)) {
+      return _studentsWithMealPlans
+          .firstWhere((s) => s.id == subscription.studentId);
+    }
+
+    // Otherwise load the student from the service
+    try {
+      final student =
+          await _studentProfileService.getStudentById(subscription.studentId);
+      return student;
+    } catch (e) {
+      log('Error loading student: $e');
+      return null;
+    }
+  }
+
+  // Helper adapter for handling MealData objects
+  void cancelMealFromMealData(MealData meal) {
+    log("meal delete flow: Using MealData adapter to cancel meal");
+    _removeCancelledMealFromViews(meal);
+  }
+
+  // Adapter method for cancelling a meal using MealData
+  void handleMealDataCancellation(MealData meal) {
+    log("meal delete flow: Using adapter method to cancel MealData");
+    _removeCancelledMealFromViews(meal);
   }
 }

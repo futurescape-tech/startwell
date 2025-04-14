@@ -617,7 +617,8 @@ class SubscriptionService {
   }
 
   // Cancel a meal delivery for a specific date
-  Future<bool> cancelMealDelivery(String subscriptionId, DateTime date) async {
+  Future<bool> cancelMealDelivery(String subscriptionId, DateTime date,
+      {String? reason, String? studentId}) async {
     try {
       // Normalize the date to avoid time issues (remove time component)
       final normalizedDate = DateTime(date.year, date.month, date.day);
@@ -626,10 +627,12 @@ class SubscriptionService {
       dev.log('========== CANCELLING MEAL ==========');
       dev.log('Subscription ID: $subscriptionId');
       dev.log('Date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
+      dev.log('Reason: ${reason ?? "Not specified"}');
+      dev.log('Student ID: ${studentId ?? "Not specified directly"}');
 
       // Extract student ID directly from subscription ID format
       // Format is typically planType-studentId or planType-timestamp
-      String studentId = 'unknown';
+      String extractedStudentId = 'unknown';
       String planType = 'lunch';
       String mealName = 'Standard Meal';
 
@@ -637,25 +640,30 @@ class SubscriptionService {
         final parts = subscriptionId.split('-');
         if (parts.length >= 2) {
           planType = parts[0]; // breakfast, lunch, express
-          studentId = parts.sublist(1).join('-');
+          extractedStudentId = parts.sublist(1).join('-');
           mealName = planType == 'breakfast'
               ? 'Breakfast of the Day'
               : 'Standard Lunch';
 
           dev.log('Extracted from ID - Plan Type: $planType');
-          dev.log('Extracted from ID - Student ID: $studentId');
+          dev.log('Extracted from ID - Student ID: $extractedStudentId');
         }
       } catch (e) {
         dev.log('Error parsing subscription ID format: $e');
       }
 
+      // Use provided student ID if available, otherwise use the extracted one
+      String finalStudentId = studentId ?? extractedStudentId;
+      dev.log('Using final student ID for record: $finalStudentId');
+
       // Find the actual subscription details if available
       final actualSubscription = await _getSubscriptionById(subscriptionId);
 
       // Use extracted values from the subscription if available
-      if (actualSubscription.studentId != 'unknown') {
-        studentId = actualSubscription.studentId;
-        dev.log('Using studentId from subscription lookup: $studentId');
+      if (actualSubscription.studentId != 'unknown' &&
+          finalStudentId == 'unknown') {
+        finalStudentId = actualSubscription.studentId;
+        dev.log('Updated student ID from subscription lookup: $finalStudentId');
       }
 
       planType = actualSubscription.planType;
@@ -665,38 +673,67 @@ class SubscriptionService {
       Student? studentProfile;
       try {
         studentProfile =
-            await StudentProfileService().getStudentById(studentId);
+            await StudentProfileService().getStudentById(finalStudentId);
         dev.log(
             'Found student profile: ${studentProfile?.name ?? "Not found"}');
       } catch (e) {
         dev.log('Error getting student profile: $e');
       }
 
-      // Create a detailed cancellation record
-      final cancellationRecord = {
-        'id': '${subscriptionId}_${normalizedDate.millisecondsSinceEpoch}',
-        'subscriptionId': subscriptionId,
-        'studentId': studentId,
-        'studentName': studentProfile?.name ?? 'Unknown Student',
-        'planType': planType,
-        'name': mealName,
-        'date': normalizedDate,
-        'cancelledAt': DateTime.now(),
-        'cancelledBy': 'user',
-        'reason': 'Cancelled by Parent',
-      };
+      // Create a unique record ID to prevent duplicates
+      final recordId =
+          '${subscriptionId}_${normalizedDate.millisecondsSinceEpoch}';
 
-      // Add to the cancelled meals history
-      _cancelledMealsHistory.add(cancellationRecord);
+      // Check if this meal was already cancelled
+      bool alreadyCancelled = false;
+      for (var existingRecord in _cancelledMealsHistory) {
+        if (existingRecord['id'] == recordId) {
+          dev.log('This meal was already cancelled, skipping duplicate record');
+          alreadyCancelled = true;
+          break;
+        }
+      }
 
-      dev.log(
-          'Added to cancellation history: $studentId on ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
-      dev.log('Total cancellation records: ${_cancelledMealsHistory.length}');
+      if (!alreadyCancelled) {
+        // Create a detailed cancellation record
+        final cancellationRecord = {
+          'id': recordId,
+          'subscriptionId': subscriptionId,
+          'studentId': finalStudentId,
+          'studentName': studentProfile?.name ?? 'Unknown Student',
+          'planType': planType,
+          'name': mealName,
+          'date': normalizedDate,
+          'cancelledAt': DateTime.now(),
+          'cancelledBy': 'user',
+          'reason': reason ?? 'Cancelled by Parent',
+          'status': 'Cancelled', // Explicitly set status field
+        };
+
+        // Add to the cancelled meals history
+        _cancelledMealsHistory.add(cancellationRecord);
+
+        dev.log(
+            'Added to cancellation history: $finalStudentId on ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
+        dev.log('Total cancellation records: ${_cancelledMealsHistory.length}');
+      }
 
       // For debugging, show all cancellation records
-      for (var record in _cancelledMealsHistory) {
+      dev.log('--- All Cancellation Records ---');
+      for (int i = 0; i < _cancelledMealsHistory.length; i++) {
+        var record = _cancelledMealsHistory[i];
         dev.log(
-            'Cancellation record: ${record['studentId']} on ${DateFormat('yyyy-MM-dd').format(record['date'] as DateTime)}');
+            'Record #${i + 1}: ${record['studentId']} on ${DateFormat('yyyy-MM-dd').format(record['date'] as DateTime)}');
+      }
+      dev.log('-------------------------------');
+
+      // Update the subscription to mark this date as cancelled
+      for (var subscription in _subscriptions) {
+        if (subscription.id == subscriptionId) {
+          dev.log('Found matching subscription, marking date as cancelled');
+          subscription.cancelledDates.add(normalizedDate);
+          break;
+        }
       }
 
       dev.log(
