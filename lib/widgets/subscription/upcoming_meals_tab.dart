@@ -2259,18 +2259,6 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                     );
                     eventBus.fireMealCancelled(event);
                     log('cancel meal flow: adding to cancelled meals list');
-
-                    // Get reference to parent MySubscriptionScreen to navigate to Cancelled tab
-                    final parentScreen = MySubscriptionScreen.of(context);
-                    if (parentScreen != null) {
-                      log('cancel meal flow: navigating to Cancelled Meals tab');
-                      // Use Future.delayed to ensure this runs after the current build phase
-                      Future.delayed(Duration.zero, () {
-                        parentScreen.navigateToCancelledMealsTab();
-                      });
-                    } else {
-                      log('cancel meal flow: Could not find parent MySubscriptionScreen');
-                    }
                   }
                 } else {
                   log('cancel meal flow: API failure - returned false');

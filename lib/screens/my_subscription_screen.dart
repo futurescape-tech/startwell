@@ -50,13 +50,16 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
 
   // Method to navigate to the cancelled meals tab
   void navigateToCancelledMealsTab() {
+    log("Navigating to Cancelled Meals tab for student: ${widget.selectedStudentId ?? 'all students'}");
     _tabController.animateTo(2); // Index 2 is the Cancelled Meals tab
-    log("Navigating to Cancelled Meals tab");
 
     // Try to refresh the cancelled meals tab data
     if (_cancelledMealsTabKey.currentState != null) {
+      log("Triggering refresh of CancelledMealsTab for student: ${widget.selectedStudentId ?? 'all students'}");
       _cancelledMealsTabKey.currentState!.loadCancelledMeals();
-      log("Triggered refresh of CancelledMealsTab via key");
+    } else {
+      log("CancelledMealsTab key state is null - will rely on tab's own initialization");
+      // The tab will load its own data when it mounts
     }
   }
 
@@ -115,11 +118,21 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
   // Handle meal cancellation events
   void _handleMealCancelled(MealCancelledEvent event) {
     log("MySubscriptionScreen received meal cancelled event");
-    if (event.shouldNavigateToTab) {
-      // Use Future.delayed to ensure this runs after the current build phase
-      Future.delayed(Duration.zero, () {
-        navigateToCancelledMealsTab();
-      });
+    log("Event details - subscriptionId: ${event.subscriptionId}, studentId: ${event.studentId ?? 'null'}");
+    log("Current selected student ID: ${widget.selectedStudentId ?? 'null'}");
+
+    // Only handle the event if it's for the current student or if no student filter is set
+    if (widget.selectedStudentId == null ||
+        event.studentId == widget.selectedStudentId) {
+      if (event.shouldNavigateToTab) {
+        // Use Future.delayed to ensure this runs after the current build phase
+        Future.delayed(Duration.zero, () {
+          log("Navigating to cancelled meals tab for student: ${event.studentId ?? 'all students'}");
+          navigateToCancelledMealsTab();
+        });
+      }
+    } else {
+      log("Ignoring event for different student (event: ${event.studentId}, current: ${widget.selectedStudentId})");
     }
   }
 

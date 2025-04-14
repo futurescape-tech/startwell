@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:startwell/models/cancelled_meal.dart';
+import 'package:startwell/screens/my_subscription_screen.dart';
 import 'package:startwell/services/event_bus_service.dart';
 import 'package:startwell/services/subscription_service.dart';
 import 'package:startwell/theme/app_theme.dart';
@@ -40,21 +41,29 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
 
   // Handle meal cancellation events
   void _handleMealCancelled(MealCancelledEvent event) {
-    log("cancel meal flow: CancelledMealsTab received meal cancelled event for subscription ${event.subscriptionId}");
-    log("cancel meal flow: Event details: ${event.toString()}");
+    log("cancel meal flow: CancelledMealsTab received meal cancelled event");
+    log("cancel meal flow: Event details - subscriptionId: ${event.subscriptionId}, date: ${DateFormat('yyyy-MM-dd').format(event.date)}");
+    log("cancel meal flow: Student ID in event: ${event.studentId ?? 'null'}, Current filter: ${widget.studentId ?? 'null'}");
 
-    // If the event includes a studentId, check if it matches our current filter
-    if (event.studentId != null && widget.studentId != null) {
-      if (event.studentId != widget.studentId) {
-        log("cancel meal flow: Ignoring event for different student (event: ${event.studentId}, current: ${widget.studentId})");
+    // Handle null student IDs
+    if (event.studentId == null) {
+      log("cancel meal flow: Event has no student ID - will process if no student filter is active");
+      if (widget.studentId != null) {
+        log("cancel meal flow: Ignoring event without student ID when filter is active");
         return;
       }
-      log("cancel meal flow: Student ID matches our filter, will refresh");
+    } else if (widget.studentId != null) {
+      // Both IDs present - check for match
+      if (event.studentId != widget.studentId) {
+        log("cancel meal flow: Student ID mismatch - event: ${event.studentId}, filter: ${widget.studentId}");
+        return;
+      }
+      log("cancel meal flow: Student ID match confirmed");
     }
 
     // Refresh data when a meal is cancelled
     if (mounted) {
-      log("cancel meal flow: Refreshing cancelled meals list from event");
+      log("cancel meal flow: Refreshing cancelled meals list");
 
       // First mark as loading to show something is happening
       setState(() {
@@ -62,7 +71,7 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
       });
 
       // Add a small delay to ensure backend has completed processing
-      Future.delayed(Duration(milliseconds: 300), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           loadCancelledMeals();
         }
@@ -169,49 +178,97 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
   Widget build(BuildContext context) {
     log("cancel meal flow: Building widget, isLoading: $_isLoading, meals count: ${_cancelledMeals.length}");
 
+    // Build the student filter indicator if a filter is active
+    Widget? studentFilterChip = widget.studentId != null
+        ? Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Chip(
+              label: Text(
+                'Filtered by Student',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+              ),
+              backgroundColor: AppTheme.purple,
+              onDeleted: () {
+                // Navigate up to MySubscriptionScreen and rebuild with null student ID
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MySubscriptionScreen(
+                      defaultTabIndex: 2, // Cancelled Meals tab
+                    ),
+                  ),
+                );
+              },
+            ),
+          )
+        : null;
+
     if (_isLoading && !_hasDataBeenLoaded) {
-      return const Center(child: Loading());
+      return Column(
+        children: [
+          if (studentFilterChip != null) studentFilterChip,
+          const Expanded(child: Center(child: Loading())),
+        ],
+      );
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, color: Colors.red.shade700, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              style: GoogleFonts.poppins(color: Colors.red.shade700),
-              textAlign: TextAlign.center,
+      return Column(
+        children: [
+          if (studentFilterChip != null) studentFilterChip,
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline,
+                      color: Colors.red.shade700, size: 48),
+                  const SizedBox(height: 16),
+                  Text(
+                    _errorMessage!,
+                    style: GoogleFonts.poppins(color: Colors.red.shade700),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    onPressed: loadCancelledMeals,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Try Again'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            TextButton.icon(
-              onPressed: loadCancelledMeals,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     if (_cancelledMeals.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: loadCancelledMeals,
-        child: const SingleChildScrollView(
-          physics: AlwaysScrollableScrollPhysics(),
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.only(top: 120),
-              child: EmptyState(
-                icon: Icons.event_busy,
-                title: 'No Cancelled Meals',
-                message: 'You haven\'t cancelled any meals yet.',
+      return Column(
+        children: [
+          if (studentFilterChip != null) studentFilterChip,
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: loadCancelledMeals,
+              child: const SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 120),
+                    child: EmptyState(
+                      icon: Icons.event_busy,
+                      title: 'No Cancelled Meals',
+                      message: 'You haven\'t cancelled any meals yet.',
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       );
     }
 
