@@ -114,8 +114,16 @@ class StudentProfileService {
         updatedStudent = updatedStudent.copyWith(
           hasActiveBreakfast: existingStudent.hasActiveBreakfast,
           hasActiveLunch: existingStudent.hasActiveLunch,
+          breakfastPlanStartDate: existingStudent.breakfastPlanStartDate,
+          lunchPlanStartDate: existingStudent.lunchPlanStartDate,
           breakfastPlanEndDate: existingStudent.breakfastPlanEndDate,
           lunchPlanEndDate: existingStudent.lunchPlanEndDate,
+          breakfastPreference: existingStudent.breakfastPreference,
+          lunchPreference: existingStudent.lunchPreference,
+          breakfastSelectedWeekdays: existingStudent.breakfastSelectedWeekdays,
+          lunchSelectedWeekdays: existingStudent.lunchSelectedWeekdays,
+          // Keep the deprecated selectedWeekdays field for backward compatibility
+          selectedWeekdays: existingStudent.selectedWeekdays,
         );
       }
 
@@ -197,6 +205,14 @@ class StudentProfileService {
         hasActiveLunch: (planType == 'lunch' || planType == 'express')
             ? true
             : existingStudent.hasActiveLunch,
+        // Store start dates based on plan type
+        breakfastPlanStartDate: planType == 'breakfast'
+            ? startDate
+            : existingStudent.breakfastPlanStartDate,
+        lunchPlanStartDate: (planType == 'lunch' || planType == 'express')
+            ? startDate
+            : existingStudent.lunchPlanStartDate,
+        // Store end dates based on plan type
         breakfastPlanEndDate: planType == 'breakfast'
             ? endDate
             : existingStudent.breakfastPlanEndDate,
@@ -210,7 +226,16 @@ class StudentProfileService {
         lunchPreference: (planType == 'lunch' || planType == 'express')
             ? mealPreference
             : existingStudent.lunchPreference,
-        selectedWeekdays: selectedWeekdays ?? existingStudent.selectedWeekdays,
+        // Store selected weekdays in meal-specific fields
+        breakfastSelectedWeekdays: planType == 'breakfast'
+            ? selectedWeekdays
+            : existingStudent.breakfastSelectedWeekdays,
+        lunchSelectedWeekdays: (planType == 'lunch' || planType == 'express')
+            ? selectedWeekdays
+            : existingStudent.lunchSelectedWeekdays,
+        // Don't update the deprecated selectedWeekdays field when adding a new plan
+        // This prevents conflicts between breakfast and lunch weekday selections
+        selectedWeekdays: existingStudent.selectedWeekdays,
       );
 
       await _saveStudentProfiles();
@@ -228,17 +253,21 @@ class StudentProfileService {
       if (planType == 'breakfast') {
         updatedStudent = updatedStudent.copyWith(
           hasActiveBreakfast: false,
+          breakfastPlanStartDate: null,
           breakfastPlanEndDate: null,
         );
       } else if (planType == 'lunch' || planType == 'express') {
         updatedStudent = updatedStudent.copyWith(
           hasActiveLunch: false,
+          lunchPlanStartDate: null,
           lunchPlanEndDate: null,
         );
       } else if (planType == 'all') {
         updatedStudent = updatedStudent.copyWith(
           hasActiveBreakfast: false,
           hasActiveLunch: false,
+          breakfastPlanStartDate: null,
+          lunchPlanStartDate: null,
           breakfastPlanEndDate: null,
           lunchPlanEndDate: null,
         );
@@ -258,5 +287,48 @@ class StudentProfileService {
 
   Future<void> _saveStudentProfiles() async {
     await saveStudentProfiles();
+  }
+
+  // Debug method to verify meal plan weekday selections
+  void debugVerifyMealPlanWeekdays(String studentId) {
+    final student = getStudentById(studentId);
+    if (student != null) {
+      print('===== MEAL PLAN WEEKDAY DEBUG INFO =====');
+      print('Student: ${student.name} (ID: ${student.id})');
+      print('Has Breakfast Plan: ${student.hasActiveBreakfast}');
+      print('Has Lunch Plan: ${student.hasActiveLunch}');
+
+      print(
+          'Breakfast Selected Weekdays: ${student.breakfastSelectedWeekdays}');
+      print('Lunch Selected Weekdays: ${student.lunchSelectedWeekdays}');
+      print(
+          '(Deprecated) Generic Selected Weekdays: ${student.selectedWeekdays}');
+
+      if (student.hasActiveBreakfast &&
+          student.hasActiveLunch &&
+          student.breakfastSelectedWeekdays != null &&
+          student.lunchSelectedWeekdays != null) {
+        // Check if the weekdays are actually different
+        bool areWeekdaysDifferent = false;
+        if (student.breakfastSelectedWeekdays!.length !=
+            student.lunchSelectedWeekdays!.length) {
+          areWeekdaysDifferent = true;
+        } else {
+          // Compare contents regardless of order
+          final breakfastSet = Set.from(student.breakfastSelectedWeekdays!);
+          final lunchSet = Set.from(student.lunchSelectedWeekdays!);
+          areWeekdaysDifferent = !setEquals(breakfastSet, lunchSet);
+        }
+
+        print(
+            'Breakfast and Lunch have different weekday selections: $areWeekdaysDifferent');
+      }
+      print('========================================');
+    }
+  }
+
+  // Helper method to compare sets
+  bool setEquals<T>(Set<T> a, Set<T> b) {
+    return a.length == b.length && a.containsAll(b);
   }
 }

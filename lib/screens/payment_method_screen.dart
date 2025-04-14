@@ -8,6 +8,7 @@ import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/utils/meal_plan_validator.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/screens/payment_dummy_screens.dart';
+import 'package:intl/intl.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   final String planType;
@@ -133,7 +134,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${widget.selectedStudent.schoolName}',
+                              widget.selectedStudent.schoolName,
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w500,
                                 color: AppTheme.textDark,
@@ -141,7 +142,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'School Address',
+                              widget.selectedStudent.schoolAddress,
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 color: AppTheme.textMedium,
@@ -173,7 +174,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Meals will be delivered to your child at their school during scheduled lunch hours.',
+                            'Meals will be provided to your child at school during breakfast and lunch hours.',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: Colors.blue.shade700,
@@ -194,47 +195,79 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             const SizedBox(height: 24),
 
             // Order Summary
-            Text(
-              'Order Summary',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textDark,
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildSummaryItem('Plan Type', widget.planType.toUpperCase()),
-            _buildSummaryItem(
-                'Duration',
-                widget.isCustomPlan
-                    ? '${widget.mealDates.length} days custom plan'
-                    : '${widget.endDate.difference(widget.startDate).inDays + 1} days'),
-            _buildSummaryItem('Student', widget.selectedStudent.name),
-            _buildSummaryItem('School', widget.selectedStudent.schoolName),
-
-            const Divider(height: 32),
-
-            // Total amount
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Amount',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textDark,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Order Summary',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
+                    ),
                   ),
-                ),
-                Text(
-                  '₹${widget.totalAmount.toStringAsFixed(0)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.purple,
+                  const SizedBox(height: 16),
+                  _buildSummaryItem('Plan Type', widget.planType.toUpperCase()),
+                  _buildSummaryItem(
+                      'Duration',
+                      widget.isCustomPlan
+                          ? '${widget.mealDates.length} days custom plan'
+                          : '${widget.endDate.difference(widget.startDate).inDays + 1} days'),
+                  _buildSummaryItem('Student', widget.selectedStudent.name),
+                  _buildSummaryItem(
+                      'School', widget.selectedStudent.schoolName),
+                  _buildSummaryItem(
+                      'Meal Plan',
+                      widget.selectedMeals.isNotEmpty
+                          ? widget.selectedMeals.first.name
+                          : '${widget.mealType?.toUpperCase() ?? "Standard"} Meal Plan'),
+                  _buildSummaryItem(
+                      'Total Meals', '${widget.mealDates.length} meals'),
+                  _buildSummaryItem('Start Date',
+                      '${DateFormat('dd MMM yyyy').format(widget.startDate)}'),
+                  _buildSummaryItem('End Date',
+                      '${DateFormat('dd MMM yyyy').format(widget.endDate)}'),
+
+                  const Divider(height: 32),
+
+                  // Total amount
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Amount',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      Text(
+                        '₹${widget.totalAmount.toStringAsFixed(0)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.purple,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
 
             const SizedBox(height: 32),

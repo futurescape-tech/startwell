@@ -9,6 +9,7 @@ import 'package:startwell/utils/meal_plan_validator.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/screens/main_screen.dart';
 import 'package:startwell/screens/my_subscription_screen.dart';
+import 'package:intl/intl.dart';
 
 class PhonePeDummyScreen extends StatefulWidget {
   final String planType;
@@ -194,10 +195,14 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
 
       // If this is a breakfast or lunch plan (not express), use April 14, 2025 as start date
       DateTime actualStartDate = widget.startDate;
-      if (planType == 'breakfast' || planType == 'lunch') {
-        // Set standardized plan start date to April 14, 2025
-        actualStartDate = DateTime(2025, 4, 14);
-      }
+      // No longer override the start date - use the date selected by the user
+      // if (planType == 'breakfast' || planType == 'lunch') {
+      //   // Set standardized plan start date to April 14, 2025
+      //   actualStartDate = DateTime(2025, 4, 14);
+      // }
+
+      log('[DEBUG] Using actual start date in payment screen: ${DateFormat('yyyy-MM-dd').format(actualStartDate)}');
+      log('[DEBUG] Meal plan type: $planType');
 
       final success = await profileService.assignMealPlan(
         actualStartDate,
@@ -263,10 +268,11 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
 
                     // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
                     DateTime actualStartDate = widget.startDate;
-                    if (planType == 'breakfast' || planType == 'lunch') {
-                      // Set standardized plan start date to April 14, 2025
-                      actualStartDate = DateTime(2025, 4, 14);
-                    }
+                    // No longer override start date - use what was selected by the user
+                    // if (planType == 'breakfast' || planType == 'lunch') {
+                    //   // Set standardized plan start date to April 14, 2025
+                    //   actualStartDate = DateTime(2025, 4, 14);
+                    // }
 
                     // Navigate directly to MySubscriptionScreen with Upcoming Meals tab (index 0)
                     Navigator.pushAndRemoveUntil(
@@ -275,9 +281,7 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                         builder: (_) => MySubscriptionScreen(
                           defaultTabIndex: 0,
                           selectedStudentId: widget.selectedStudent.id,
-                          startDate: widget.startDate,
-
-                          // actualStartDate,
+                          startDate: actualStartDate,
                           endDate: widget.endDate,
                         ),
                       ),
@@ -517,10 +521,14 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
 
       // If this is a breakfast or lunch plan (not express), use April 14, 2025 as start date
       DateTime actualStartDate = widget.startDate;
-      if (planType == 'breakfast' || planType == 'lunch') {
-        // Set standardized plan start date to April 14, 2025
-        actualStartDate = DateTime(2025, 4, 14);
-      }
+      // No longer override the start date - use the date selected by the user
+      // if (planType == 'breakfast' || planType == 'lunch') {
+      //   // Set standardized plan start date to April 14, 2025
+      //   actualStartDate = DateTime(2025, 4, 14);
+      // }
+
+      log('[DEBUG] Using actual start date in payment screen: ${DateFormat('yyyy-MM-dd').format(actualStartDate)}');
+      log('[DEBUG] Meal plan type: $planType');
 
       final success = await profileService.assignMealPlan(
         actualStartDate,
@@ -584,10 +592,11 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
 
                     // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
                     DateTime actualStartDate = widget.startDate;
-                    if (planType == 'breakfast' || planType == 'lunch') {
-                      // Set standardized plan start date to April 14, 2025
-                      actualStartDate = DateTime(2025, 4, 14);
-                    }
+                    // No longer override start date - use what was selected by the user
+                    // if (planType == 'breakfast' || planType == 'lunch') {
+                    //   // Set standardized plan start date to April 14, 2025
+                    //   actualStartDate = DateTime(2025, 4, 14);
+                    // }
 
                     // Navigate directly to MySubscriptionScreen with Upcoming Meals tab (index 0)
                     Navigator.pushAndRemoveUntil(
@@ -838,10 +847,14 @@ class _StartwellWalletDummyScreenState
 
       // If this is a breakfast or lunch plan (not express), use April 14, 2025 as start date
       DateTime actualStartDate = widget.startDate;
-      if (planType == 'breakfast' || planType == 'lunch') {
-        // Set standardized plan start date to April 14, 2025
-        actualStartDate = DateTime(2025, 4, 14);
-      }
+      // No longer override the start date - use the date selected by the user
+      // if (planType == 'breakfast' || planType == 'lunch') {
+      //   // Set standardized plan start date to April 14, 2025
+      //   actualStartDate = DateTime(2025, 4, 14);
+      // }
+
+      log('[DEBUG] Using actual start date in payment screen: ${DateFormat('yyyy-MM-dd').format(actualStartDate)}');
+      log('[DEBUG] Meal plan type: $planType');
 
       final success = await profileService.assignMealPlan(
         actualStartDate,
@@ -905,10 +918,11 @@ class _StartwellWalletDummyScreenState
 
                     // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
                     DateTime actualStartDate = widget.startDate;
-                    if (planType == 'breakfast' || planType == 'lunch') {
-                      // Set standardized plan start date to April 14, 2025
-                      actualStartDate = DateTime(2025, 4, 14);
-                    }
+                    // No longer override start date - use what was selected by the user
+                    // if (planType == 'breakfast' || planType == 'lunch') {
+                    //   // Set standardized plan start date to April 14, 2025
+                    //   actualStartDate = DateTime(2025, 4, 14);
+                    // }
 
                     // Navigate directly to MySubscriptionScreen with Upcoming Meals tab (index 0)
                     Navigator.pushAndRemoveUntil(

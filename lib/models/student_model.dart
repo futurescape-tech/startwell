@@ -16,16 +16,36 @@ class Student {
   // Active plan information
   final bool hasActiveBreakfast;
   final bool hasActiveLunch;
+  final DateTime? breakfastPlanStartDate; // When breakfast plan starts
+  final DateTime? lunchPlanStartDate; // When lunch plan starts
   final DateTime? breakfastPlanEndDate;
   final DateTime? lunchPlanEndDate;
 
   // Meal preferences
   final String? breakfastPreference; // 'Indian', 'Jain', 'International', etc.
   final String? lunchPreference; // 'Indian', 'Jain', 'International', etc.
-  final List<int>? selectedWeekdays; // For custom plans: Mon-1, Tue-2, etc.
+
+  // Separate weekday selections for each meal type
+  final List<int>?
+      breakfastSelectedWeekdays; // For breakfast custom plans: Mon-1, Tue-2, etc.
+  final List<int>?
+      lunchSelectedWeekdays; // For lunch custom plans: Mon-1, Tue-2, etc.
+
+  // Deprecated - kept for backward compatibility
+  final List<int>? selectedWeekdays;
 
   // Getter to check if student has any active plan
   bool get hasActivePlan => hasActiveBreakfast || hasActiveLunch;
+
+  // Getter to get the appropriate selected weekdays based on meal type
+  List<int>? getSelectedWeekdaysForMealType(String mealType) {
+    if (mealType == 'breakfast') {
+      return breakfastSelectedWeekdays;
+    } else if (mealType == 'lunch' || mealType == 'express') {
+      return lunchSelectedWeekdays;
+    }
+    return null;
+  }
 
   Student({
     required this.id,
@@ -43,11 +63,15 @@ class Student {
     this.mealPlanEndDate,
     this.hasActiveBreakfast = false,
     this.hasActiveLunch = false,
+    this.breakfastPlanStartDate,
     this.breakfastPlanEndDate,
+    this.lunchPlanStartDate,
     this.lunchPlanEndDate,
     this.breakfastPreference,
     this.lunchPreference,
     this.selectedWeekdays,
+    this.breakfastSelectedWeekdays,
+    this.lunchSelectedWeekdays,
   });
 
   // Create a copy of the student with optional new values
@@ -62,7 +86,9 @@ class Student {
     String? schoolAddress,
     bool? hasActiveBreakfast,
     bool? hasActiveLunch,
+    DateTime? breakfastPlanStartDate,
     DateTime? breakfastPlanEndDate,
+    DateTime? lunchPlanStartDate,
     DateTime? lunchPlanEndDate,
     String? grade,
     String? section,
@@ -72,6 +98,8 @@ class Student {
     String? breakfastPreference,
     String? lunchPreference,
     List<int>? selectedWeekdays,
+    List<int>? breakfastSelectedWeekdays,
+    List<int>? lunchSelectedWeekdays,
   }) {
     return Student(
       id: id ?? this.id,
@@ -89,11 +117,18 @@ class Student {
       mealPlanEndDate: mealPlanEndDate ?? this.mealPlanEndDate,
       hasActiveBreakfast: hasActiveBreakfast ?? this.hasActiveBreakfast,
       hasActiveLunch: hasActiveLunch ?? this.hasActiveLunch,
+      breakfastPlanStartDate:
+          breakfastPlanStartDate ?? this.breakfastPlanStartDate,
       breakfastPlanEndDate: breakfastPlanEndDate ?? this.breakfastPlanEndDate,
+      lunchPlanStartDate: lunchPlanStartDate ?? this.lunchPlanStartDate,
       lunchPlanEndDate: lunchPlanEndDate ?? this.lunchPlanEndDate,
       breakfastPreference: breakfastPreference ?? this.breakfastPreference,
       lunchPreference: lunchPreference ?? this.lunchPreference,
       selectedWeekdays: selectedWeekdays ?? this.selectedWeekdays,
+      breakfastSelectedWeekdays:
+          breakfastSelectedWeekdays ?? this.breakfastSelectedWeekdays,
+      lunchSelectedWeekdays:
+          lunchSelectedWeekdays ?? this.lunchSelectedWeekdays,
     );
   }
 
@@ -115,11 +150,15 @@ class Student {
       'mealPlanEndDate': mealPlanEndDate?.toIso8601String(),
       'hasActiveBreakfast': hasActiveBreakfast,
       'hasActiveLunch': hasActiveLunch,
+      'breakfastPlanStartDate': breakfastPlanStartDate?.toIso8601String(),
       'breakfastPlanEndDate': breakfastPlanEndDate?.toIso8601String(),
+      'lunchPlanStartDate': lunchPlanStartDate?.toIso8601String(),
       'lunchPlanEndDate': lunchPlanEndDate?.toIso8601String(),
       'breakfastPreference': breakfastPreference,
       'lunchPreference': lunchPreference,
       'selectedWeekdays': selectedWeekdays,
+      'breakfastSelectedWeekdays': breakfastSelectedWeekdays,
+      'lunchSelectedWeekdays': lunchSelectedWeekdays,
     };
   }
 
@@ -143,8 +182,14 @@ class Student {
           : null,
       hasActiveBreakfast: json['hasActiveBreakfast'] as bool? ?? false,
       hasActiveLunch: json['hasActiveLunch'] as bool? ?? false,
+      breakfastPlanStartDate: json['breakfastPlanStartDate'] != null
+          ? DateTime.parse(json['breakfastPlanStartDate'] as String)
+          : null,
       breakfastPlanEndDate: json['breakfastPlanEndDate'] != null
           ? DateTime.parse(json['breakfastPlanEndDate'] as String)
+          : null,
+      lunchPlanStartDate: json['lunchPlanStartDate'] != null
+          ? DateTime.parse(json['lunchPlanStartDate'] as String)
           : null,
       lunchPlanEndDate: json['lunchPlanEndDate'] != null
           ? DateTime.parse(json['lunchPlanEndDate'] as String)
@@ -153,6 +198,12 @@ class Student {
       lunchPreference: json['lunchPreference'] as String?,
       selectedWeekdays: json['selectedWeekdays'] != null
           ? List<int>.from(json['selectedWeekdays'] as List)
+          : null,
+      breakfastSelectedWeekdays: json['breakfastSelectedWeekdays'] != null
+          ? List<int>.from(json['breakfastSelectedWeekdays'] as List)
+          : null,
+      lunchSelectedWeekdays: json['lunchSelectedWeekdays'] != null
+          ? List<int>.from(json['lunchSelectedWeekdays'] as List)
           : null,
     );
   }

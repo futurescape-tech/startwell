@@ -25,7 +25,7 @@ class MealPlanValidator {
   /// Validate if a meal plan can be assigned to a student
   /// Returns null if valid, or an error message if invalid
   static String? validateMealPlan(Student student, String selectedPlanType) {
-    final bool isExpress = selectedPlanType == 'express';
+    // Rule: Students can't have both breakfast and lunch plans simultaneously
     final bool hasBothPlans =
         student.hasActiveBreakfast && student.hasActiveLunch;
 
@@ -34,24 +34,29 @@ class MealPlanValidator {
       return 'Student ${student.name} already has an active breakfast and lunch meal plan. You can choose a new plan once the current one ends.';
     }
 
-    // If selecting breakfast and student already has breakfast plan (not both plans)
+    // Rule: Students with active breakfast plans can only select lunch plans
+    // If selecting breakfast and student already has breakfast plan
     if (selectedPlanType == 'breakfast' && student.hasActiveBreakfast) {
       return 'Student ${student.name} already has an active breakfast meal plan. You can choose a new breakfast plan once the current one ends. You can still select a lunch plan for this student.';
     }
 
-    // If selecting lunch and student already has lunch plan (not both plans)
+    // Rule: Students with active lunch plans can only select breakfast plans
+    // If selecting lunch and student already has lunch plan
     if (selectedPlanType == 'lunch' && student.hasActiveLunch) {
       return 'Student ${student.name} already has an active lunch meal plan. You can choose a new lunch plan once the current one ends. You can still select a breakfast plan for this student.';
     }
 
-    if (isExpress) {
-      final now = DateTime.now().toLocal();
-      final isAllowedWindow = now.hour >= 0 && now.hour < 8;
+    // Rule: Express 1-Day plans can only be selected between 12:00 AM and 8:00 AM
+    // Rule: Express plans can't be selected if a student already has an active lunch plan
+    if (selectedPlanType == 'express') {
+      // Check time restriction
+      if (!isWithinExpressWindow()) {
+        return 'Express 1-Day plan can only be selected between 12:00 AM and 8:00 AM IST.';
+      }
+
+      // Check active lunch plan restriction
       if (student.hasActiveLunch) {
         return 'Student ${student.name} already has an active lunch meal plan. You cannot select an Express 1-Day plan until the current one ends.';
-      }
-      if (!isAllowedWindow) {
-        return 'Express 1-Day plan can only be selected between 12:00 AM and 8:00 AM IST.';
       }
     }
 

@@ -2,74 +2,131 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:intl/intl.dart';
+import 'package:startwell/models/subscription_model.dart';
+import 'dart:developer';
 
 class DeliveredMealsTab extends StatefulWidget {
-  const DeliveredMealsTab({Key? key}) : super(key: key);
+  final String? studentId;
+
+  const DeliveredMealsTab({
+    Key? key,
+    this.studentId,
+  }) : super(key: key);
 
   @override
   State<DeliveredMealsTab> createState() => _DeliveredMealsTabState();
 }
 
 class _DeliveredMealsTabState extends State<DeliveredMealsTab> {
-  final List<Map<String, dynamic>> _deliveredMeals = [
-    {
-      'date': DateTime.now().subtract(const Duration(days: 1)),
-      'title': 'Indian Lunch',
-      'deliveryTime': '12:30 PM',
-      'isReviewed': true,
-      'rating': 4,
-    },
-    {
-      'date': DateTime.now().subtract(const Duration(days: 2)),
-      'title': 'International Breakfast',
-      'deliveryTime': '7:45 AM',
-      'isReviewed': false,
-      'rating': 0,
-    },
-    {
-      'date': DateTime.now().subtract(const Duration(days: 3)),
-      'title': 'Indian Breakfast',
-      'deliveryTime': '7:45 AM',
-      'isReviewed': true,
-      'rating': 5,
-    },
-    {
-      'date': DateTime.now().subtract(const Duration(days: 4)),
-      'title': 'Lunch of the Day',
-      'deliveryTime': '12:30 PM',
-      'isReviewed': false,
-      'rating': 0,
-    },
-    {
-      'date': DateTime.now().subtract(const Duration(days: 5)),
-      'title': 'Jain Lunch',
-      'deliveryTime': '12:30 PM',
-      'isReviewed': true,
-      'rating': 3,
-    },
-  ];
+  List<Map<String, dynamic>> _deliveredMeals = [];
+  bool _isLoading = true;
+  final SubscriptionService _subscriptionService = SubscriptionService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeliveredMeals();
+  }
+
+  Future<void> _loadDeliveredMeals() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // In a real app, this would load delivered meals from the service
+      // When implemented, uncomment the line below:
+      // final deliveredMeals = await _subscriptionService.getDeliveredMeals(widget.studentId);
+
+      // For now, just show empty state
+      await Future.delayed(Duration(milliseconds: 800));
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          // When implemented, uncomment the line below:
+          // _deliveredMeals = deliveredMeals;
+        });
+      }
+    } catch (e) {
+      log('Error loading delivered meals: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     if (_deliveredMeals.isEmpty) {
       return Center(
-        child: Text(
-          "No meals yet in this category.",
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            color: AppTheme.textMedium,
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "No delivered meals yet",
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Your meal delivery history will appear here",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppTheme.textMedium,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadDeliveredMeals,
+              icon: const Icon(Icons.refresh),
+              label: Text(
+                'Refresh',
+                style: GoogleFonts.poppins(),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.purple,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: _deliveredMeals.length,
-      itemBuilder: (context, index) {
-        final meal = _deliveredMeals[index];
-        return _buildDeliveredMealCard(meal);
-      },
+    return RefreshIndicator(
+      onRefresh: _loadDeliveredMeals,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        itemCount: _deliveredMeals.length,
+        itemBuilder: (context, index) {
+          final meal = _deliveredMeals[index];
+          return _buildDeliveredMealCard(meal);
+        },
+      ),
     );
   }
 

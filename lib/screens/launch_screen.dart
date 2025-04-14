@@ -127,30 +127,6 @@ class _LaunchScreenState extends State<LaunchScreen>
                 ),
                 SizedBox(height: screenHeight * 0.02),
 
-                // App one-liner with animations
-                AnimatedOpacity(
-                  opacity: _showTitle ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 1000),
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedSlide(
-                    offset:
-                        _showTitle ? const Offset(0, 0) : const Offset(0, 0.2),
-                    duration: const Duration(milliseconds: 1000),
-                    curve: Curves.easeOutCubic,
-                    child: Text(
-                      "Welcome to StartWell – Smart Tiffin Solutions for Smart Parents!",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: screenHeight * 0.02),
-
                 // Welcome message with animations
                 AnimatedOpacity(
                   opacity: _showMessage ? 1.0 : 0.0,
@@ -170,7 +146,7 @@ class _LaunchScreenState extends State<LaunchScreen>
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Smart Tiffin Solutions for Smart Parents',
+                        'Welcome to StartWell – Smart Tiffin Solutions for Smart Parents!',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
                           fontSize: 16,

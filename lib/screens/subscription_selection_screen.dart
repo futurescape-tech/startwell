@@ -121,26 +121,25 @@ class _SubscriptionSelectionScreenState
       _isCustomPlan = false; // Regular plan mode
     }
 
-    // Set first available date - ensure it's not later than today for express orders
+    // Set first available date
     final now = DateTime.now();
+    _firstAvailableDate = _getNextWeekday(now);
 
-    // For express orders, handle the date constraints differently
-    if (widget.isExpressOrder) {
+    // For regular orders, use the next available weekday as start date
+    if (!widget.isExpressOrder) {
+      _startDate = _firstAvailableDate;
+    } else {
+      // For express orders, calculate the appropriate day based on express window
       final bool isExpressWindowOpen = isWithinExpressWindow();
 
-      // If express window is open (before 8 AM), allow today's date, otherwise tomorrow
+      // If express window is open and it's a weekday, use today
       if (isExpressWindowOpen && now.weekday <= 5) {
         _firstAvailableDate = DateTime(now.year, now.month, now.day);
         _startDate = _firstAvailableDate;
       } else {
-        // Next weekday for delivery
-        _firstAvailableDate = _getNextWeekday(now);
+        // Otherwise use the next weekday
         _startDate = _firstAvailableDate;
       }
-    } else {
-      // Normal flow for non-express orders
-      _firstAvailableDate = _getNextWeekday(now);
-      _startDate = _firstAvailableDate;
     }
 
     // Set focused date to start date
@@ -343,7 +342,20 @@ class _SubscriptionSelectionScreenState
   void _calculateExpressMealDates() {
     _mealDates.clear();
 
-    // For express orders, just add the start date (today or next available day)
+    // For express orders, always use a fixed date - either today (if in express window)
+    // or the next available weekday
+    final now = DateTime.now();
+    final bool isExpressWindowOpen = isWithinExpressWindow();
+
+    // If express window is open and it's a weekday, use today
+    if (isExpressWindowOpen && now.weekday <= 5) {
+      _startDate = DateTime(now.year, now.month, now.day);
+    } else {
+      // Otherwise use the next weekday
+      _startDate = _getNextWeekday(now);
+    }
+
+    // Always use just one date - the fixed express date
     _mealDates.add(_startDate);
     _endDate = _startDate;
 
@@ -1173,115 +1185,139 @@ class _SubscriptionSelectionScreenState
                                 : AppTheme.purple,
                           ),
                           const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _isCustomPlan &&
-                                        _selectedWeekdays
-                                            .where((day) => day)
-                                            .isEmpty
-                                    ? "No weekdays selected"
-                                    : _getFormattedStartDate(),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: _isCustomPlan
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                  color: AppTheme.textDark,
-                                ),
-                              ),
-                              if (widget.isExpressOrder)
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  'Start date is locked for same-day express delivery',
+                                  _isCustomPlan &&
+                                          _selectedWeekdays
+                                              .where((day) => day)
+                                              .isEmpty
+                                      ? "No weekdays selected"
+                                      : _getFormattedStartDate(),
                                   style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                    color: Colors.orange,
+                                    fontSize: 14,
+                                    fontWeight: _isCustomPlan
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                    color: AppTheme.textDark,
                                   ),
                                 ),
-                              if (_isCustomPlan &&
-                                  !_selectedWeekdays
-                                      .where((day) => day)
-                                      .isEmpty)
-                                Text(
-                                  'Based on earliest selected weekday',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                    color: AppTheme.purple,
+                                if (widget.isExpressOrder)
+                                  Text(
+                                    'Start date is locked for same-day express delivery',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color: Colors.orange,
+                                    ),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
                                   ),
-                                ),
-                            ],
-                          ),
-                          const Spacer(),
-                          Visibility(
-                            visible: !widget.isExpressOrder,
-                            child: TextButton(
-                              onPressed: () async {
-                                final selectedDate = await showDatePicker(
-                                  context: context,
-                                  initialDate: _startDate,
-                                  firstDate: _firstAvailableDate,
-                                  lastDate: DateTime.now()
-                                      .add(const Duration(days: 90)),
-                                  selectableDayPredicate: (DateTime date) {
-                                    // Only allow weekdays (Monday to Friday)
-                                    return date.weekday <= 5;
-                                  },
-                                );
-
-                                if (selectedDate != null) {
-                                  setState(() {
-                                    // For custom plan, use the smart start date calculation
-                                    if (_isCustomPlan) {
-                                      _startDate = calculateCustomPlanStartDate(
-                                        selectedStartDate: selectedDate,
-                                        selectedWeekdays:
-                                            _getSelectedWeekdayIndexes(),
-                                      );
-                                    } else {
-                                      _startDate = selectedDate;
-                                    }
-
-                                    _focusedCalendarDate = _startDate;
-
-                                    // If in custom mode, only allow selected weekdays
-                                    if (_isCustomPlan &&
-                                        !_selectedWeekdays[
-                                            selectedDate.weekday - 1]) {
-                                      // Show an error message
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Selected date doesn\'t match your weekday preferences. Adjusting selections.',
-                                            style: GoogleFonts.poppins(),
-                                          ),
-                                          backgroundColor: Colors.orange,
-                                        ),
-                                      );
-
-                                      // Enable the selected weekday
-                                      _selectedWeekdays[
-                                          selectedDate.weekday - 1] = true;
-                                    }
-
-                                    // Recalculate meal dates with new start date
-                                    _calculateMealDates();
-                                  });
-                                }
-                              },
-                              child: Text(
-                                'Change',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppTheme.purple,
-                                ),
-                              ),
+                                if (_isCustomPlan &&
+                                    !_selectedWeekdays
+                                        .where((day) => day)
+                                        .isEmpty)
+                                  Text(
+                                    'Based on earliest selected weekday',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      fontStyle: FontStyle.italic,
+                                      color: AppTheme.purple,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
+                          const Spacer(),
+                          widget.isExpressOrder
+                              ? Tooltip(
+                                  message:
+                                      'Date cannot be changed for Express 1-Day orders',
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Locked',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : TextButton(
+                                  onPressed: () async {
+                                    final selectedDate = await showDatePicker(
+                                      context: context,
+                                      initialDate: _startDate,
+                                      firstDate: _firstAvailableDate,
+                                      lastDate: DateTime.now()
+                                          .add(const Duration(days: 90)),
+                                      selectableDayPredicate: (DateTime date) {
+                                        // Only allow weekdays (Monday to Friday)
+                                        return date.weekday <= 5;
+                                      },
+                                    );
+
+                                    if (selectedDate != null) {
+                                      setState(() {
+                                        // For custom plan, use the smart start date calculation
+                                        if (_isCustomPlan) {
+                                          _startDate =
+                                              calculateCustomPlanStartDate(
+                                            selectedStartDate: selectedDate,
+                                            selectedWeekdays:
+                                                _getSelectedWeekdayIndexes(),
+                                          );
+                                        } else {
+                                          _startDate = selectedDate;
+                                        }
+
+                                        _focusedCalendarDate = _startDate;
+
+                                        // If in custom mode, only allow selected weekdays
+                                        if (_isCustomPlan &&
+                                            !_selectedWeekdays[
+                                                selectedDate.weekday - 1]) {
+                                          // Show an error message
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Selected date doesn\'t match your weekday preferences. Adjusting selections.',
+                                                style: GoogleFonts.poppins(),
+                                              ),
+                                              backgroundColor: Colors.orange,
+                                            ),
+                                          );
+
+                                          // Enable the selected weekday
+                                          _selectedWeekdays[
+                                              selectedDate.weekday - 1] = true;
+                                        }
+
+                                        // Recalculate meal dates with new start date
+                                        _calculateMealDates();
+                                      });
+                                    }
+                                  },
+                                  child: Text(
+                                    'Change',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.purple,
+                                    ),
+                                  ),
+                                ),
                         ],
                       ),
                     ],
@@ -1402,7 +1438,9 @@ class _SubscriptionSelectionScreenState
                             _focusedCalendarDate = focusedDay;
                           });
                         },
-                        onDaySelected: _onDaySelected,
+                        // Disable day selection for express orders
+                        onDaySelected:
+                            widget.isExpressOrder ? null : _onDaySelected,
                         eventLoader: (day) {
                           // Return a list with 1 item if the day has a meal, empty list otherwise
                           return _hasMealOnDate(day) ? [day] : [];
@@ -1422,17 +1460,11 @@ class _SubscriptionSelectionScreenState
                         ),
                         // Specify which days are enabled
                         enabledDayPredicate: (day) {
-                          // For express orders, only enable today or next day depending on express window
+                          // For express orders, only enable the selected day and disable all others
                           if (widget.isExpressOrder) {
-                            final bool isExpressWindowOpen =
-                                isWithinExpressWindow();
-                            // If in express window, allow today, otherwise only allow future days
-                            return isExpressWindowOpen
-                                ? day.isAfter(DateTime.now()
-                                        .subtract(const Duration(days: 1))) &&
-                                    day.weekday <= 5
-                                : day.isAfter(DateTime.now()) &&
-                                    day.weekday <= 5;
+                            return day.year == _startDate.year &&
+                                day.month == _startDate.month &&
+                                day.day == _startDate.day;
                           }
                           // For regular orders, only enable weekdays
                           return day.weekday <= 5;
@@ -1504,6 +1536,18 @@ class _SubscriptionSelectionScreenState
                           _buildWeekdayCircle('S', false, disabled: true),
                         ],
                       ),
+                      if (widget.isExpressOrder)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Text(
+                            'Express 1-Day orders are fixed for the selected delivery date only',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -1742,31 +1786,53 @@ class _SubscriptionSelectionScreenState
     );
   }
 
-  Widget _buildWeekdayCircle(String day, bool isSelected,
+  Widget _buildWeekdayCircle(String text, bool isSelected,
       {bool disabled = false}) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: disabled
-            ? Colors.grey.shade200
-            : (isSelected ? AppTheme.purple : Colors.white),
-        border: Border.all(
-          color: disabled
-              ? Colors.grey.shade300
-              : (isSelected ? AppTheme.purple : Colors.grey.shade300),
-        ),
-      ),
-      child: Center(
-        child: Text(
-          day,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: disabled
-                ? Colors.grey.shade400
-                : (isSelected ? Colors.white : AppTheme.textMedium),
+    final bool isForExpress = widget.isExpressOrder;
+
+    final Color bgColor = isSelected
+        ? (isForExpress ? Colors.grey.shade400 : AppTheme.purple)
+        : Colors.transparent;
+    final Color borderColor = isSelected
+        ? (isForExpress ? Colors.grey.shade400 : AppTheme.purple)
+        : AppTheme.purple;
+    final Color textColor =
+        isSelected ? Colors.white : (disabled ? Colors.grey : AppTheme.purple);
+
+    return GestureDetector(
+      onTap: disabled || isForExpress
+          ? null
+          : () => _toggleWeekday(_weekdayNames.indexOf(text == 'M'
+              ? 'Monday'
+              : text == 'T' && _weekdayNames.indexOf('Tuesday') >= 0
+                  ? 'Tuesday'
+                  : text == 'W'
+                      ? 'Wednesday'
+                      : text == 'T' && _weekdayNames.indexOf('Thursday') >= 0
+                          ? 'Thursday'
+                          : 'Friday')),
+      child: Tooltip(
+        message: isForExpress
+            ? 'Day selection locked for Express orders'
+            : (disabled ? 'Weekend deliveries not available' : ''),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: bgColor,
+            border: Border.all(
+                color: disabled ? Colors.grey.shade300 : borderColor,
+                width: 1.5),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(
+                color: disabled ? Colors.grey.shade400 : textColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ),
       ),

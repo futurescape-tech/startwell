@@ -2,6 +2,10 @@ import 'package:intl/intl.dart';
 import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/models/student_model.dart';
 import 'package:startwell/utils/date_utils.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:developer' as dev;
+import 'dart:math';
 
 enum SubscriptionStatus { active, paused, cancelled, expired }
 
@@ -12,6 +16,15 @@ enum SubscriptionDuration {
   quarterly,
   halfYearly,
   annual
+}
+
+// Helper class to store subscription with delivery data
+class _SubscriptionWithDeliveryData {
+  final String id;
+  final List<DateTime> deliveryDates = [];
+  final List<DateTime> cancelledDates = [];
+
+  _SubscriptionWithDeliveryData(this.id);
 }
 
 class Subscription {
@@ -26,6 +39,9 @@ class Subscription {
   final List<int>
       selectedWeekdays; // 1-7 for Monday-Sunday, empty for daily delivery
 
+  // Track cancelled dates - dates when meals were cancelled
+  final List<DateTime> _cancelledDates = [];
+
   Subscription({
     required this.id,
     required this.studentId,
@@ -37,6 +53,34 @@ class Subscription {
     this.duration = SubscriptionDuration.monthly,
     this.selectedWeekdays = const [], // Empty means all weekdays (Mon-Fri)
   });
+
+  // Add a date to the cancelled dates list
+  void addCancelledDate(DateTime date) {
+    // Normalize the date to avoid time comparison issues
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+
+    // Check if this date is already marked as cancelled
+    if (!isCancelledForDate(normalizedDate)) {
+      _cancelledDates.add(normalizedDate);
+      dev.log(
+          'Added cancelled date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)} for subscription: $id');
+    }
+  }
+
+  // Check if the subscription has a cancelled meal for a specific date
+  bool isCancelledForDate(DateTime date) {
+    // Normalize the date to avoid time comparison issues
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+
+    // Check if this date exists in the cancelled dates list
+    return _cancelledDates.any((d) =>
+        d.year == normalizedDate.year &&
+        d.month == normalizedDate.month &&
+        d.day == normalizedDate.day);
+  }
+
+  // Get all cancelled dates
+  List<DateTime> get cancelledDates => List.unmodifiable(_cancelledDates);
 
   // Calculate the next delivery date based on subscription plan
   DateTime get nextDeliveryDate {
@@ -228,12 +272,24 @@ class SubscriptionService {
     return _instance;
   }
 
-  SubscriptionService._internal();
+  SubscriptionService._internal() {
+    // Initialize with empty subscriptions list to avoid null issues
+    _subscriptions.clear();
+  }
+
+  // A temporary storage for cancelled meals - in a real app this would be in a database
+  static final List<Map<String, dynamic>> _cancelledMealsHistory = [];
+
+  // A temporary storage for subscriptions with delivery dates and cancelled dates
+  static final List<_SubscriptionWithDeliveryData> _subscriptions = [];
 
   // Convert Duration to SubscriptionDuration enum based on end date
   SubscriptionDuration _getDurationFromEndDate(
       DateTime startDate, DateTime endDate) {
     final int days = endDate.difference(startDate).inDays;
+
+    // Log for debugging purposes
+    dev.log('Calculating duration: days between start and end: $days');
 
     if (days <= 1) {
       return SubscriptionDuration.singleDay;
@@ -280,16 +336,46 @@ class SubscriptionService {
     }
   }
 
-  // Extract custom weekdays from the student model if available
-  List<int> _getCustomWeekdaysFromStudent(Student student) {
-    // If student has custom weekdays set, use them
-    if (student.selectedWeekdays != null &&
-        student.selectedWeekdays!.isNotEmpty) {
-      return List<int>.from(student.selectedWeekdays!);
+  // Extract custom weekdays from the student model if available based on meal type
+  List<int> _getCustomWeekdaysFromStudent(Student student, String planType) {
+    // Use the proper weekday selection based on plan type
+    if (planType == 'breakfast') {
+      if (student.breakfastSelectedWeekdays != null &&
+          student.breakfastSelectedWeekdays!.isNotEmpty) {
+        // Use breakfast-specific weekdays
+        dev.log(
+            'Using breakfast-specific weekdays: ${student.breakfastSelectedWeekdays}');
+        return List<int>.from(student.breakfastSelectedWeekdays!);
+      }
+    } else if (planType == 'lunch' || planType == 'express') {
+      if (student.lunchSelectedWeekdays != null &&
+          student.lunchSelectedWeekdays!.isNotEmpty) {
+        // Use lunch-specific weekdays
+        dev.log(
+            'Using lunch-specific weekdays: ${student.lunchSelectedWeekdays}');
+        return List<int>.from(student.lunchSelectedWeekdays!);
+      }
+    }
+
+    // Only fall back to the deprecated field for students created before the meal-specific fields
+    // Only if the meal-specific fields don't exist (not just empty)
+    if ((planType == 'breakfast' &&
+            student.breakfastSelectedWeekdays == null) ||
+        ((planType == 'lunch' || planType == 'express') &&
+            student.lunchSelectedWeekdays == null)) {
+      if (student.selectedWeekdays != null &&
+          student.selectedWeekdays!.isNotEmpty) {
+        // For backward compatibility, use the generic field
+        dev.log(
+            'Using generic weekdays (backward compatibility): ${student.selectedWeekdays}');
+        return List<int>.from(student.selectedWeekdays!);
+      }
     }
 
     // If no custom weekdays are specified, default to Mon-Fri (1-5)
     // for standard meal plans
+    dev.log(
+        'No custom weekdays found, using empty list (all weekdays Monday-Friday)');
     return []; // Empty list indicates standard weekday delivery (Mon-Fri)
   }
 
@@ -308,17 +394,23 @@ class SubscriptionService {
       orElse: () => throw Exception('Student not found'),
     );
 
-    // Create subscriptions based on actual student meal plans
-    final now = DateTime.now();
-    final List<Subscription> subscriptions = [];
+    dev.log('Student: ${student.name}, ID: ${student.id}');
+    dev.log(
+        'Student has breakfast plan: ${student.hasActiveBreakfast}, breakfast end date: ${student.breakfastPlanEndDate}');
+    dev.log(
+        'Student has lunch plan: ${student.hasActiveLunch}, lunch end date: ${student.lunchPlanEndDate}');
 
-    // Get custom weekdays if any
-    final customWeekdays = _getCustomWeekdaysFromStudent(student);
+    // Create subscriptions based on actual student meal plans
+    final List<Subscription> subscriptions = [];
 
     // Add breakfast subscription if active
     if (student.hasActiveBreakfast && student.breakfastPlanEndDate != null) {
-      final duration =
-          _getDurationFromEndDate(now, student.breakfastPlanEndDate!);
+      // Try to use the stored start date if available, otherwise use current date
+      final DateTime subscriptionStartDate =
+          student.breakfastPlanStartDate ?? DateTime.now();
+
+      final duration = _getDurationFromEndDate(
+          subscriptionStartDate, student.breakfastPlanEndDate!);
 
       // Use the explicit meal type if it's set, otherwise use a default
       String preferredMealStyle = student.breakfastPreference ?? 'Indian';
@@ -326,48 +418,124 @@ class SubscriptionService {
       final mealName =
           _getMealNameFromPlanType('breakfast', preferredMealStyle);
 
-      subscriptions.add(Subscription(
+      // Get breakfast-specific weekdays
+      final breakfastWeekdays =
+          _getCustomWeekdaysFromStudent(student, 'breakfast');
+      dev.log('Breakfast weekdays: $breakfastWeekdays');
+
+      dev.log(
+          'Breakfast Subscription Start Date: $subscriptionStartDate, End Date: ${student.breakfastPlanEndDate}, Duration: $duration');
+
+      final subscription = Subscription(
         id: 'breakfast-${student.id}',
         studentId: student.id,
         planType: 'breakfast',
         mealName: mealName,
-        startDate: now,
+        startDate: subscriptionStartDate,
         endDate: student.breakfastPlanEndDate!,
         duration: duration,
-        selectedWeekdays: customWeekdays,
-      ));
+        selectedWeekdays: breakfastWeekdays,
+      );
+
+      dev.log(
+          'Adding breakfast subscription: ${subscription.id}, start: ${subscription.startDate}, end: ${subscription.endDate}');
+      subscriptions.add(subscription);
     }
 
     // Add lunch or express subscription if active
     if (student.hasActiveLunch && student.lunchPlanEndDate != null) {
       final planType = student.mealPlanType == 'express' ? 'express' : 'lunch';
-      final duration = _getDurationFromEndDate(now, student.lunchPlanEndDate!);
+
+      // Try to use the stored start date if available, otherwise use current date
+      DateTime subscriptionStartDate =
+          student.lunchPlanStartDate ?? DateTime.now();
+
+      final duration = _getDurationFromEndDate(
+          subscriptionStartDate, student.lunchPlanEndDate!);
 
       // Use the explicit meal type if it's set, otherwise use a default
       String preferredMealStyle = student.lunchPreference ?? 'Indian';
 
       final mealName = _getMealNameFromPlanType(planType, preferredMealStyle);
 
-      subscriptions.add(Subscription(
+      // Get lunch-specific weekdays
+      final lunchWeekdays = _getCustomWeekdaysFromStudent(student, planType);
+      dev.log('Lunch/Express weekdays: $lunchWeekdays');
+
+      dev.log(
+          '${planType} Subscription Start Date: $subscriptionStartDate, End Date: ${student.lunchPlanEndDate}, Duration: $duration');
+
+      final subscription = Subscription(
         id: '$planType-${student.id}',
         studentId: student.id,
         planType: planType,
         mealName: mealName,
-        startDate: now,
+        startDate: subscriptionStartDate,
         endDate: student.lunchPlanEndDate!,
         duration: duration,
-        selectedWeekdays: customWeekdays,
-      ));
+        selectedWeekdays: lunchWeekdays,
+      );
+
+      dev.log(
+          'Adding ${planType} subscription: ${subscription.id}, start: ${subscription.startDate}, end: ${subscription.endDate}');
+      subscriptions.add(subscription);
     }
 
     // If no active subscriptions are found from the student model,
     // fall back to mock data for demo purposes
     if (subscriptions.isEmpty) {
+      dev.log('No active subscriptions found, creating demo subscriptions');
       // Create meaningful demo subscriptions with realistic meal items
       _createDemoSubscriptions(studentId, subscriptions);
+    } else {
+      dev.log('Total active subscriptions: ${subscriptions.length}');
+      for (final sub in subscriptions) {
+        dev.log(
+            'Subscription: ID=${sub.id}, startDate=${sub.startDate}, planType=${sub.planType}');
+      }
     }
 
+    // Fix any subscriptions with incorrect duration values
+    _fixSubscriptionDurations(subscriptions);
+
     return subscriptions;
+  }
+
+  // Helper method to fix any incorrect durations in subscriptions
+  void _fixSubscriptionDurations(List<Subscription> subscriptions) {
+    for (int i = 0; i < subscriptions.length; i++) {
+      final subscription = subscriptions[i];
+
+      // Recalculate the correct duration based on actual dates
+      final int days =
+          subscription.endDate.difference(subscription.startDate).inDays;
+      SubscriptionDuration correctDuration;
+
+      if (days <= 1) {
+        correctDuration = SubscriptionDuration.singleDay;
+      } else if (days <= 7) {
+        correctDuration = SubscriptionDuration.weekly;
+      } else if (days <= 31) {
+        correctDuration = SubscriptionDuration.monthly;
+      } else if (days <= 90) {
+        correctDuration = SubscriptionDuration.quarterly;
+      } else if (days <= 180) {
+        correctDuration = SubscriptionDuration.halfYearly;
+      } else {
+        correctDuration = SubscriptionDuration.annual;
+      }
+
+      // If duration is wrong, fix it by creating a new subscription
+      if (subscription.duration != correctDuration) {
+        dev.log(
+            '🔄 Fixing incorrect duration for subscription ${subscription.id}');
+        dev.log(
+            '🔄 Original duration: ${subscription.duration}, Correct duration: $correctDuration');
+
+        // Create copy with corrected duration
+        subscriptions[i] = subscription.copyWith(duration: correctDuration);
+      }
+    }
   }
 
   // Helper method to create demo subscriptions
@@ -377,6 +545,10 @@ class SubscriptionService {
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
     final oneMonthLater = DateTime(now.year, now.month + 1, now.day);
     final oneWeekLater = DateTime(now.year, now.month, now.day + 7);
+
+    // Explicitly calculate the correct duration based on days
+    final weeklyDuration = _getDurationFromEndDate(now, oneWeekLater);
+    final monthlyDuration = _getDurationFromEndDate(now, oneMonthLater);
 
     // Create different combinations of subscriptions for demo purposes
     // Format: studentId ending with:
@@ -395,7 +567,8 @@ class SubscriptionService {
         mealName: 'Indian Breakfast',
         startDate: now,
         endDate: oneMonthLater,
-        duration: SubscriptionDuration.monthly,
+        duration:
+            monthlyDuration, // Use the calculated duration instead of hardcoded
       ));
 
       subscriptions.add(Subscription(
@@ -405,7 +578,8 @@ class SubscriptionService {
         mealName: 'Jain Lunch',
         startDate: now,
         endDate: oneMonthLater,
-        duration: SubscriptionDuration.monthly,
+        duration:
+            monthlyDuration, // Use the calculated duration instead of hardcoded
       ));
     } else if (studentId.endsWith('2')) {
       // Scenario 2: Student has only Express plan
@@ -427,7 +601,8 @@ class SubscriptionService {
         mealName: 'International Breakfast',
         startDate: now,
         endDate: oneWeekLater,
-        duration: SubscriptionDuration.weekly,
+        duration:
+            weeklyDuration, // Use the calculated duration instead of hardcoded
         selectedWeekdays: [1, 3, 5], // Mon, Wed, Fri only
       ));
     }
@@ -443,9 +618,286 @@ class SubscriptionService {
 
   // Cancel a meal delivery for a specific date
   Future<bool> cancelMealDelivery(String subscriptionId, DateTime date) async {
+    try {
+      // Normalize the date to avoid time issues (remove time component)
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+
+      // Log detailed cancellation info
+      dev.log('========== CANCELLING MEAL ==========');
+      dev.log('Subscription ID: $subscriptionId');
+      dev.log('Date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
+
+      // Extract student ID directly from subscription ID format
+      // Format is typically planType-studentId or planType-timestamp
+      String studentId = 'unknown';
+      String planType = 'lunch';
+      String mealName = 'Standard Meal';
+
+      try {
+        final parts = subscriptionId.split('-');
+        if (parts.length >= 2) {
+          planType = parts[0]; // breakfast, lunch, express
+          studentId = parts.sublist(1).join('-');
+          mealName = planType == 'breakfast'
+              ? 'Breakfast of the Day'
+              : 'Standard Lunch';
+
+          dev.log('Extracted from ID - Plan Type: $planType');
+          dev.log('Extracted from ID - Student ID: $studentId');
+        }
+      } catch (e) {
+        dev.log('Error parsing subscription ID format: $e');
+      }
+
+      // Find the actual subscription details if available
+      final actualSubscription = await _getSubscriptionById(subscriptionId);
+
+      // Use extracted values from the subscription if available
+      if (actualSubscription.studentId != 'unknown') {
+        studentId = actualSubscription.studentId;
+        dev.log('Using studentId from subscription lookup: $studentId');
+      }
+
+      planType = actualSubscription.planType;
+      mealName = actualSubscription.mealName;
+
+      // Try to get student profile information
+      Student? studentProfile;
+      try {
+        studentProfile =
+            await StudentProfileService().getStudentById(studentId);
+        dev.log(
+            'Found student profile: ${studentProfile?.name ?? "Not found"}');
+      } catch (e) {
+        dev.log('Error getting student profile: $e');
+      }
+
+      // Create a detailed cancellation record
+      final cancellationRecord = {
+        'id': '${subscriptionId}_${normalizedDate.millisecondsSinceEpoch}',
+        'subscriptionId': subscriptionId,
+        'studentId': studentId,
+        'studentName': studentProfile?.name ?? 'Unknown Student',
+        'planType': planType,
+        'name': mealName,
+        'date': normalizedDate,
+        'cancelledAt': DateTime.now(),
+        'cancelledBy': 'user',
+        'reason': 'Cancelled by Parent',
+      };
+
+      // Add to the cancelled meals history
+      _cancelledMealsHistory.add(cancellationRecord);
+
+      dev.log(
+          'Added to cancellation history: $studentId on ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
+      dev.log('Total cancellation records: ${_cancelledMealsHistory.length}');
+
+      // For debugging, show all cancellation records
+      for (var record in _cancelledMealsHistory) {
+        dev.log(
+            'Cancellation record: ${record['studentId']} on ${DateFormat('yyyy-MM-dd').format(record['date'] as DateTime)}');
+      }
+
+      dev.log(
+          'Cancelled meal delivery for $subscriptionId on ${normalizedDate.toString()}');
+      dev.log('======================================');
+
+      return true;
+    } catch (e) {
+      dev.log('Error cancelling meal delivery: $e');
+      return false;
+    }
+  }
+
+  // Helper method to get a subscription by ID
+  Future<Subscription> _getSubscriptionById(String subscriptionId) async {
+    // In a real app, this would fetch from the database
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // Extract student ID from the subscription ID if possible
+    // Most subscription IDs are in the format 'planType-studentId'
+    String studentId = 'unknown';
+    String planType = 'lunch';
+
+    try {
+      // Parse subscription ID to get plan type and student ID
+      final parts = subscriptionId.split('-');
+      if (parts.length >= 2) {
+        planType = parts[0]; // breakfast, lunch, express
+
+        // The rest could be the student ID or a timestamp
+        // Try to use the active subscriptions to find a match
+        for (var subscription in _subscriptions) {
+          if (subscription.id == subscriptionId) {
+            studentId = subscription.id.split('-')[1];
+            dev.log(
+                "Found subscription in active subscriptions: studentId=$studentId");
+            break;
+          }
+        }
+
+        // If we still don't have a valid student ID, try to extract it from the subscription ID
+        if (studentId == 'unknown') {
+          // Join all parts after the first one to reconstruct the student ID
+          studentId = parts.sublist(1).join('-');
+          dev.log("Extracted studentId from subscription ID: $studentId");
+        }
+      }
+    } catch (e) {
+      dev.log("Error parsing subscription ID: $e");
+    }
+
+    // Create and return a subscription with the extracted details
+    return Subscription(
+      id: subscriptionId,
+      studentId: studentId,
+      planType: planType,
+      mealName:
+          planType == 'breakfast' ? 'Breakfast of the Day' : 'Standard Lunch',
+      startDate: DateTime.now(),
+      endDate: DateTime.now().add(const Duration(days: 30)),
+    );
+  }
+
+  // Adjust delivery dates - remove cancelled date and add a new last delivery date
+  Future<bool> adjustDeliveryDates(String subscriptionId,
+      DateTime cancelledDate, DateTime newLastDeliveryDate) async {
+    try {
+      // Simulate database call
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // Find the subscription or create it if not found
+      var subscription = _subscriptions.firstWhere(
+        (s) => s.id == subscriptionId,
+        orElse: () => _createSubscriptionRecord(subscriptionId),
+      );
+
+      // First cancel the meal on specified date
+      final normalizedCancelDate =
+          DateTime(cancelledDate.year, cancelledDate.month, cancelledDate.day);
+
+      subscription.deliveryDates.removeWhere((d) =>
+          d.year == normalizedCancelDate.year &&
+          d.month == normalizedCancelDate.month &&
+          d.day == normalizedCancelDate.day);
+
+      // Add to cancelled dates history
+      subscription.cancelledDates.add(normalizedCancelDate);
+
+      // Now add the new delivery date at the end
+      final normalizedNewDate = DateTime(newLastDeliveryDate.year,
+          newLastDeliveryDate.month, newLastDeliveryDate.day);
+
+      // Add only if it's not already in the delivery dates
+      if (!subscription.deliveryDates.any((d) =>
+          d.year == normalizedNewDate.year &&
+          d.month == normalizedNewDate.month &&
+          d.day == normalizedNewDate.day)) {
+        subscription.deliveryDates.add(normalizedNewDate);
+
+        // Sort delivery dates to maintain chronological order
+        subscription.deliveryDates.sort((a, b) => a.compareTo(b));
+      }
+
+      dev.log(
+          'Adjusted delivery dates for $subscriptionId: cancelled ${normalizedCancelDate.toString()}, added ${normalizedNewDate.toString()}');
+      return true;
+    } catch (e) {
+      dev.log('Error adjusting delivery dates: $e');
+      return false;
+    }
+  }
+
+  // Helper method to create a new subscription record
+  _SubscriptionWithDeliveryData _createSubscriptionRecord(
+      String subscriptionId) {
+    final newRecord = _SubscriptionWithDeliveryData(subscriptionId);
+    _subscriptions.add(newRecord);
+    return newRecord;
+  }
+
+  // Pause a meal delivery for a specific date
+  Future<bool> pauseMealDelivery(String subscriptionId, DateTime date) async {
     // In a real app, this would update the database
+    dev.log(
+        '🔴 Pausing meal: $subscriptionId on ${DateFormat('yyyy-MM-dd').format(date)}');
     await Future.delayed(
         const Duration(milliseconds: 500)); // Simulate network delay
     return true;
+  }
+
+  // Resume a meal delivery for a specific date
+  Future<bool> resumeMealDelivery(String subscriptionId, DateTime date) async {
+    // In a real app, this would update the database
+    dev.log(
+        '🟢 Resuming meal: $subscriptionId on ${DateFormat('yyyy-MM-dd').format(date)}');
+    await Future.delayed(
+        const Duration(milliseconds: 500)); // Simulate network delay
+    return true;
+  }
+
+  // Utility method for logging subscription details (helpful for debugging)
+  static void logSubscriptionDetails(Subscription subscription) {
+    dev.log('==== SUBSCRIPTION DETAILS ====');
+    dev.log('ID: ${subscription.id}');
+    dev.log('Student ID: ${subscription.studentId}');
+    dev.log('Plan Type: ${subscription.planType}');
+    dev.log(
+        'Start Date: ${DateFormat('yyyy-MM-dd').format(subscription.startDate)}');
+    dev.log(
+        'End Date: ${DateFormat('yyyy-MM-dd').format(subscription.endDate)}');
+    dev.log('Duration: ${subscription.duration}');
+    dev.log('Selected Weekdays: ${subscription.selectedWeekdays}');
+    dev.log('==============================');
+  }
+
+  // Get cancelled meals for a student
+  Future<List<Map<String, dynamic>>> getCancelledMeals(
+      String? studentId) async {
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    dev.log("Getting cancelled meals - studentId: ${studentId ?? 'ALL'}");
+    dev.log(
+        "Total cancelled meals in history: ${_cancelledMealsHistory.length}");
+
+    // Show all records for debugging
+    for (var meal in _cancelledMealsHistory) {
+      dev.log(
+          "Cancelled meal in history - Student: ${meal['studentId']}, Date: ${DateFormat('yyyy-MM-dd').format(meal['date'] as DateTime)}");
+    }
+
+    // Filter by student if ID is provided
+    if (studentId != null) {
+      dev.log("Filtering by studentId: $studentId");
+
+      final filtered = _cancelledMealsHistory.where((meal) {
+        final mealStudentId = meal['studentId'] as String;
+        final matches = mealStudentId == studentId;
+        dev.log(
+            "Comparing meal studentId: $mealStudentId == $studentId = $matches");
+        return matches;
+      }).toList();
+
+      // Sort by cancellation date (most recent first)
+      filtered.sort((a, b) => (b['cancelledAt'] as DateTime)
+          .compareTo(a['cancelledAt'] as DateTime));
+
+      dev.log(
+          "Found ${filtered.length} cancelled meals for student $studentId");
+
+      return filtered;
+    }
+
+    // Return all cancelled meals sorted by cancellation date
+    final allCancelled =
+        List<Map<String, dynamic>>.from(_cancelledMealsHistory);
+    allCancelled.sort((a, b) =>
+        (b['cancelledAt'] as DateTime).compareTo(a['cancelledAt'] as DateTime));
+
+    dev.log("Returning all ${allCancelled.length} cancelled meals");
+
+    return allCancelled;
   }
 }
