@@ -6,6 +6,7 @@ import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/app_colors.dart';
 import 'package:startwell/screens/manage_student_profile_screen.dart';
 import 'package:startwell/screens/my_subscription_screen.dart';
+import 'package:startwell/utils/routes.dart';
 
 class MainScreen extends StatefulWidget {
   final int? initialTabIndex;
@@ -56,6 +57,11 @@ class MainScreenState extends State<MainScreen> {
     _onItemTapped(index);
   }
 
+  // Navigate to profile settings screen
+  void _navigateToProfileSettings() {
+    Navigator.pushNamed(context, Routes.profileSettings);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,13 +74,15 @@ class MainScreenState extends State<MainScreen> {
           });
         },
         children: [
-          const DashboardScreen(),
-          const ManageStudentProfileScreen(isManagementMode: true),
-          MySubscriptionScreen(
+          // Wrap child screens with a profile icon
+          _addProfileIconToScreen(const DashboardScreen()),
+          _addProfileIconToScreen(
+              const ManageStudentProfileScreen(isManagementMode: true)),
+          _addProfileIconToScreen(MySubscriptionScreen(
               startDate: DateTime.now(),
               endDate: DateTime.now(),
-              defaultTabIndex: widget.initialTabIndex == 2 ? 0 : 0),
-          const MealPlanScreen(),
+              defaultTabIndex: widget.initialTabIndex == 2 ? 0 : 0)),
+          _addProfileIconToScreen(const MealPlanScreen()),
         ],
       ),
       bottomNavigationBar: Container(
@@ -130,6 +138,65 @@ class MainScreenState extends State<MainScreen> {
       ),
     );
   }
+
+  // Helper method to add profile icon to app bars of child screens
+  Widget _addProfileIconToScreen(Widget screen) {
+    // If the screen is Dashboard (case 0), wrap it with the AppBar
+    if (_selectedIndex == 0) {
+      return WillPopScope(
+        onWillPop: () async => false, // Prevent back button from popping
+        child: Scaffold(
+          // appBar: AppBar(
+          //   title: _getTitleForIndex(_selectedIndex),
+          //   backgroundColor: Colors.white,
+          //   //  AppTheme.purple,
+          //   elevation: 0,
+          //   automaticallyImplyLeading: false, // Remove back button
+          //   actions: [
+          //     IconButton(
+          //       icon: const Icon(Icons.account_circle, color: AppTheme.white),
+          //       onPressed: _navigateToProfileSettings,
+          //     ),
+          //   ],
+          // ),
+          body: screen,
+        ),
+      );
+    }
+
+    // For other screens, return them as is to use their own AppBars
+    return screen;
+  }
+
+  // Helper method to get the title for each tab
+  Widget _getTitleForIndex(int index) {
+    String title;
+    switch (index) {
+      case 0:
+        title = 'Home';
+        break;
+      case 1:
+        title = 'Student Profiles';
+        break;
+      case 2:
+        title = 'My Subscription';
+        break;
+      case 3:
+        title = 'Meal Plan';
+        break;
+      default:
+        title = 'StartWell';
+    }
+
+    return Text(
+      title,
+      style: GoogleFonts.poppins(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: AppTheme.white,
+      ),
+    );
+  }
 }
 
 // Placeholder screens for navigation targets that don't exist yet
@@ -150,6 +217,14 @@ class StudentProfilesScreen extends StatelessWidget {
         ),
         backgroundColor: AppTheme.purple,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle, color: AppTheme.white),
+            onPressed: () {
+              Navigator.pushNamed(context, Routes.profileSettings);
+            },
+          ),
+        ],
       ),
       body: Center(
         child: Column(

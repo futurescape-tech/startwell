@@ -42,6 +42,9 @@ class Subscription {
   // Track cancelled dates - dates when meals were cancelled
   final List<DateTime> _cancelledDates = [];
 
+  // Map to track swapped meals by date
+  final Map<DateTime, String> _swappedMeals = {};
+
   Subscription({
     required this.id,
     required this.studentId,
@@ -133,6 +136,11 @@ class Subscription {
 
   // Determine if cancel is enabled for this subscription
   bool get isCancelEnabled {
+    // Express plans cannot be cancelled
+    if (planType == 'express') {
+      return false;
+    }
+
     final today = DateTime.now();
     final cutoffDate = DateTime(nextDeliveryDate.year, nextDeliveryDate.month,
             nextDeliveryDate.day, 23, 59 // 11:59 PM the day before
@@ -142,6 +150,9 @@ class Subscription {
     // Cancel is allowed until 11:59 PM the day before delivery
     return today.isBefore(cutoffDate);
   }
+
+  // Check if this is an express plan
+  bool get isExpressPlan => planType == 'express';
 
   // Format the next delivery date
   String get formattedNextDeliveryDate {
@@ -210,6 +221,12 @@ class Subscription {
     return mealName;
   }
 
+  // Get the meal name for a specific date, considering swaps
+  String getMealNameForDate(DateTime date) {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    return _swappedMeals[normalizedDate] ?? mealName;
+  }
+
   // Create a copy with updated properties
   Subscription copyWith({
     String? id,
@@ -261,6 +278,50 @@ class Subscription {
           }).join(',');
 
     return 'Subscription(id: $id, studentId: $studentId, plan: $planType, meal: $mealName, period: $formattedStart-$formattedEnd, days: $weekdays)';
+  }
+
+  // Swap a meal for a specific date
+  Future<bool> swapMeal(
+      String subscriptionId, String newMealName, DateTime date) async {
+    try {
+      dev.log(
+          "[meal swap logic] Starting meal swap for subscription ID: $subscriptionId");
+      dev.log("[meal swap logic] New meal name: $newMealName");
+      dev.log(
+          "[meal swap logic] Date: ${DateFormat('yyyy-MM-dd').format(date)}");
+
+      // Normalize the date to avoid time issues
+      final normalizedDate = DateTime(date.year, date.month, date.day);
+
+      // In a real app, this would update the database
+      await Future.delayed(
+          const Duration(milliseconds: 500)); // Simulate network delay
+
+      // Find the student ID from the subscription ID
+      String? studentId;
+      if (subscriptionId.contains('-')) {
+        studentId = subscriptionId.split('-').sublist(1).join('-');
+        dev.log("[meal swap logic] Extracted student ID: $studentId");
+
+        if (studentId != null) {
+          // Store the swapped meal for this specific date
+          _swappedMeals[normalizedDate] = newMealName;
+
+          dev.log(
+              "[meal swap logic] Stored swapped meal for date ${DateFormat('yyyy-MM-dd').format(normalizedDate)}: $newMealName");
+
+          // In a real implementation, you would save this to the database
+          // For now, return true to indicate success
+          return true;
+        }
+      }
+
+      dev.log("[meal swap logic] Meal swap completed successfully");
+      return true;
+    } catch (e) {
+      dev.log("[meal swap logic] Error swapping meal: $e");
+      return false;
+    }
   }
 }
 
@@ -608,14 +669,6 @@ class SubscriptionService {
     }
   }
 
-  // Swap a meal
-  Future<bool> swapMeal(String subscriptionId, String newMealName) async {
-    // In a real app, this would update the database
-    await Future.delayed(
-        const Duration(milliseconds: 500)); // Simulate network delay
-    return true;
-  }
-
   // Cancel a meal delivery for a specific date
   Future<bool> cancelMealDelivery(String subscriptionId, DateTime date,
       {String? reason, String? studentId}) async {
@@ -936,5 +989,66 @@ class SubscriptionService {
     dev.log("Returning all ${allCancelled.length} cancelled meals");
 
     return allCancelled;
+  }
+
+  // Swap a meal for a specific date
+  Future<bool> swapMeal(String subscriptionId, String newMealName,
+      [DateTime? date]) async {
+    try {
+      // If no date provided, use tomorrow as default
+      final targetDate = date ?? DateTime.now().add(const Duration(days: 1));
+
+      dev.log(
+          "swap flow: Starting meal swap for subscription ID: $subscriptionId");
+      dev.log("swap flow: New meal name: $newMealName");
+      dev.log(
+          "swap flow: Target date: ${DateFormat('yyyy-MM-dd').format(targetDate)}");
+
+      // Find the subscription
+      String? studentId;
+      if (subscriptionId.contains('-')) {
+        studentId = subscriptionId.split('-').sublist(1).join('-');
+        dev.log("swap flow: Extracted student ID: $studentId");
+      }
+
+      // Attempt to get the subscription from active subscriptions
+      Subscription? subscription;
+
+      if (studentId != null) {
+        try {
+          final subscriptions =
+              await getActiveSubscriptionsForStudent(studentId);
+          subscription = subscriptions.firstWhere(
+            (sub) => sub.id == subscriptionId,
+            orElse: () => throw Exception('Subscription not found'),
+          );
+        } catch (e) {
+          dev.log("swap flow: Error finding active subscription: $e");
+        }
+      }
+
+      // If we found the subscription, use it; otherwise create a temporary one
+      if (subscription != null) {
+        return await subscription.swapMeal(
+            subscriptionId, newMealName, targetDate);
+      } else {
+        // Create a temporary subscription
+        final tempSubscription = Subscription(
+          id: subscriptionId,
+          studentId: studentId ?? 'unknown',
+          planType:
+              subscriptionId.startsWith('breakfast') ? 'breakfast' : 'lunch',
+          mealName: 'Standard Meal',
+          startDate: DateTime.now(),
+          endDate: DateTime.now().add(const Duration(days: 30)),
+        );
+
+        return await tempSubscription.swapMeal(
+            subscriptionId, newMealName, targetDate);
+      }
+    } catch (e) {
+      dev.log("swap flow: Error in subscription service swapMeal: $e");
+      return false;
+    }
   }
 }

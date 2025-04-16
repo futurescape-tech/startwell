@@ -9,6 +9,7 @@ import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
 import 'package:startwell/screens/meal_detail_page.dart';
 import 'package:startwell/widgets/common/veg_icon.dart';
+import 'package:startwell/utils/routes.dart';
 
 class MealPlanScreen extends StatefulWidget {
   const MealPlanScreen({super.key});
@@ -120,6 +121,14 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             ),
           ),
           backgroundColor: AppTheme.purple,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.account_circle, color: AppTheme.white),
+              onPressed: () {
+                Navigator.pushNamed(context, Routes.profileSettings);
+              },
+            ),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(60),
             child: Container(
@@ -231,7 +240,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         children: [
           // Info about breakfast timing
           InfoBanner(
-            title: "Breakfast ",
+            title: "Meal Details",
             message:
                 "Good mornings Wake up to warm, fresh breakfast on school days",
             type: InfoBannerType.info,
@@ -300,7 +309,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         children: [
           // Info about lunch timing
           InfoBanner(
-            title: "Lunch",
+            title: "Meal Details",
             message:
                 "Fuel your afternoon with fresh lunches on all school days",
             type: InfoBannerType.info,
@@ -379,15 +388,6 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Express 1 Day Delivery',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textDark,
-                ),
-              ),
-              const SizedBox(height: 8),
               InfoBanner(
                 title: isExpressAvailable
                     ? "Express Ordering Open"

@@ -103,7 +103,7 @@ class _FooterNoteState extends State<FooterNote>
                       child: Icon(
                         Icons.favorite,
                         color: heartColor,
-                        size: 16,
+                        size: 18,
                       ),
                     );
                   },

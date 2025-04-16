@@ -132,6 +132,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Scaffold(
       backgroundColor: AppTheme.white,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(
           'Home',
           style: GoogleFonts.poppins(
@@ -143,10 +144,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         backgroundColor: AppTheme.purple,
         elevation: 0,
         actions: [
+          // Profile icon button
           IconButton(
-            icon: const Icon(Icons.more_vert, color: AppTheme.white),
+            icon: const Icon(Icons.account_circle, color: AppTheme.white),
             onPressed: () {
-              // Show more options
+              Navigator.pushNamed(context, Routes.profileSettings);
             },
           ),
         ],

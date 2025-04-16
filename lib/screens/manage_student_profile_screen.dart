@@ -7,6 +7,7 @@ import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/meal_plan_validator.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
+import 'package:startwell/utils/routes.dart';
 import 'package:intl/intl.dart';
 
 class ManageStudentProfileScreen extends StatefulWidget {
@@ -710,6 +711,14 @@ class _ManageStudentProfileScreenState
           ),
         ),
         backgroundColor: AppTheme.purple,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle, color: AppTheme.white),
+            onPressed: () {
+              Navigator.pushNamed(context, Routes.profileSettings);
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -737,8 +746,8 @@ class _ManageStudentProfileScreenState
                   // Instructions
                   InfoBanner(
                     title: widget.isManagementMode
-                        ? "Manage Profiles"
-                        : "Student Profile",
+                        ? "Instructions"
+                        : "Instructions",
                     message: widget.isManagementMode
                         ? "View, create, edit, or delete student profiles."
                         : "Please select or create a student profile to continue with your subscription.",

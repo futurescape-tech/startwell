@@ -2,179 +2,224 @@ import 'dart:developer';
 import 'package:intl/intl.dart';
 import 'package:startwell/models/cancelled_meal.dart';
 import 'package:startwell/services/event_bus_service.dart';
+import 'package:startwell/services/student_profile_service.dart';
+import 'package:startwell/models/student_model.dart';
+import 'package:startwell/models/subscription_model.dart';
+import 'dart:async';
+import 'dart:developer' as dev;
 
+/// Service class to manage subscription-related operations.
 class SubscriptionService {
-  // Static list to store cancellation history
-  static final List<Map<String, dynamic>> _cancelledMealsHistory = [];
+  // Singleton instance
+  static final SubscriptionService _instance = SubscriptionService._internal();
 
-  Future<bool> cancelMealDelivery(String subscriptionId, DateTime date,
-      {String? reason, String? studentId}) async {
+  // Factory constructor to return the same instance
+  factory SubscriptionService() {
+    return _instance;
+  }
+
+  // Private constructor
+  SubscriptionService._internal() {
+    // Initialize with empty cancellation history instead of adding sample data
+    _cancellationHistory.clear();
+    log('[cancelled meal flow] Initialized SubscriptionService with empty cancellation history');
+  }
+
+  // Internal storage for active subscriptions
+  final List<Subscription> _subscriptions = [];
+
+  // SINGLE source of truth for cancelled meals
+  final List<Map<String, dynamic>> _cancellationHistory = [];
+
+  // Student profile service for name lookups
+  final StudentProfileService _studentProfileService = StudentProfileService();
+
+  // Get a subscription by ID
+  Future<Subscription?> getSubscriptionById(String subscriptionId) async {
     try {
-      log("cancel meal flow: starting cancelMealDelivery for $subscriptionId");
+      return _subscriptions.firstWhere(
+        (s) => s.id == subscriptionId,
+        orElse: () => throw Exception('Subscription not found'),
+      );
+    } catch (e) {
+      log('[cancelled meal flow] Error finding subscription: $e');
+      // Return a default subscription if not found
+      return Subscription(
+        id: subscriptionId,
+        studentId: 'unknown',
+        planType: 'lunch',
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 30)),
+        selectedWeekdays: [1, 2, 3, 4, 5],
+        mealName: 'Standard Meal',
+      );
+    }
+  }
 
-      // Normalize the date to avoid time issues
-      final normalizedDate = DateTime(date.year, date.month, date.day);
+  // Cancel a meal for a specific date and subscription
+  Future<bool> cancelMealDelivery(String subscriptionId, DateTime date,
+      {required String studentId}) async {
+    // Normalize the date to avoid time issues
+    final normalizedDate = DateTime(date.year, date.month, date.day);
 
-      // Simulate API call delay
-      await Future.delayed(const Duration(milliseconds: 800));
+    log('[cancelled_meal_data_flow] Cancelling meal for subscription: $subscriptionId, date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}, student: $studentId');
 
-      // Log the cancellation details
-      log('cancel meal flow: Cancelling meal delivery:');
-      log('cancel meal flow: Subscription ID: $subscriptionId');
-      log('cancel meal flow: Date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
-      log('cancel meal flow: Reason: ${reason ?? "Not specified"}');
-      log('cancel meal flow: Student ID: ${studentId ?? "Not specified directly"}');
+    try {
+      // Generate a unique ID for this cancellation
+      final cancelId =
+          'cancelled_${subscriptionId}_${normalizedDate.millisecondsSinceEpoch}';
 
-      // In a real implementation, this would:
-      // 1. Mark the meal as cancelled in the database
-      // 2. Add to cancellation history with reason
-      // 3. Update next delivery date if needed
-      // 4. Handle any notifications/emails
+      // Check if the meal was already cancelled
+      final alreadyCancelled = _cancellationHistory.any((meal) =>
+          meal['subscriptionId'] == subscriptionId &&
+          _isSameDay(meal['date'] as DateTime, normalizedDate));
 
-      // Extract info from the subscription ID (usually format: planType-studentId)
-      List<String> parts = subscriptionId.split('-');
-      String planType = parts.isNotEmpty ? parts[0] : 'unknown';
-      String extractedStudentId =
-          parts.length > 1 ? parts.sublist(1).join('-') : 'unknown-student';
-
-      // Use provided student ID if available, otherwise use extracted one
-      String finalStudentId = studentId ?? extractedStudentId;
-
-      log("cancel meal flow: Extracted planType=$planType, extracted studentId=$extractedStudentId");
-      log("cancel meal flow: Using finalStudentId=$finalStudentId for cancellation record");
-
-      // Create cancellation record with unique ID based on subscription and date
-      final recordId =
-          '${subscriptionId}_${normalizedDate.millisecondsSinceEpoch}';
-
-      // Check if we already have this cancellation in history
-      bool alreadyCancelled = false;
-      for (var existingRecord in _cancelledMealsHistory) {
-        if (existingRecord['id'] == recordId) {
-          log("cancel meal flow: Meal already cancelled in history, skipping duplicate record");
-          alreadyCancelled = true;
-          break;
-        }
+      if (alreadyCancelled) {
+        log('[cancelled_meal_data_flow] Meal already cancelled, skipping');
+        return true; // Already cancelled, so consider it a success
       }
 
-      if (!alreadyCancelled) {
-        // Create cancellation record
-        final cancellationRecord = {
-          'id': recordId,
-          'subscriptionId': subscriptionId,
-          'studentId': finalStudentId,
-          'studentName':
-              'Student Name', // Would come from real student data in production
-          'planType': planType,
-          'name': planType == 'breakfast' ? 'Breakfast' : 'Lunch',
-          'date': normalizedDate,
-          'cancelledAt': DateTime.now(),
-          'cancelledBy': 'user',
-          'reason': reason ?? 'Cancelled by Parent',
-          'status': 'Cancelled', // Explicitly set status
-        };
-
-        // Add to cancellation history
-        _cancelledMealsHistory.add(cancellationRecord);
-
-        log("cancel meal flow: Added cancellation record to history");
-        log("cancel meal flow: Total cancellation records: ${_cancelledMealsHistory.length}");
+      // Get the subscription object
+      final subscription = await getSubscriptionById(subscriptionId);
+      if (subscription == null) {
+        log('[cancelled_meal_data_flow] ERROR: Subscription not found: $subscriptionId');
+        return false;
       }
 
-      // For debugging, print all cancellation records
+      // Get student name for the cancellation record
+      final studentName = await _getStudentName(studentId);
+      log('[cancelled_meal_data_flow] Retrieved student name for cancellation: $studentName');
+
+      // Create cancellation record
+      final cancellation = {
+        'id': cancelId,
+        'subscriptionId': subscriptionId,
+        'studentId': studentId,
+        'studentName': studentName,
+        'planType': subscription.planType,
+        'mealName': subscription.getMealNameForDate(
+            normalizedDate), // Use the meal name from subscription
+        'date': normalizedDate,
+        'cancelledAt': DateTime.now(),
+        'cancelledBy': 'parent',
+        'reason': 'Cancelled by parent',
+      };
+
+      // Add to cancellation history
+      _cancellationHistory.add(cancellation);
+
+      log('[cancelled_meal_data_flow] Successfully cancelled meal, added to history. Total cancelled: ${_cancellationHistory.length}');
+      log('[cancelled_meal_data_flow] Cancellation details - ID: ${cancellation['id']}, Student: ${cancellation['studentName']}, Meal: ${cancellation['mealName']}');
+
+      // Also mark as cancelled in the subscription model
+      if (subscription != null) {
+        subscription.addCancelledDate(normalizedDate);
+        log('[cancelled_meal_data_flow] Marked date as cancelled in subscription model');
+      }
+
+      // Log all cancellations for debugging
       _logAllCancellationRecords();
 
-      // Fire event to notify other components of the cancellation
-      log("cancel meal flow: Firing meal cancelled event");
-      eventBus.fireMealCancelled(MealCancelledEvent(
-        subscriptionId,
-        normalizedDate,
-        studentId: finalStudentId,
-        shouldNavigateToTab: true,
-      ));
-      log("cancel meal flow: Event dispatched");
-
-      log("cancel meal flow: cancelMealDelivery completed successfully");
       return true;
     } catch (e) {
-      log('cancel meal flow: Error cancelling meal delivery: $e');
+      log('[cancelled_meal_data_flow] Error cancelling meal: $e');
       return false;
+    }
+  }
+
+  // Get all cancelled meals for a student
+  Future<List<CancelledMeal>> getCancelledMeals(String? studentId) async {
+    log('[cancelled meal flow] Getting cancelled meals for student: ${studentId ?? "all"}');
+
+    // Simulate network delay (reduced for faster response)
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    _logAllCancellationRecords();
+
+    try {
+      if (studentId == null) {
+        log('[cancelled meal flow] Returning all ${_cancellationHistory.length} cancelled meals');
+        final allMeals = _cancellationHistory
+            .map((map) => CancelledMeal.fromMap(map))
+            .toList();
+        return allMeals;
+      }
+
+      final filteredMeals = _cancellationHistory
+          .where((meal) => meal['studentId'] == studentId)
+          .toList();
+
+      log('[cancelled meal flow] Found ${filteredMeals.length} cancelled meals for student: $studentId');
+
+      // Log each cancelled meal for debugging
+      for (var meal in filteredMeals) {
+        log('[cancelled meal flow] Found meal: ${meal['name']} on ${DateFormat('yyyy-MM-dd').format(meal['date'] as DateTime)}');
+      }
+
+      final cancelledMeals =
+          filteredMeals.map((map) => CancelledMeal.fromMap(map)).toList();
+
+      // Sort by timestamp, newest first
+      cancelledMeals.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+      return cancelledMeals;
+    } catch (e) {
+      log('[cancelled meal flow] Error getting cancelled meals: $e');
+      return [];
+    }
+  }
+
+  // Get student name helper
+  Future<String> _getStudentName(String studentId) async {
+    try {
+      final students = await _studentProfileService.getStudentProfiles();
+      final student = students.firstWhere(
+        (s) => s.id == studentId,
+        orElse: () => Student(
+          id: studentId,
+          name: 'Unknown Student',
+          schoolName: 'Unknown School',
+          className: 'Unknown Class',
+          division: 'Unknown Division',
+          floor: 'Unknown Floor',
+          allergies: 'None',
+          schoolAddress: 'Unknown Address',
+          grade: 'Unknown Grade',
+          section: 'Unknown Section',
+          profileImageUrl: '',
+        ),
+      );
+      return student.name;
+    } catch (e) {
+      log('[cancelled meal flow] Error getting student name: $e');
+      return 'Unknown Student';
     }
   }
 
   // Helper method to log all cancellation records for debugging
   void _logAllCancellationRecords() {
-    int count = 0;
-    log("cancel meal flow: === ALL CANCELLATION RECORDS ===");
-    for (var record in _cancelledMealsHistory) {
-      log("cancel meal flow: Record #${++count}: ${record['subscriptionId']} on ${DateFormat('yyyy-MM-dd').format(record['date'] as DateTime)}");
+    log("[cancelled_meal_data_flow] === LOGGING ALL CANCELLATION RECORDS ===");
+    log("[cancelled_meal_data_flow] Total records: ${_cancellationHistory.length}");
+
+    for (var record in _cancellationHistory) {
+      log("[cancelled_meal_data_flow] === RECORD START ===");
+      log("[cancelled_meal_data_flow] ID: ${record['id']}");
+      log("[cancelled_meal_data_flow] Subscription ID: ${record['subscriptionId']}");
+      log("[cancelled_meal_data_flow] Student ID: ${record['studentId']}");
+      log("[cancelled_meal_data_flow] Student Name: ${record['studentName']}");
+      log("[cancelled_meal_data_flow] Date: ${DateFormat('yyyy-MM-dd').format(record['date'] as DateTime)}");
+      log("[cancelled_meal_data_flow] Cancelled At: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(record['cancelledAt'] as DateTime)}");
+      log("[cancelled_meal_data_flow] === RECORD END ===");
     }
-    log("cancel meal flow: === END OF RECORDS ===");
+
+    log("[cancelled_meal_data_flow] === END OF RECORDS ===");
   }
 
-  // Get cancelled meals for a student
-  Future<List<CancelledMeal>> getCancelledMeals(String? studentId) async {
-    log("cancel meal flow: getCancelledMeals called for studentId: ${studentId ?? 'ALL'}");
-    log("cancel meal flow: Total records in history: ${_cancelledMealsHistory.length}");
-
-    // Log all records available for debugging
-    _logAllCancellationRecords();
-
-    // Simulate network delay - slightly longer to ensure all processing is complete
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    List<Map<String, dynamic>> result;
-
-    // Filter by student if ID is provided
-    if (studentId != null) {
-      log("cancel meal flow: Filtering by studentId: $studentId");
-
-      result = _cancelledMealsHistory
-          .where((meal) => meal['studentId'] == studentId)
-          .toList();
-
-      log("cancel meal flow: Found ${result.length} cancelled meals for student");
-
-      // Log each meal details
-      for (var meal in result) {
-        log("cancel meal flow: Meal - Name: ${meal['name']}, Date: ${DateFormat('yyyy-MM-dd').format(meal['date'] as DateTime)}, Student: ${meal['studentName']}");
-      }
-    } else {
-      // Return all cancelled meals
-      result = List<Map<String, dynamic>>.from(_cancelledMealsHistory);
-      log("cancel meal flow: Returning all ${result.length} cancelled meals");
-    }
-
-    // If no results were found, this is unusual - log additional information
-    if (result.isEmpty) {
-      log("cancel meal flow: WARNING - No cancelled meals found");
-      if (studentId != null) {
-        log("cancel meal flow: Checking if any records exist for the student ID in any field");
-        // Check if the student ID appears in any record at all
-        final anyMatches = _cancelledMealsHistory.where((meal) {
-          return meal.values
-              .any((value) => value is String && value.contains(studentId));
-        }).toList();
-
-        if (anyMatches.isNotEmpty) {
-          log("cancel meal flow: Found ${anyMatches.length} records containing the student ID somewhere");
-          for (var match in anyMatches) {
-            log("cancel meal flow: Potential match: ${match.toString()}");
-          }
-        }
-      }
-    }
-
-    // Sort by cancellation date (most recent first)
-    result.sort((a, b) =>
-        (b['cancelledAt'] as DateTime).compareTo(a['cancelledAt'] as DateTime));
-
-    // Convert the Map<String, dynamic> to CancelledMeal objects
-    final cancelledMeals =
-        result.map((map) => CancelledMeal.fromMap(map)).toList();
-
-    log("cancel meal flow: Converted ${cancelledMeals.length} records to CancelledMeal objects");
-    return cancelledMeals;
+  // Helper method to check if two dates are the same day
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 
   // Update the status of a meal in the service
@@ -189,16 +234,15 @@ class SubscriptionService {
         // Create a unique record ID
         final recordId = '${subscriptionId}_${date.millisecondsSinceEpoch}';
 
-        // Check if we already have this record
+        // Check if we already have this record using the instance list
         bool alreadyExists =
-            _cancelledMealsHistory.any((record) => record['id'] == recordId);
+            _cancellationHistory.any((record) => record['id'] == recordId);
 
         if (!alreadyExists) {
           log("cancel meal flow: Creating cancellation record as part of status update");
 
-          // Create a cancellation record directly
-          await cancelMealDelivery(subscriptionId, date,
-              reason: "Cancelled via status update");
+          // Create a cancellation record directly using the instance method
+          await cancelMealDelivery(subscriptionId, date, studentId: studentId);
         } else {
           log("cancel meal flow: Cancellation record already exists, not creating duplicate");
         }
@@ -211,6 +255,126 @@ class SubscriptionService {
     } catch (e) {
       log("cancel meal flow: Error updating meal status: $e");
       return false;
+    }
+  }
+
+  // Swap a meal for a specific date
+  Future<bool> swapMeal(String subscriptionId, String newMealName,
+      [DateTime? date]) async {
+    try {
+      // If no date provided, use tomorrow as default
+      final targetDate = date ?? DateTime.now().add(const Duration(days: 1));
+
+      log("swap flow: Starting meal swap for subscription ID: $subscriptionId");
+      log("swap flow: New meal name: $newMealName");
+      log("swap flow: Target date: ${DateFormat('yyyy-MM-dd').format(targetDate)}");
+
+      // Create a temporary subscription to handle the swap
+      final subscription = Subscription(
+        id: subscriptionId,
+        studentId: subscriptionId.contains('-')
+            ? subscriptionId.split('-').sublist(1).join('-')
+            : 'unknown',
+        planType:
+            subscriptionId.startsWith('breakfast') ? 'breakfast' : 'lunch',
+        mealName: 'Standard Meal',
+        startDate: DateTime.now(),
+        endDate: DateTime.now().add(const Duration(days: 30)),
+      );
+
+      // Call the subscription model's swapMeal method
+      return await subscription.swapMeal(
+          subscriptionId, newMealName, targetDate);
+    } catch (e) {
+      log('swap flow: Error in subscription service swapMeal: $e');
+      return false;
+    }
+  }
+
+  // Get active subscriptions for a student by delegating to the model's implementation
+  Future<List<Subscription>> getActiveSubscriptionsForStudent(
+      String studentId) async {
+    log('Getting active subscriptions for student: $studentId');
+    try {
+      // In a real app, this would fetch from a database or API
+      // Here we'll use the existing StudentProfileService to get student data
+      // This is a simplified version of the model's implementation
+      final studentProfileService = StudentProfileService();
+      final students = await studentProfileService.getStudentProfiles();
+      final student = students.firstWhere(
+        (student) => student.id == studentId,
+        orElse: () => throw Exception('Student not found'),
+      );
+
+      // Create subscriptions based on actual student meal plans
+      final List<Subscription> subscriptions = [];
+
+      // Add breakfast subscription if active
+      if (student.hasActiveBreakfast && student.breakfastPlanEndDate != null) {
+        final DateTime subscriptionStartDate =
+            student.breakfastPlanStartDate ?? DateTime.now();
+
+        final subscription = Subscription(
+          id: 'breakfast-${student.id}',
+          studentId: student.id,
+          planType: 'breakfast',
+          mealName: 'Indian Breakfast',
+          startDate: subscriptionStartDate,
+          endDate: student.breakfastPlanEndDate!,
+        );
+
+        subscriptions.add(subscription);
+      }
+
+      // Add lunch or express subscription if active
+      if (student.hasActiveLunch && student.lunchPlanEndDate != null) {
+        final planType =
+            student.mealPlanType == 'express' ? 'express' : 'lunch';
+        final DateTime subscriptionStartDate =
+            student.lunchPlanStartDate ?? DateTime.now();
+
+        final subscription = Subscription(
+          id: '$planType-${student.id}',
+          studentId: student.id,
+          planType: planType,
+          mealName: 'Indian Lunch',
+          startDate: subscriptionStartDate,
+          endDate: student.lunchPlanEndDate!,
+        );
+
+        subscriptions.add(subscription);
+      }
+
+      // If no active subscriptions are found from the student model, return demo data
+      if (subscriptions.isEmpty) {
+        log('No active subscriptions found, returning demo subscriptions');
+
+        final now = DateTime.now();
+        final oneMonthLater = DateTime(now.year, now.month + 1, now.day);
+
+        subscriptions.add(Subscription(
+          id: '1-${studentId}',
+          studentId: studentId,
+          planType: 'breakfast',
+          mealName: 'Indian Breakfast',
+          startDate: now,
+          endDate: oneMonthLater,
+        ));
+
+        subscriptions.add(Subscription(
+          id: '2-${studentId}',
+          studentId: studentId,
+          planType: 'lunch',
+          mealName: 'Standard Lunch',
+          startDate: now,
+          endDate: oneMonthLater,
+        ));
+      }
+
+      return subscriptions;
+    } catch (e) {
+      log('Error getting active subscriptions: $e');
+      return [];
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:intl/intl.dart';
 
 /// Model class for representing a cancelled meal in the system.
@@ -30,21 +31,38 @@ class CancelledMeal {
   factory CancelledMeal.fromMap(Map<String, dynamic> map) {
     // Log conversion to help debug
     try {
-      return CancelledMeal(
+      log('[cancelled meal flow] Converting map to CancelledMeal: ${map['id']}');
+
+      // Handle date conversion, since date might come in different formats
+      DateTime parseDate(dynamic dateValue) {
+        if (dateValue is DateTime) {
+          return dateValue;
+        } else if (dateValue is String) {
+          return DateTime.parse(dateValue);
+        } else {
+          throw FormatException('Invalid date format: $dateValue');
+        }
+      }
+
+      final cancelledMeal = CancelledMeal(
         id: map['id'] as String,
         subscriptionId: map['subscriptionId'] as String,
         studentId: map['studentId'] as String,
         studentName: map['studentName'] as String,
         planType: map['planType'] as String,
-        mealName: map['name'] as String,
-        cancellationDate: map['date'] as DateTime,
-        timestamp: map['cancelledAt'] as DateTime,
+        mealName: map['mealName'] ?? map['name'] as String,
+        cancellationDate: parseDate(map['date']),
+        timestamp: parseDate(map['cancelledAt']),
         cancelledBy: map['cancelledBy'] as String,
         reason: map['reason'] as String?,
       );
+
+      log('[cancelled meal flow] Successfully converted to CancelledMeal - ID: ${cancelledMeal.id}, Student: ${cancelledMeal.studentName}, Date: ${DateFormat('yyyy-MM-dd').format(cancelledMeal.cancellationDate)}');
+
+      return cancelledMeal;
     } catch (e) {
-      print('Error converting map to CancelledMeal: $e');
-      print('Map contents: $map');
+      log('[cancelled meal flow] Error converting map to CancelledMeal: $e');
+      log('[cancelled meal flow] Map contents: $map');
       rethrow;
     }
   }
@@ -57,7 +75,7 @@ class CancelledMeal {
       'studentId': studentId,
       'studentName': studentName,
       'planType': planType,
-      'name': mealName,
+      'mealName': mealName,
       'date': cancellationDate,
       'cancelledAt': timestamp,
       'cancelledBy': cancelledBy,

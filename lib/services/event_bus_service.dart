@@ -33,15 +33,31 @@ class EventBusService {
 class MealCancelledEvent {
   final String subscriptionId;
   final DateTime date;
-  final bool shouldNavigateToTab;
   final String? studentId;
+  final bool shouldNavigateToTab;
 
-  MealCancelledEvent(this.subscriptionId, this.date,
-      {this.shouldNavigateToTab = true, this.studentId});
+  // Add fields for the cancelled meal details
+  final String mealName;
+  final String studentName;
+  final DateTime cancellationTimestamp;
+  final String reason;
+
+  MealCancelledEvent(
+    this.subscriptionId,
+    this.date, {
+    this.studentId,
+    this.shouldNavigateToTab = false,
+    // Add required parameters for the new fields
+    required this.mealName,
+    required this.studentName,
+    required this.cancellationTimestamp,
+    required this.reason,
+  });
 
   @override
-  String toString() =>
-      'MealCancelledEvent(subscriptionId: $subscriptionId, date: $date, studentId: ${studentId ?? 'unknown'}, shouldNavigateToTab: $shouldNavigateToTab)';
+  String toString() {
+    return 'MealCancelledEvent(subscriptionId: $subscriptionId, date: $date, studentId: $studentId, navigate: $shouldNavigateToTab, mealName: $mealName)';
+  }
 }
 
 /// Global instance for easy access
