@@ -46,38 +46,89 @@ class SubscriptionCardShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 15,
-      mainAxisSpacing: 15,
-      childAspectRatio: 1.4,
-      children: List.generate(4, (index) => _buildSubscriptionItemShimmer()),
+    return Column(
+      children: [
+        // Active Plan Card Shimmer
+        _buildSubscriptionCardShimmer(),
+        const SizedBox(height: 15),
+        // Remaining Meals Card Shimmer
+        _buildRemMealsCardShimmer(),
+      ],
     );
   }
 
-  Widget _buildSubscriptionItemShimmer() {
+  Widget _buildSubscriptionCardShimmer() {
     return ShimmerWidgets.shimmerCard(
-      borderRadius: 16,
+      borderRadius: 12,
       padding: const EdgeInsets.all(16),
       children: [
         Row(
           children: [
-            ShimmerWidgets.shimmerCircle(size: 32),
-            const SizedBox(width: 10),
-            ShimmerWidgets.shimmerText(
-              height: 14,
-              width: 80,
-              borderRadius: 4,
+            ShimmerWidgets.shimmerCircle(size: 48),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerWidgets.shimmerText(
+                    height: 18,
+                    width: 100,
+                    borderRadius: 4,
+                  ),
+                  const SizedBox(height: 8),
+                  ShimmerWidgets.shimmerText(
+                    height: 14,
+                    width: 180,
+                    borderRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+            ShimmerWidgets.shimmerBox(
+              height: 24,
+              width: 70,
+              borderRadius: 12,
             ),
           ],
         ),
-        const SizedBox(height: 20),
-        ShimmerWidgets.shimmerText(
-          height: 22,
-          width: 60,
-          borderRadius: 6,
+      ],
+    );
+  }
+
+  Widget _buildRemMealsCardShimmer() {
+    return ShimmerWidgets.shimmerCard(
+      borderRadius: 12,
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
+          children: [
+            ShimmerWidgets.shimmerCircle(size: 48),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerWidgets.shimmerText(
+                    height: 18,
+                    width: 150,
+                    borderRadius: 4,
+                  ),
+                  const SizedBox(height: 8),
+                  ShimmerWidgets.shimmerText(
+                    height: 14,
+                    width: 180,
+                    borderRadius: 4,
+                  ),
+                  const SizedBox(height: 12),
+                  ShimmerWidgets.shimmerBox(
+                    height: 6,
+                    width: double.infinity,
+                    borderRadius: 3,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -44,6 +44,10 @@ dependencies:
   path_provider: ^2.1.1
   path: ^1.8.3
   package_info_plus: ^4.2.0
+  google_maps_flutter: ^2.5.0
+  url_launcher: ^6.2.2
+  carousel_slider: ^5.0.0
+  smooth_page_indicator: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +78,14 @@ flutter:
     - assets/images/lunch/
     - assets/images/express/
     - assets/images/payment/
+    - assets/images/carousel/
+    - assets/icons/
+    - assets/icons/Natural Ingredients.png
+    - assets/icons/Designed by Child Nutritionists.png
+    - assets/icons/Prepared by Chefs & Mothers.png
+    - assets/images/carousel/Designed_by_Child_Nutritionists.png
+    - assets/images/carousel/Natural_ingridents.png
+    - assets/images/carousel/prepared_by_chefs&mothers.png
     - assets/images/breakfast/breakfast of the day (most recommended).png
     - assets/images/breakfast/Indian Breakfast.png
     - assets/images/breakfast/International Breakfast.png 

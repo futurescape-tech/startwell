@@ -66,7 +66,7 @@ class _FooterNoteState extends State<FooterNote>
               'Trusted by parents',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
-                fontSize: 24,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: greyColor,
               ),
@@ -76,7 +76,7 @@ class _FooterNoteState extends State<FooterNote>
               'Loved by kids!',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
-                fontSize: 24,
+                fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: greyColor,
               ),
@@ -103,7 +103,7 @@ class _FooterNoteState extends State<FooterNote>
                       child: Icon(
                         Icons.favorite,
                         color: heartColor,
-                        size: 18,
+                        size: 20,
                       ),
                     );
                   },

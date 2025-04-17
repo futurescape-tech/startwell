@@ -9,6 +9,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:startwell/screens/faq_page.dart';
+import 'package:provider/provider.dart';
+import 'package:startwell/screens/privacy_policy_page.dart';
+import 'package:startwell/screens/terms_conditions_page.dart';
+import 'package:startwell/screens/startwell_location_page.dart';
+import 'package:startwell/screens/login_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   const ProfileSettingsScreen({Key? key}) : super(key: key);
@@ -207,66 +214,16 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   }
 
   Future<void> _showTermsAndConditions() async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Terms & Conditions',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            // Replace with actual terms content
-            'These are the StartWell Terms and Conditions. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla.\n\nClass aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor.\n\nMorbi lectus risus, iaculis vel, suscipit quis, luctus non, massa. Fusce ac turpis quis ligula lacinia aliquet. Mauris ipsum. Nulla metus metus, ullamcorper vel, tincidunt sed, euismod in, nibh. Quisque volutpat condimentum velit. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-            ),
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Close',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-        ],
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TermsConditionsPage()),
     );
   }
 
   Future<void> _showPrivacyPolicy() async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Privacy Policy',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            // Replace with actual privacy policy
-            'This is the StartWell Privacy Policy. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla.\n\nWe collect personal information that you voluntarily provide to us when you register with us, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Services, or otherwise when you contact us.\n\nThe personal information that we collect depends on the context of your interactions with us and the Services, the choices you make, and the products and features you use.',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-            ),
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Close',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-        ],
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PrivacyPolicyPage()),
     );
   }
 
@@ -356,6 +313,20 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         content: Text(message),
         backgroundColor: AppTheme.error,
       ),
+    );
+  }
+
+  void _navigateToFAQPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const FAQPage()),
+    );
+  }
+
+  void _navigateToLocationPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const StartwellLocationPage()),
     );
   }
 
@@ -515,7 +486,19 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   ),
                   const Divider(),
                   _buildSettingsItem(
-                    icon: Icons.info,
+                    icon: Icons.question_answer,
+                    title: 'FAQs',
+                    onTap: _navigateToFAQPage,
+                  ),
+                  const Divider(),
+                  _buildSettingsItem(
+                    icon: Icons.location_on,
+                    title: 'Startwell Location',
+                    onTap: _navigateToLocationPage,
+                  ),
+                  const Divider(),
+                  _buildSettingsItem(
+                    icon: Icons.info_outline,
                     title: 'App Version',
                     trailing: Text(
                       _appVersion,
@@ -525,6 +508,45 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       ),
                     ),
                     onTap: null,
+                  ),
+                  const Divider(),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Connect With Us",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppTheme.purple,
+                            )),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildSocialMediaButton(
+                              icon: Icons.facebook,
+                              color: const Color(0xFF1877F2),
+                              url:
+                                  'https://business.facebook.com/business/loginpage/?next=https%3A%2F%2Fbusiness.facebook.com%2F%3Fnav_ref%3Dbiz_unified_f3_login_page_to_mbs&login_options%5B0%5D=FB&login_options%5B1%5D=IG&login_options%5B2%5D=SSO&config_ref=biz_login_tool_flavor_mbs',
+                            ),
+                            _buildSocialMediaButton(
+                              icon: Icons.camera_alt,
+                              color: const Color(0xFFE1306C),
+                              url:
+                                  'https://www.instagram.com/startwell.official/',
+                            ),
+                            _buildSocialMediaButton(
+                              icon: Icons.business_center,
+                              color: const Color(0xFF0077B5),
+                              url:
+                                  'https://www.linkedin.com/company/startwellindia',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const Divider(),
                   _buildSettingsItem(
@@ -564,5 +586,38 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       trailing: trailing ?? const Icon(Icons.chevron_right),
       onTap: onTap,
     );
+  }
+
+  Widget _buildSocialMediaButton({
+    required IconData icon,
+    required Color color,
+    required String url,
+  }) {
+    return InkWell(
+      onTap: () => _launchURL(url),
+      child: Container(
+        padding: const EdgeInsets.all(12.0),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          color: color,
+          size: 28,
+        ),
+      ),
+    );
+  }
+
+  void _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch $urlString')),
+        );
+      }
+    }
   }
 }
