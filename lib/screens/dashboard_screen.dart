@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/themes/app_theme.dart';
@@ -12,12 +14,19 @@ import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/models/student_model.dart';
 import 'package:startwell/services/subscription_service.dart' as services;
 import 'package:startwell/models/subscription_model.dart';
+import 'package:startwell/types/subscription_types.dart';
 import 'package:startwell/screens/active_plan_details_page.dart';
 import 'package:startwell/screens/remaining_meal_details_page.dart';
 import 'package:startwell/widgets/home/value_carousel.dart';
+import 'package:startwell/services/user_profile_service.dart';
+import 'package:startwell/models/user_profile.dart';
+import 'package:startwell/widgets/profile_avatar.dart';
+import 'package:startwell/screens/all_student_subscription_page.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final UserProfile? userProfile;
+  final bool ishomeMode;
+  const DashboardScreen({super.key, this.userProfile, this.ishomeMode = false});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -31,6 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
+  // UserProfile? userProfile;
 
   // Subscription data
   List<Student> _students = [];
@@ -40,6 +50,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    log('User Profile: ${widget.userProfile}');
 
     _animationController = AnimationController(
       vsync: this,
@@ -63,6 +74,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     // Add scroll listener to show footer when at bottom
     _scrollController.addListener(_onScroll);
 
+    // Load user profile
+    // _loadUserProfile();
+
     // Load student data and their subscriptions
     _loadStudentData();
   }
@@ -77,6 +91,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           await studentProfileService.getStudentProfiles();
       _students = students;
 
+      print('Total students: ${_students.length}');
+
       // For each student, fetch their active subscriptions
       Map<String, List<SubscriptionPlanData>> studentPlans = {};
       bool hasAnyActivePlans = false;
@@ -85,6 +101,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         final List<Subscription> subscriptions = await subscriptionService
             .getActiveSubscriptionsForStudent(student.id);
 
+        print(
+            'Student: ${student.name}, Active subscriptions: ${subscriptions.length}');
+
         if (subscriptions.isNotEmpty) {
           hasAnyActivePlans = true;
           List<SubscriptionPlanData> planDataList = [];
@@ -92,8 +111,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           // Process each subscription for this student
           for (var subscription in subscriptions) {
             // Get cancelled meals for this subscription
-            final cancelledMeals =
-                await subscriptionService.getCancelledMeals(student.id);
+            final cancelledMeals = await subscriptionService.getCancelledMeals(
+              student.id,
+            );
             final int cancelledCount = cancelledMeals.length;
 
             // Calculate meal summary
@@ -103,16 +123,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                 : _calculateConsumedMeals(subscription, cancelledCount);
 
             // Create plan data object
-            planDataList.add(SubscriptionPlanData(
-              student: student,
-              subscription: subscription,
-              planType: _getPlanTypeDisplay(subscription),
-              totalMeals: totalMeals,
-              remainingMeals: totalMeals - consumedMeals,
-              nextRenewalDate: subscription.endDate.day.toString() +
-                  ' ' +
-                  _getMonthName(subscription.endDate.month),
-            ));
+            planDataList.add(
+              SubscriptionPlanData(
+                student: student,
+                subscription: subscription,
+                planType: _getPlanTypeDisplay(subscription),
+                totalMeals: totalMeals,
+                remainingMeals: totalMeals - consumedMeals,
+                nextRenewalDate: subscription.endDate.day.toString() +
+                    ' ' +
+                    _getMonthName(subscription.endDate.month),
+              ),
+            );
           }
 
           studentPlans[student.id] = planDataList;
@@ -173,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return months[month - 1];
   }
@@ -242,8 +264,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
 
       // Sum all weekday counts and subtract cancelled meals
-      final totalPassed =
-          weekdayCounts.values.fold(0, (sum, count) => sum + count);
+      final totalPassed = weekdayCounts.values.fold(
+        0,
+        (sum, count) => sum + count,
+      );
       return totalPassed - cancelledCount;
     } else {
       // Default Mon-Fri plan
@@ -307,26 +331,38 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.white,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         title: Text(
           'Home',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: AppTheme.white,
+            color: Colors.white,
           ),
         ),
         backgroundColor: AppTheme.purple,
         elevation: 0,
-        actions: [
-          // Profile icon button
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: AppTheme.white),
-            onPressed: () {
-              Navigator.pushNamed(context, Routes.profileSettings);
+        leading: Row(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(width: 10),
+          Image.asset(
+            'assets/images/start_well.png',
+            fit: BoxFit.cover,
+            width: 46,
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(Icons.home, color: Colors.white, size: 28);
             },
+          ),
+        ]),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: ProfileAvatar(
+              userProfile: widget.userProfile,
+              radius: 18,
+              onAvatarTap: () {
+                Navigator.pushNamed(context, Routes.profileSettings);
+              },
+            ),
           ),
         ],
       ),
@@ -351,7 +387,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           _navigateToTab(3), // Meal Plan tab
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 10),
 
                   // Subscription Overview Section
                   _buildAnimatedSection(
@@ -361,8 +397,23 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SectionTitle(
+                        SectionTitle(
                           title: 'Your Subscriptions',
+                          actionText: _hasActivePlans ? 'See All' : null,
+                          onActionPressed: _hasActivePlans
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          AllStudentSubscriptionPage(
+                                        students: _students,
+                                        studentPlans: _studentPlans,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              : null,
                         ),
                         const SizedBox(height: 15),
 
@@ -405,133 +456,156 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
 
-                        // Active plans list - grouped by student
+                        // Active plans - Show only the first student with active plan
                         if (_hasActivePlans)
-                          ..._students
-                              .where((student) =>
-                                  _studentPlans.containsKey(student.id))
-                              .map((student) {
-                            final plans = _studentPlans[student.id] ?? [];
-                            final planCount = plans.length;
+                          Builder(
+                            builder: (context) {
+                              // Get first student with active plans
+                              final studentsWithPlans = _students
+                                  .where(
+                                    (student) => _studentPlans.containsKey(
+                                      student.id,
+                                    ),
+                                  )
+                                  .toList();
 
-                            // Show a single card per student with plan count
-                            return Column(
-                              children: [
-                                Card(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 2,
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => ActivePlanDetailsPage(
-                                              studentId: student.id),
+                              if (studentsWithPlans.isEmpty)
+                                return const SizedBox.shrink();
+
+                              final firstStudent = studentsWithPlans.first;
+                              final plans =
+                                  _studentPlans[firstStudent.id] ?? [];
+                              final planCount = plans.length;
+
+                              return Column(
+                                children: [
+                                  Card(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 2,
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                ActivePlanDetailsPage(
+                                              studentId: firstStudent.id,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 48,
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.purple
+                                                    .withOpacity(0.1),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.calendar_month,
+                                                color: AppTheme.purple,
+                                                size: 24,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    firstStudent.name,
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: AppTheme.textDark,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    planCount == 1
+                                                        ? '1 Active Plan'
+                                                        : '$planCount Active Plans',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 14,
+                                                      color:
+                                                          AppTheme.textMedium,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.green.withOpacity(
+                                                  0.1,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    width: 8,
+                                                    height: 8,
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                      color: Colors.green,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'Active',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: Colors.green,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Icon(
+                                              Icons.chevron_right,
+                                              color: AppTheme.textMedium,
+                                            ),
+                                          ],
                                         ),
-                                      );
-                                    },
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 48,
-                                            height: 48,
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.purple
-                                                  .withOpacity(0.1),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.calendar_month,
-                                              color: AppTheme.purple,
-                                              size: 24,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  student.name,
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: AppTheme.textDark,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  planCount == 1
-                                                      ? '1 Active Plan'
-                                                      : '$planCount Active Plans',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 14,
-                                                    color: AppTheme.textMedium,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  Colors.green.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Container(
-                                                  width: 8,
-                                                  height: 8,
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color: Colors.green,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  'Active',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: Colors.green,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Icon(
-                                            Icons.chevron_right,
-                                            color: AppTheme.textMedium,
-                                          ),
-                                        ],
                                       ),
                                     ),
                                   ),
-                                ),
 
-                                // Add Remaining Meals card for this student
-                                _buildStudentRemainingMealsCard(student, plans),
-                              ],
-                            );
-                          }).toList(),
+                                  // Add Remaining Meals card for this student
+                                  _buildStudentRemainingMealsCard(
+                                    firstStudent,
+                                    plans,
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30),
 
                   // Upcoming Meals Section
                   _buildAnimatedSection(
@@ -552,7 +626,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30),
 
                   // StartwellPromiseCarousel - Moved from above
                   _buildAnimatedSection(
@@ -565,16 +638,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                       children: [
                         Padding(
                           padding: EdgeInsets.only(left: 20),
-                          child: SectionTitle(
-                            title: 'Why Parents Choose Us',
-                          ),
+                          child: SectionTitle(title: 'Why Parents Choose Us'),
                         ),
                         const SizedBox(height: 15),
                         ValueCarousel(),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 30),
 
                   // Quick Actions Section
                   _buildAnimatedSection(
@@ -584,9 +654,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SectionTitle(
-                          title: 'Quick Actions',
-                        ),
+                        const SectionTitle(title: 'Quick Actions'),
                         const SizedBox(height: 15),
                         QuickActions(
                           onInviteSchoolPressed: () {
@@ -621,11 +689,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ],
                     ),
                   ),
-                  const SizedBox(height: 40),
 
                   // Footer Note - only show when scrolled to the bottom
                   if (_showFooter)
                     _buildAnimatedSection(
+                      margin: 0,
                       animation: _fadeAnimation,
                       slideAnimation: _slideAnimation,
                       delay: 0.5,
@@ -664,7 +732,9 @@ class _DashboardScreenState extends State<DashboardScreen>
             opacity: animation.value,
             child: Transform.translate(
               offset: Offset(
-                  0, slideAnimation.value * (1 - delayedAnimation.value)),
+                0,
+                slideAnimation.value * (1 - delayedAnimation.value),
+              ),
               child: child,
             ),
           );
@@ -676,7 +746,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // Add this method to build remaining meals card for each student
   Widget _buildStudentRemainingMealsCard(
-      Student student, List<SubscriptionPlanData> plans) {
+    Student student,
+    List<SubscriptionPlanData> plans,
+  ) {
     // Calculate total remaining meals
     int totalRemaining = 0;
     int totalMeals = 0;
@@ -720,9 +792,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 20),
       child: InkWell(
@@ -788,8 +858,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                     LinearProgressIndicator(
                       value: progress, // Use the calculated progress value
                       backgroundColor: Colors.grey[200],
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(AppTheme.orange),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppTheme.orange,
+                      ),
                       minHeight: 6,
                       borderRadius: BorderRadius.circular(3),
                     ),
@@ -797,33 +868,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right,
-                color: AppTheme.textMedium,
-              ),
+              const Icon(Icons.chevron_right, color: AppTheme.textMedium),
             ],
           ),
         ),
       ),
     );
   }
-}
-
-// Class to hold subscription data for a student
-class SubscriptionPlanData {
-  final Student student;
-  final Subscription subscription;
-  final String planType;
-  final int totalMeals;
-  final int remainingMeals;
-  final String nextRenewalDate;
-
-  SubscriptionPlanData({
-    required this.student,
-    required this.subscription,
-    required this.planType,
-    required this.totalMeals,
-    required this.remainingMeals,
-    required this.nextRenewalDate,
-  });
 }

@@ -16,6 +16,9 @@ import 'package:startwell/screens/terms_conditions_page.dart';
 import 'package:startwell/screens/startwell_location_page.dart';
 import 'package:startwell/screens/login_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:startwell/widgets/profile_avatar.dart';
+import 'package:startwell/utils/routes.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   const ProfileSettingsScreen({Key? key}) : super(key: key);
@@ -52,14 +55,17 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      // Get current profile or create a sample one if none exists
-      _userProfile = await _userProfileService.getCurrentProfile();
+      final userProfileService = UserProfileService();
+      _userProfile = await userProfileService.getCurrentProfile();
 
+      // Create a sample profile if none exists (for demo purposes)
       if (_userProfile == null) {
-        _userProfile = await _userProfileService.createSampleProfile();
+        _userProfile = await userProfileService.createSampleProfile();
       }
 
       // Initialize the text controllers
@@ -67,10 +73,12 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       _emailController.text = _userProfile?.email ?? '';
       _phoneController.text = _userProfile?.phoneNumber ?? '';
     } catch (e) {
-      _showErrorSnackBar('Error loading profile: $e');
+      print('Error loading user profile: $e');
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -369,93 +377,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         child: Column(
           children: [
             // Profile Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.purple.withOpacity(0.05),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: _selectImage,
-                    child: Stack(
-                      children: [
-                        // Profile Image
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: AppTheme.purple.withOpacity(0.2),
-                          backgroundImage: _userProfile?.profileImageUrl != null
-                              ? FileImage(File(_userProfile!.profileImageUrl!))
-                              : null,
-                          child: _userProfile?.profileImageUrl == null
-                              ? Icon(
-                                  Icons.person,
-                                  size: 50,
-                                  color: AppTheme.purple.withOpacity(0.7),
-                                )
-                              : null,
-                        ),
-                        // Edit Icon
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.purple,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white,
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _userProfile?.name ?? 'User Name',
-                    style: GoogleFonts.poppins(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    _userProfile?.email ?? 'email@example.com',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: _showEditProfileForm,
-                    icon: const Icon(Icons.edit),
-                    label: Text(
-                      'Edit Profile',
-                      style: GoogleFonts.poppins(),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 10,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildProfileHeader(),
 
             // Settings Section
             Container(
@@ -522,28 +444,63 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                               color: AppTheme.purple,
                             )),
                         const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildSocialMediaButton(
-                              icon: Icons.facebook,
-                              color: const Color(0xFF1877F2),
-                              url:
-                                  'https://business.facebook.com/business/loginpage/?next=https%3A%2F%2Fbusiness.facebook.com%2F%3Fnav_ref%3Dbiz_unified_f3_login_page_to_mbs&login_options%5B0%5D=FB&login_options%5B1%5D=IG&login_options%5B2%5D=SSO&config_ref=biz_login_tool_flavor_mbs',
-                            ),
-                            _buildSocialMediaButton(
-                              icon: Icons.camera_alt,
-                              color: const Color(0xFFE1306C),
-                              url:
-                                  'https://www.instagram.com/startwell.official/',
-                            ),
-                            _buildSocialMediaButton(
-                              icon: Icons.business_center,
-                              color: const Color(0xFF0077B5),
-                              url:
-                                  'https://www.linkedin.com/company/startwellindia',
-                            ),
-                          ],
+                        Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: FaIcon(
+                                  FontAwesomeIcons.instagram,
+                                  color: const Color(0xFFE1306C),
+                                  size: 24,
+                                ),
+                                title: Text(
+                                  "Instagram",
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                onTap: () => _launchURL(
+                                    'https://www.instagram.com/startwell.official/'),
+                              ),
+                              const Divider(height: 1),
+                              ListTile(
+                                leading: FaIcon(
+                                  FontAwesomeIcons.facebook,
+                                  color: const Color(0xFF1877F2),
+                                  size: 24,
+                                ),
+                                title: Text(
+                                  "Facebook",
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                onTap: () => _launchURL(
+                                    'https://business.facebook.com/business/loginpage/?next=https%3A%2F%2Fbusiness.facebook.com%2F%3Fnav_ref%3Dbiz_unified_f3_login_page_to_mbs&login_options%5B0%5D=FB&login_options%5B1%5D=IG&login_options%5B2%5D=SSO&config_ref=biz_login_tool_flavor_mbs'),
+                              ),
+                              const Divider(height: 1),
+                              ListTile(
+                                leading: FaIcon(
+                                  FontAwesomeIcons.linkedin,
+                                  color: const Color(0xFF0077B5),
+                                  size: 24,
+                                ),
+                                title: Text(
+                                  "LinkedIn",
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                onTap: () => _launchURL(
+                                    'https://www.linkedin.com/company/startwellindia'),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -560,6 +517,62 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        children: [
+          ProfileAvatar(
+            userProfile: _userProfile,
+            radius: 35,
+            showEditIcon: true,
+            onEditTap: _selectImage,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _userProfile?.name ?? 'User Name',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _userProfile?.email ?? 'user@example.com',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  _userProfile?.phoneNumber ?? '+1234567890',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit, color: AppTheme.purple),
+            onPressed: _showEditProfileForm,
+          ),
+        ],
       ),
     );
   }
@@ -585,28 +598,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       ),
       trailing: trailing ?? const Icon(Icons.chevron_right),
       onTap: onTap,
-    );
-  }
-
-  Widget _buildSocialMediaButton({
-    required IconData icon,
-    required Color color,
-    required String url,
-  }) {
-    return InkWell(
-      onTap: () => _launchURL(url),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: color,
-          size: 28,
-        ),
-      ),
     );
   }
 

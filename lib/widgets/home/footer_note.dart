@@ -53,12 +53,25 @@ class _FooterNoteState extends State<FooterNote>
     const Color heartColor = Color(0xFFE63946);
 
     return Container(
+      height: 300,
+      decoration: const BoxDecoration(
+        // color: Colors.red,
+        image: DecorationImage(
+          image: AssetImage('assets/images/background_footer.png'),
+          fit: BoxFit.fitWidth,
+          // colorFilter: ColorFilter.mode(
+          //   Colors.white.withOpacity(.85),
+          //   BlendMode.srcOver,
+          // ),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 16.0),
       child: AnimatedOpacity(
         opacity: _isVisible ? 1.0 : 0.0,
         duration: const Duration(milliseconds: 1200),
         curve: Curves.easeOutCubic,
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
             // First line: Trusted by parents
@@ -100,7 +113,7 @@ class _FooterNoteState extends State<FooterNote>
                   builder: (context, child) {
                     return Transform.scale(
                       scale: _heartAnimation.value,
-                      child: Icon(
+                      child: const Icon(
                         Icons.favorite,
                         color: heartColor,
                         size: 20,

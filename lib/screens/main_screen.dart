@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:startwell/models/user_profile.dart';
 import 'package:startwell/screens/dashboard_screen.dart';
 import 'package:startwell/screens/meal_plan_screen.dart';
+import 'package:startwell/services/user_profile_service.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/app_colors.dart';
 import 'package:startwell/screens/manage_student_profile_screen.dart';
@@ -20,16 +22,36 @@ class MainScreen extends StatefulWidget {
 class MainScreenState extends State<MainScreen> {
   late int _selectedIndex;
   final PageController _pageController = PageController();
+  UserProfile? _userProfile;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialTabIndex ?? 0;
+    _loadUserProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.initialTabIndex != null) {
         _pageController.jumpToPage(_selectedIndex);
       }
     });
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final userProfileService = UserProfileService();
+      _userProfile = await userProfileService.getCurrentProfile();
+
+      // Create a sample profile if none exists (for demo purposes)
+      if (_userProfile == null) {
+        _userProfile = await userProfileService.createSampleProfile();
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error loading user profile: $e');
+    }
   }
 
   @override
@@ -57,11 +79,6 @@ class MainScreenState extends State<MainScreen> {
     _onItemTapped(index);
   }
 
-  // Navigate to profile settings screen
-  void _navigateToProfileSettings() {
-    Navigator.pushNamed(context, Routes.profileSettings);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,15 +91,18 @@ class MainScreenState extends State<MainScreen> {
           });
         },
         children: [
-          // Wrap child screens with a profile icon
-          _addProfileIconToScreen(const DashboardScreen()),
-          _addProfileIconToScreen(
-              const ManageStudentProfileScreen(isManagementMode: true)),
-          _addProfileIconToScreen(MySubscriptionScreen(
-              startDate: DateTime.now(),
-              endDate: DateTime.now(),
-              defaultTabIndex: widget.initialTabIndex == 2 ? 0 : 0)),
-          _addProfileIconToScreen(const MealPlanScreen()),
+          DashboardScreen(userProfile: _userProfile),
+          ManageStudentProfileScreen(
+            isManagementMode: true,
+            userProfile: _userProfile,
+          ),
+          MySubscriptionScreen(
+            startDate: DateTime.now(),
+            endDate: DateTime.now(),
+            defaultTabIndex: widget.initialTabIndex == 2 ? 0 : 0,
+            userProfile: _userProfile,
+          ),
+          MealPlanScreen(userProfile: _userProfile),
         ],
       ),
       bottomNavigationBar: Container(
@@ -132,146 +152,6 @@ class MainScreenState extends State<MainScreen> {
               icon: Icon(Icons.restaurant_menu),
               activeIcon: Icon(Icons.restaurant_menu, size: 28),
               label: 'Meal Plan',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Helper method to add profile icon to app bars of child screens
-  Widget _addProfileIconToScreen(Widget screen) {
-    // If the screen is Dashboard (case 0), wrap it with the AppBar
-    if (_selectedIndex == 0) {
-      return WillPopScope(
-        onWillPop: () async => false, // Prevent back button from popping
-        child: Scaffold(
-          // appBar: AppBar(
-          //   title: _getTitleForIndex(_selectedIndex),
-          //   backgroundColor: Colors.white,
-          //   //  AppTheme.purple,
-          //   elevation: 0,
-          //   automaticallyImplyLeading: false, // Remove back button
-          //   actions: [
-          //     IconButton(
-          //       icon: const Icon(Icons.account_circle, color: AppTheme.white),
-          //       onPressed: _navigateToProfileSettings,
-          //     ),
-          //   ],
-          // ),
-          body: screen,
-        ),
-      );
-    }
-
-    // For other screens, return them as is to use their own AppBars
-    return screen;
-  }
-
-  // Helper method to get the title for each tab
-  Widget _getTitleForIndex(int index) {
-    String title;
-    switch (index) {
-      case 0:
-        title = 'Home';
-        break;
-      case 1:
-        title = 'Student Profiles';
-        break;
-      case 2:
-        title = 'My Subscription';
-        break;
-      case 3:
-        title = 'Meal Plan';
-        break;
-      default:
-        title = 'StartWell';
-    }
-
-    return Text(
-      title,
-      style: GoogleFonts.poppins(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: AppTheme.white,
-      ),
-    );
-  }
-}
-
-// Placeholder screens for navigation targets that don't exist yet
-class StudentProfilesScreen extends StatelessWidget {
-  const StudentProfilesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Student Profiles',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.white,
-          ),
-        ),
-        backgroundColor: AppTheme.purple,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: AppTheme.white),
-            onPressed: () {
-              Navigator.pushNamed(context, Routes.profileSettings);
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.school,
-              size: 80,
-              color: AppColors.primary.withOpacity(0.7),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Student Profiles',
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Manage your children\'s profiles and meal preferences',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {},
-              icon: const Icon(Icons.add),
-              label: Text(
-                'Add Student',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
             ),
           ],
         ),

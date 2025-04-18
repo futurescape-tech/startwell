@@ -247,41 +247,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
 
                       const SizedBox(height: 24),
 
-                      // Section 3: Associated Students
-                      if (_associatedStudents.isNotEmpty) ...[
-                        _buildSectionHeader('Associated Students'),
-                        ..._associatedStudents
-                            .map((student) => Card(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.all(12),
-                                    leading: CircleAvatar(
-                                      backgroundImage: NetworkImage(
-                                          'https://ui-avatars.com/api/?name=${Uri.encodeComponent(student.name)}&background=random'),
-                                      radius: 24,
-                                    ),
-                                    title: Text(
-                                      student.name,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.textDark,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      "Class ${student.className ?? 'N/A'}, ${student.schoolName ?? 'N/A'}",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: AppTheme.textMedium,
-                                      ),
-                                    ),
-                                  ),
-                                ))
-                            .toList(),
-                      ],
+                      // Associated Students section has been removed
                     ],
                   ),
                 ),

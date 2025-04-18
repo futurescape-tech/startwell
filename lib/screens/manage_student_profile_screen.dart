@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/meal_model.dart';
 import 'package:startwell/models/student_model.dart';
+import 'package:startwell/models/user_profile.dart';
 import 'package:startwell/screens/order_summary_screen.dart';
 import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/themes/app_theme.dart';
@@ -9,6 +10,8 @@ import 'package:startwell/utils/meal_plan_validator.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
 import 'package:startwell/utils/routes.dart';
 import 'package:intl/intl.dart';
+import 'package:startwell/widgets/profile_avatar.dart';
+import 'package:startwell/widgets/student/student_card_widget.dart';
 
 class ManageStudentProfileScreen extends StatefulWidget {
   final String? planType;
@@ -22,6 +25,7 @@ class ManageStudentProfileScreen extends StatefulWidget {
   final bool? isExpressOrder;
   final bool isManagementMode;
   final String? mealType;
+  final UserProfile? userProfile;
 
   const ManageStudentProfileScreen({
     Key? key,
@@ -36,6 +40,7 @@ class ManageStudentProfileScreen extends StatefulWidget {
     this.isExpressOrder,
     this.isManagementMode = false,
     this.mealType,
+    this.userProfile,
   }) : super(key: key);
 
   @override
@@ -711,12 +716,25 @@ class _ManageStudentProfileScreenState
           ),
         ),
         backgroundColor: AppTheme.purple,
+        elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: AppTheme.white),
-            onPressed: () {
-              Navigator.pushNamed(context, Routes.profileSettings);
-            },
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: widget.userProfile != null
+                ? ProfileAvatar(
+                    userProfile: widget.userProfile,
+                    radius: 18,
+                    onAvatarTap: () {
+                      Navigator.pushNamed(context, Routes.profileSettings);
+                    },
+                  )
+                : IconButton(
+                    icon:
+                        const Icon(Icons.account_circle, color: AppTheme.white),
+                    onPressed: () {
+                      Navigator.pushNamed(context, Routes.profileSettings);
+                    },
+                  ),
           ),
         ],
       ),
@@ -907,154 +925,14 @@ class _ManageStudentProfileScreenState
       itemBuilder: (context, index) {
         final student = _studentProfiles[index];
         final isSelected = _selectedStudent?.id == student.id;
-        final hasActivePlan =
-            student.hasActiveBreakfast || student.hasActiveLunch;
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: isSelected ? AppTheme.purple : Colors.grey.shade300,
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          elevation: isSelected ? 2 : 0,
-          child: InkWell(
-            onTap: () => _selectStudent(student),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Selection indicator (only in selection mode)
-                      if (!widget.isManagementMode)
-                        Transform.scale(
-                          scale: 1.2,
-                          child: Checkbox(
-                            value: isSelected,
-                            onChanged: (_) => _selectStudent(student),
-                            activeColor: AppTheme.purple,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                      if (!widget.isManagementMode) const SizedBox(width: 8),
-
-                      // Student details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              student.name,
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              student.schoolName,
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: AppTheme.textMedium,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Class ${student.className}, Division ${student.division}, Floor ${student.floor}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: AppTheme.textMedium,
-                              ),
-                            ),
-                            if (student.allergies.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'Allergies: ${student.allergies}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.red[700],
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      // Actions
-                      Column(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _showStudentForm(student: student),
-                            tooltip: 'Edit',
-                          ),
-                          student.hasActivePlan
-                              ? Tooltip(
-                                  message:
-                                      'Student has active meal plans and cannot be deleted',
-                                  child: IconButton(
-                                    icon: const Icon(Icons.no_accounts,
-                                        color: Colors.grey),
-                                    onPressed: null, // Disabled
-                                  ),
-                                )
-                              : IconButton(
-                                  icon: const Icon(Icons.delete,
-                                      color: Colors.red),
-                                  onPressed: () =>
-                                      _confirmDeleteStudentProfile(student),
-                                  tooltip: 'Delete student profile',
-                                ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  // Active meal plan information
-                  if (hasActivePlan && !widget.isManagementMode) ...[
-                    const SizedBox(height: 8),
-                    const Divider(),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.restaurant,
-                          size: 16,
-                          color: student.hasActiveBreakfast &&
-                                  student.hasActiveLunch
-                              ? Colors.orange
-                              : AppTheme.purple,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            MealPlanValidator.getActivePlanLabel(student),
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: student.hasActiveBreakfast &&
-                                      student.hasActiveLunch
-                                  ? Colors.orange
-                                  : AppTheme.purple,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+        return StudentCardWidget(
+          student: student,
+          isSelected: isSelected,
+          onSelect: widget.isManagementMode ? null : _selectStudent,
+          onEdit: _showStudentForm,
+          onDelete: _confirmDeleteStudentProfile,
+          isManagementMode: widget.isManagementMode,
         );
       },
     );

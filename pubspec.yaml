@@ -48,6 +48,7 @@ dependencies:
   url_launcher: ^6.2.2
   carousel_slider: ^5.0.0
   smooth_page_indicator: ^1.1.0
+  font_awesome_flutter: ^10.4.0
 
 dev_dependencies:
   flutter_test:
@@ -95,6 +96,15 @@ flutter:
     - assets/images/lunch/International Lunch.png
     - assets/images/lunch/Jain Lunch.png
     - assets/images/veg.png
+    # Payment method icons
+    - assets/images/payment/wallet.png
+    - assets/images/payment/phonepe.png
+    - assets/images/payment/gpay.png
+    - assets/images/payment/paytm.png
+    - assets/images/background_footer.png
+    - assets/images/payment/razorpay.png
+    # App logo
+    - assets/images/start_well.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

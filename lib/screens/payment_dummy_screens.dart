@@ -278,12 +278,16 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => MySubscriptionScreen(
-                          defaultTabIndex: 0,
-                          selectedStudentId: widget.selectedStudent.id,
-                          startDate: actualStartDate,
-                          endDate: widget.endDate,
+                        builder: (_) => MainScreen(
+                          initialTabIndex: 2,
                         ),
+
+                        //  MySubscriptionScreen(
+                        //   defaultTabIndex: 0,
+                        //   selectedStudentId: widget.selectedStudent.id,
+                        //   startDate: actualStartDate,
+                        //   endDate: widget.endDate,
+                        // ),
                       ),
                       (route) => false, // Remove all previous routes
                     );

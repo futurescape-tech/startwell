@@ -3,8 +3,10 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:startwell/models/user_profile.dart';
 import 'package:startwell/services/event_bus_service.dart';
 import 'package:startwell/themes/app_theme.dart';
+import 'package:startwell/widgets/profile_avatar.dart';
 import 'package:startwell/widgets/subscription/upcoming_meals_tab.dart';
 import 'package:startwell/widgets/subscription/cancelled_meals_tab.dart';
 import 'package:startwell/utils/routes.dart';
@@ -18,6 +20,7 @@ class MySubscriptionScreen extends StatefulWidget {
   final DateTime? startDate;
   final DateTime? endDate;
   final int defaultTabIndex;
+  final UserProfile? userProfile;
 
   const MySubscriptionScreen({
     Key? key,
@@ -25,6 +28,7 @@ class MySubscriptionScreen extends StatefulWidget {
     this.startDate,
     this.endDate,
     this.defaultTabIndex = 0,
+    this.userProfile,
   }) : super(key: key);
 
   @override
@@ -127,11 +131,23 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
         backgroundColor: AppTheme.purple,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: AppTheme.white),
-            onPressed: () {
-              Navigator.pushNamed(context, Routes.profileSettings);
-            },
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: widget.userProfile != null
+                ? ProfileAvatar(
+                    userProfile: widget.userProfile,
+                    radius: 18,
+                    onAvatarTap: () {
+                      Navigator.pushNamed(context, Routes.profileSettings);
+                    },
+                  )
+                : IconButton(
+                    icon:
+                        const Icon(Icons.account_circle, color: AppTheme.white),
+                    onPressed: () {
+                      Navigator.pushNamed(context, Routes.profileSettings);
+                    },
+                  ),
           ),
         ],
         bottom: PreferredSize(

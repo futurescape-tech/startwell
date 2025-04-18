@@ -2,17 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/meal_model.dart';
+import 'package:startwell/models/user_profile.dart';
 import 'package:startwell/screens/subscription_selection_screen.dart';
 import 'package:startwell/services/meal_data_service.dart';
 import 'package:startwell/services/meal_selection_manager.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
+import 'package:startwell/widgets/profile_avatar.dart';
 import 'package:startwell/screens/meal_detail_page.dart';
 import 'package:startwell/widgets/common/veg_icon.dart';
 import 'package:startwell/utils/routes.dart';
 
 class MealPlanScreen extends StatefulWidget {
-  const MealPlanScreen({super.key});
+  final UserProfile? userProfile;
+
+  const MealPlanScreen({
+    super.key,
+    this.userProfile,
+  });
 
   @override
   State<MealPlanScreen> createState() => _MealPlanScreenState();
@@ -122,11 +129,23 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
           ),
           backgroundColor: AppTheme.purple,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.account_circle, color: AppTheme.white),
-              onPressed: () {
-                Navigator.pushNamed(context, Routes.profileSettings);
-              },
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: widget.userProfile != null
+                  ? ProfileAvatar(
+                      userProfile: widget.userProfile,
+                      radius: 18,
+                      onAvatarTap: () {
+                        Navigator.pushNamed(context, Routes.profileSettings);
+                      },
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.account_circle,
+                          color: AppTheme.white),
+                      onPressed: () {
+                        Navigator.pushNamed(context, Routes.profileSettings);
+                      },
+                    ),
             ),
           ],
           bottom: PreferredSize(

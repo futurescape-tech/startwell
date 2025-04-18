@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/services/meal_service.dart';
@@ -10,6 +11,7 @@ import 'package:startwell/models/cancelled_meal.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:startwell/screens/my_subscription_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UpcomingMealsTab extends StatefulWidget {
   final String? selectedStudentId;
@@ -78,10 +80,102 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   Map<DateTime, List<MealData>> _mealsMap = {};
   List<MealData> _selectedDateMeals = [];
 
+  // Add a loading flag for SwapMeal operations
+  bool _isSwapLoading = false;
+
   @override
   void initState() {
     super.initState();
-    _loadStudentsWithMealPlans();
+    // Only call _loadData() which handles both loading subscriptions and applying local swaps
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await _loadStudentsWithMealPlans();
+    // We're now applying local swaps in _generateMealMap after the meal map is fully populated
+    // so we don't need to call it here
+  }
+
+  // Method to apply locally swapped meals
+  Future<void> _applyLocalSwappedMeals() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Get all keys that start with swappedMeal_
+      final keys = prefs
+          .getKeys()
+          .where((key) => key.startsWith('swappedMeal_'))
+          .toList();
+
+      if (keys.isEmpty) {
+        return;
+      }
+
+      log('[swap_meal_flow] Found ${keys.length} locally swapped meals');
+
+      // Apply each swapped meal to the UI
+      for (final key in keys) {
+        final swappedJson = prefs.getString(key);
+        if (swappedJson != null) {
+          final swappedData = jsonDecode(swappedJson);
+
+          // Extract important information
+          final String subscriptionId = swappedData['subscriptionId'];
+          final String newMealName = swappedData['newMealName'];
+          final DateTime date = DateTime.parse(swappedData['date']);
+
+          // Update in memory meals map
+          _updateMealFromLocalStorage(subscriptionId, newMealName, date);
+        }
+      }
+
+      // Update UI if needed
+      if (mounted) {
+        setState(() {
+          _updateSelectedDayMeals();
+        });
+      }
+    } catch (e) {
+      log('[swap_meal_flow] Error applying local swapped meals: $e');
+    }
+  }
+
+  // Helper to update meals from local storage
+  void _updateMealFromLocalStorage(
+      String subscriptionId, String newMealName, DateTime date) {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+
+    log('[swap_meal_flow] Attempting to apply local swap: subscriptionId=$subscriptionId, newMealName=$newMealName, date=${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
+
+    if (_mealsMap.containsKey(normalizedDate)) {
+      final meals = _mealsMap[normalizedDate]!;
+      log('[swap_meal_flow] Found ${meals.length} meals for this date');
+
+      for (int i = 0; i < meals.length; i++) {
+        if (meals[i].subscriptionId == subscriptionId) {
+          log('[swap_meal_flow] Found matching meal to update: ${meals[i].name} -> $newMealName');
+
+          final updatedMeal = MealData(
+            studentName: meals[i].studentName,
+            name: newMealName,
+            planType: meals[i].planType,
+            items: meals[i].items,
+            status: 'Swapped',
+            subscription: meals[i].subscription,
+            canSwap: meals[i].canSwap,
+            date: meals[i].date,
+            studentId: meals[i].studentId,
+            subscriptionId: meals[i].subscriptionId,
+          );
+
+          meals[i] = updatedMeal;
+          log('[swap_meal_flow] Successfully updated meal in memory');
+          break;
+        }
+      }
+    } else {
+      log('[swap_meal_flow] No meals found for date ${DateFormat('yyyy-MM-dd').format(normalizedDate)}');
+    }
   }
 
   DateTime _getEarliestSubscriptionStartDate() {
@@ -282,15 +376,18 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
           log('[cancel_meal_flow] Added $mealsAddedForThisSubscription meals for this subscription');
         }
 
-        // Update selected date meals if necessary
-        if (_mealsMap.containsKey(_selectedDay)) {
-          _selectedDateMeals = _mealsMap[_selectedDay] ?? [];
-        } else {
-          _selectedDateMeals = [];
-        }
+        // Now apply local swapped meals after generating the entire meal map
+        _applyLocalSwappedMeals().then((_) {
+          // Update selected date meals if necessary
+          if (_mealsMap.containsKey(_selectedDay)) {
+            _selectedDateMeals = _mealsMap[_selectedDay] ?? [];
+          } else {
+            _selectedDateMeals = [];
+          }
 
-        log('[cancel_meal_flow] Finished generating meal map, added $totalMealsAdded total meals');
-        log('[cancel_meal_flow] Selected day (${DateFormat('yyyy-MM-dd').format(_selectedDay)}) has ${_selectedDateMeals.length} meals');
+          log('[cancel_meal_flow] Finished generating meal map, added $totalMealsAdded total meals');
+          log('[cancel_meal_flow] Selected day (${DateFormat('yyyy-MM-dd').format(_selectedDay)}) has ${_selectedDateMeals.length} meals');
+        });
       });
     });
   }
@@ -721,7 +818,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   }
 
   // Build calendar marker with colored dots for meal types
-  Widget _buildCalendarMarker(List<dynamic> events, DateTime day) {
+  Widget _buildCalendarMarker(List<dynamic> events, DateTime date) {
     if (events.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -733,7 +830,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     bool hasSwapped = false;
     bool hasCancelled = false;
 
-    log('[cancel_meal_flow] Building calendar marker for ${DateFormat('yyyy-MM-dd').format(day)} with ${events.length} events');
+    log('[cancel_meal_flow] Building calendar marker for ${DateFormat('yyyy-MM-dd').format(date)} with ${events.length} events');
 
     // Process MealData objects
     for (final event in events) {
@@ -850,6 +947,44 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     );
   }
 
+  // Helper method to build status badge
+  Widget _buildStatusBadge(String status, bool isCancelled) {
+    Color bgColor = Colors.green.withOpacity(0.1);
+    Color borderColor = Colors.green.withOpacity(0.5);
+    Color textColor = Colors.green;
+
+    if (isCancelled) {
+      bgColor = Colors.red.withOpacity(0.1);
+      borderColor = Colors.red.withOpacity(0.5);
+      textColor = Colors.red;
+      status = 'Cancelled';
+    } else if (status == 'Swapped') {
+      bgColor = Colors.orange.withOpacity(0.1);
+      borderColor = Colors.orange.withOpacity(0.5);
+      textColor = Colors.orange;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: borderColor,
+          width: 1,
+        ),
+      ),
+      child: Text(
+        status,
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
   // Helper to check if there are cancelled meals for a specific date
   Future<bool> _checkForCancelledMeals(DateTime date) async {
     // Normalize the date to avoid time issues
@@ -868,21 +1003,23 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       log('[cancel_meal_flow] Found ${cancelledMeals.length} cancelled meals for student: $_selectedStudentId');
 
       // Check if any cancelled meals match the given date
-      bool hasCancelled = false;
-
       for (var meal in cancelledMeals) {
-        // Compare year, month, and day to check if this meal was cancelled on the given date
-        final DateTime cancellationDate = meal.cancellationDate;
-        if (cancellationDate.year == normalizedDate.year &&
-            cancellationDate.month == normalizedDate.month &&
-            cancellationDate.day == normalizedDate.day) {
-          hasCancelled = true;
-          log('[cancel_meal_flow] Found cancelled meal for date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}, meal: ${meal.mealName}, subscription: ${meal.subscriptionId}');
-          break;
+        try {
+          // Compare year, month, and day to check if this meal was cancelled on the given date
+          final DateTime cancellationDate = meal.cancellationDate;
+          if (cancellationDate.year == normalizedDate.year &&
+              cancellationDate.month == normalizedDate.month &&
+              cancellationDate.day == normalizedDate.day) {
+            log('[cancel_meal_flow] Found cancelled meal for date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}, meal: ${meal.mealName}, subscription: ${meal.subscriptionId}');
+            return true;
+          }
+        } catch (e) {
+          log('[cancel_meal_flow] Error processing cancelled meal: $e');
+          // Continue checking other meals even if one has an error
         }
       }
 
-      return hasCancelled;
+      return false;
     } catch (e) {
       log('[cancel_meal_flow] Error checking for cancelled meals: $e');
       return false;
@@ -1084,30 +1221,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         ),
 
                         // Status badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isCancelled
-                                ? Colors.red.withOpacity(0.1)
-                                : meal.status == 'Swapped'
-                                    ? Colors.orange.withOpacity(0.1)
-                                    : Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            meal.status,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isCancelled
-                                  ? Colors.red
-                                  : meal.status == 'Swapped'
-                                      ? Colors.orange
-                                      : Colors.green,
-                            ),
-                          ),
-                        ),
+                        _buildStatusBadge(meal.status, isCancelled),
                       ],
                     ),
 
@@ -1392,38 +1506,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         ),
 
                         // Status badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isCancelled
-                                ? Colors.red.withOpacity(0.1)
-                                : meal.status == 'Swapped'
-                                    ? Colors.orange.withOpacity(0.1)
-                                    : Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isCancelled
-                                  ? Colors.red.withOpacity(0.5)
-                                  : meal.status == 'Swapped'
-                                      ? Colors.orange.withOpacity(0.5)
-                                      : Colors.green.withOpacity(0.5),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            meal.status,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isCancelled
-                                  ? Colors.red
-                                  : meal.status == 'Swapped'
-                                      ? Colors.orange
-                                      : Colors.green,
-                            ),
-                          ),
-                        ),
+                        _buildStatusBadge(meal.status, isCancelled),
                       ],
                     ),
 
@@ -1774,6 +1857,10 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   }
 
   Future<void> _performMealSwap(MealData meal, String newMealName) async {
+    setState(() {
+      _isSwapLoading = true;
+    });
+
     _showSnackBar('Swapping meal...');
 
     try {
@@ -1784,6 +1871,10 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       );
 
       if (success) {
+        // Save swapped meal to local storage with unique key
+        await _saveSwappedMealToLocalStorage(meal, newMealName);
+
+        // Update UI
         _updateMealAfterSwap(meal.subscription.id, newMealName, meal.date);
         _showSnackBar('Successfully swapped to $newMealName');
       } else {
@@ -1792,6 +1883,40 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     } catch (e) {
       log('Error during swap: $e');
       _showSnackBar('An error occurred during swap');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSwapLoading = false;
+        });
+      }
+    }
+  }
+
+  // Method to save swapped meal to local storage
+  Future<void> _saveSwappedMealToLocalStorage(
+      MealData meal, String newMealName) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Create a unique key using student ID and date
+      final String key =
+          'swappedMeal_${meal.studentId}_${meal.subscriptionId}_${DateFormat('yyyy-MM-dd').format(meal.date)}';
+
+      // Create a map with essential data to save
+      final Map<String, dynamic> swapData = {
+        'subscriptionId': meal.subscriptionId,
+        'studentId': meal.studentId,
+        'newMealName': newMealName,
+        'date': DateFormat('yyyy-MM-dd').format(meal.date),
+        'originalMealName': meal.subscription.mealName,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      // Save to SharedPreferences
+      await prefs.setString(key, jsonEncode(swapData));
+      log('[swap_meal_flow] Saved swapped meal to local storage: $key');
+    } catch (e) {
+      log('[swap_meal_flow] Error saving swapped meal to local storage: $e');
     }
   }
 
@@ -2043,6 +2168,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
 
         // Navigate to Cancelled Meals tab (index 1)
         if (context.mounted) {
+          // Use the static method to get the parent MySubscriptionScreen state
           final mySubscriptionScreenState = MySubscriptionScreen.of(context);
           if (mySubscriptionScreenState != null) {
             log('[cancel_meal_flow] Navigating to Cancelled Meals tab');
@@ -2053,7 +2179,14 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             // Switch to Cancelled Meals tab which will trigger a refresh
             mySubscriptionScreenState.switchToTab(1);
           } else {
-            log('[cancel_meal_flow] ERROR: Could not find MySubscriptionScreen state');
+            log('[cancel_meal_flow] ERROR: Could not find MySubscriptionScreen state, trying with globalKey');
+            // Fallback to using the global key if context-based access fails
+            if (mySubscriptionScreenKey.currentState != null) {
+              await Future.delayed(const Duration(milliseconds: 500));
+              mySubscriptionScreenKey.currentState!.switchToTab(1);
+            } else {
+              log('[cancel_meal_flow] ERROR: Could not find MySubscriptionScreen state with key either');
+            }
           }
         }
       } else {
@@ -2070,9 +2203,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         }
       }
     } catch (e) {
-      log('[cancel_meal_flow] Error during cancellation: $e');
-
-      // Dismiss the progress dialog if it's still showing
+      log('[cancel_meal_flow] Error during meal cancellation: $e');
+      // Dismiss progress dialog if still showing
       if (context.mounted && Navigator.canPop(context)) {
         Navigator.of(context).pop();
       }
@@ -2081,9 +2213,9 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Error cancelling meal: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 3),
           ),
         );
       }
