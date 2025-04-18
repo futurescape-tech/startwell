@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/routes.dart';
@@ -14,6 +15,33 @@ import 'package:startwell/services/subscription_service.dart' as services;
 import 'package:startwell/models/subscription_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/screens/my_subscription_screen.dart';
+
+// Define the MealData class to hold meal information
+class MealData {
+  final String studentName;
+  final String name;
+  final String planType;
+  final List<String> items;
+  String status;
+  final Subscription subscription;
+  final bool canSwap;
+  final DateTime date;
+  final String studentId;
+  final String subscriptionId;
+
+  MealData({
+    required this.studentName,
+    required this.name,
+    required this.planType,
+    required this.items,
+    required this.status,
+    required this.subscription,
+    required this.canSwap,
+    required this.date,
+    required this.studentId,
+    required this.subscriptionId,
+  });
+}
 
 class UpcomingMealCardList extends StatefulWidget {
   const UpcomingMealCardList({super.key});
@@ -30,9 +58,9 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
   final SubscriptionService _modelSubscriptionService = SubscriptionService();
   bool _isLoading = true;
 
-  // Change to Map<String, List<MealSchedule>> to group by student
-  Map<String, List<MealSchedule>> _upcomingMealsByStudent = {};
-  // Map to store meal status since MealSchedule.status is final
+  // List to store all upcoming meals across all students
+  List<MealData> _upcomingMeals = [];
+  // Map to store meal status
   Map<String, String> _mealStatusMap = {};
   List<Student> _students = [];
 
@@ -43,73 +71,92 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
   }
 
   // Generate a unique key for a meal to use in our status map
-  String _getMealKey(MealSchedule meal) {
-    return '${meal.studentId}_${meal.planType}_${DateFormat('yyyy-MM-dd').format(meal.date)}';
+  String _getMealKey(String studentId, String subscriptionId, DateTime date) {
+    return '${studentId}_${subscriptionId}_${DateFormat('yyyy-MM-dd').format(date)}';
   }
 
   // Check if a meal is swapped in local storage
-  Future<bool> _isMealSwapped(
+  Future<Map<String, dynamic>> _getMealSwapInfo(
       String studentId, String subscriptionId, DateTime date) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final normalizedDate = DateFormat('yyyy-MM-dd').format(date);
       final key = 'swappedMeal_${studentId}_${subscriptionId}_$normalizedDate';
 
-      return prefs.containsKey(key);
+      if (prefs.containsKey(key)) {
+        // Get the swap data from shared preferences
+        final String? swapDataJson = prefs.getString(key);
+        if (swapDataJson != null) {
+          final Map<String, dynamic> swapData = jsonDecode(swapDataJson);
+          return {
+            'isSwapped': true,
+            'newMealName': swapData['newMealName'] ?? '',
+            'originalMealName': swapData['originalMealName'] ?? '',
+          };
+        }
+      }
+
+      return {'isSwapped': false, 'newMealName': '', 'originalMealName': ''};
     } catch (e) {
-      log('Error checking if meal is swapped: $e');
-      return false;
+      log('Error checking meal swap info: $e');
+      return {'isSwapped': false, 'newMealName': '', 'originalMealName': ''};
     }
   }
 
-  // Check if a meal is cancelled by checking with the SubscriptionService
-  Future<bool> _isMealCancelled(String studentId, DateTime date) async {
+  // Check if a meal is cancelled
+  Future<bool> _isMealCancelled(
+      String studentId, String subscriptionId, DateTime date) async {
     try {
+      // Create a normalized date string for keys
+      final normalizedDate = DateFormat('yyyy-MM-dd').format(date);
+
+      // Key format for cancelled meals in SharedPreferences
+      final key =
+          'cancelledMeal_${studentId}_${subscriptionId}_$normalizedDate';
+
+      log('[cancelled_meal_check] Checking if meal is cancelled: $key');
+
+      // First check in SharedPreferences for locally stored cancelled status
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(key) == true) {
+        log('[cancelled_meal_check] Found cancelled status in SharedPreferences: $key');
+        return true;
+      }
+
+      log('[cancelled_meal_check] Not found in SharedPreferences, checking with service');
+
+      // If not found locally, check with the subscription service
       final cancelledMeals =
           await _subscriptionService.getCancelledMeals(studentId);
 
-      // Check if any cancelled meal matches this date
-      return cancelledMeals.any((meal) =>
-          meal.cancellationDate.year == date.year &&
-          meal.cancellationDate.month == date.month &&
-          meal.cancellationDate.day == date.day);
+      log('[cancelled_meal_check] Service returned ${cancelledMeals.length} cancelled meals for student $studentId');
+
+      // Check if any cancelled meal matches this date and subscription
+      final isCancelled = cancelledMeals.any((meal) {
+        final bool matches = meal.subscriptionId == subscriptionId &&
+            meal.cancellationDate.year == date.year &&
+            meal.cancellationDate.month == date.month &&
+            meal.cancellationDate.day == date.day;
+
+        if (matches) {
+          log('[cancelled_meal_check] Found match in service data: ${meal.id}');
+        }
+
+        return matches;
+      });
+
+      // Store the cancelled status in SharedPreferences for future reference
+      if (isCancelled) {
+        log('[cancelled_meal_check] Saving cancelled status to SharedPreferences: $key');
+        await prefs.setBool(key, true);
+      }
+
+      log('[cancelled_meal_check] Final cancellation status for $key: $isCancelled');
+      return isCancelled;
     } catch (e) {
-      log('Error checking if meal is cancelled: $e');
+      log('[cancelled_meal_check] Error checking if meal is cancelled: $e');
       return false;
     }
-  }
-
-  // Update meal status based on whether it's cancelled or swapped
-  Future<void> _updateMealStatus(MealSchedule meal) async {
-    final mealKey = _getMealKey(meal);
-
-    // First check if it's cancelled
-    final isCancelled = await _isMealCancelled(meal.studentId, meal.date);
-    if (isCancelled) {
-      _mealStatusMap[mealKey] = 'Cancelled';
-      return;
-    }
-
-    // Only check for swapped if not cancelled
-    final isSwapped = await _isMealSwapped(
-        meal.studentId,
-        // We don't have subscriptionId in MealSchedule, so we create a pattern similar to
-        // how it's formed in the system (can be customized based on actual implementation)
-        '${meal.planType}-${meal.studentId}',
-        meal.date);
-
-    if (isSwapped) {
-      _mealStatusMap[mealKey] = 'Swapped';
-    } else {
-      // Keep original status if not cancelled or swapped
-      _mealStatusMap[mealKey] = meal.status;
-    }
-  }
-
-  // Get the current status of a meal
-  String _getMealStatus(MealSchedule meal) {
-    final mealKey = _getMealKey(meal);
-    return _mealStatusMap[mealKey] ?? meal.status;
   }
 
   Future<void> _loadMeals() async {
@@ -119,98 +166,204 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
       });
 
       // Load student profiles
-      final studentProfileService = StudentProfileService();
-      final students = await studentProfileService.getStudentProfiles();
+      final students = await _studentProfileService.getStudentProfiles();
       _students = students;
 
       if (students.isEmpty) {
         setState(() {
           _isLoading = false;
+          _upcomingMeals = [];
         });
         return;
       }
 
-      final mealService = MealService();
-      Map<String, List<MealSchedule>> mealsByStudent = {};
+      // Get all active subscriptions for all students
+      List<MealData> allUpcomingMeals = [];
 
-      // Clear the status map
-      _mealStatusMap.clear();
-
-      // Get meals for each student with active subscription
       for (var student in students) {
         try {
-          print('Checking student: ${student.name}, ID: ${student.id}');
-          print(
-              'Has active breakfast: ${student.hasActiveBreakfast}, Has active lunch: ${student.hasActiveLunch}');
+          log('Loading subscriptions for student: ${student.name}');
 
-          // Check if student has active meal plans
-          if (student.hasActiveBreakfast || student.hasActiveLunch) {
-            print('Student has active plan: ${student.name}');
+          // Skip students without active meal plans
+          if (!student.hasActiveBreakfast && !student.hasActiveLunch) {
+            continue;
+          }
 
-            // Get all upcoming meals for this student
-            final studentMeals =
-                await mealService.getUpcomingMealsForStudent(student.id);
-            print('Retrieved ${studentMeals.length} meals for ${student.name}');
+          // Get active subscriptions for this student
+          final subscriptions = await _modelSubscriptionService
+              .getActiveSubscriptionsForStudent(student.id);
 
-            // Get the current date without time component for comparison
-            final now = DateTime.now();
-            final today = DateTime(now.year, now.month, now.day);
+          if (subscriptions.isEmpty) {
+            log('No active subscriptions found for student: ${student.name}');
+            continue;
+          }
 
-            // Filter out past and cancelled meals
-            List<MealSchedule> validMeals = [];
+          // Get current date for filtering
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
 
-            for (var meal in studentMeals) {
-              // Normalize the date to compare properly
-              final mealDate =
-                  DateTime(meal.date.year, meal.date.month, meal.date.day);
+          // Track if we found a valid meal for this student
+          bool foundMealForStudent = false;
 
-              // Skip if meal date is before today
-              if (mealDate.isBefore(today)) {
-                continue;
-              }
-
-              // Check if meal is cancelled
-              await _updateMealStatus(meal);
-              final mealKey = _getMealKey(meal);
-              if (_mealStatusMap[mealKey] == 'Cancelled') {
-                print(
-                    'Skipping cancelled meal: ${meal.title} on ${DateFormat('yyyy-MM-dd').format(meal.date)}');
-                continue;
-              }
-
-              validMeals.add(meal);
+          // Process each subscription to get meal data
+          for (var subscription in subscriptions) {
+            // Skip expired subscriptions
+            if (subscription.endDate.isBefore(today)) {
+              continue;
             }
 
-            // Sort by date (earliest first)
-            validMeals.sort((a, b) => a.date.compareTo(b.date));
+            // Generate scheduled dates
+            final List<DateTime> scheduledDates = _generateScheduleDates(
+                subscription.startDate,
+                subscription.endDate,
+                subscription.selectedWeekdays,
+                subscription.planType);
 
-            print(
-                'Valid upcoming meals for ${student.name} after filtering: ${validMeals.length}');
+            // Process each scheduled date
+            for (var date in scheduledDates) {
+              // Skip past dates
+              final normalizedDate = DateTime(date.year, date.month, date.day);
+              if (normalizedDate.isBefore(today)) {
+                continue;
+              }
 
-            // Add to map regardless of whether meals were found
-            mealsByStudent[student.id] = validMeals;
+              // Check if this meal is cancelled (now uses SharedPreferences too)
+              bool isCancelled = await _isMealCancelled(
+                  student.id, subscription.id, normalizedDate);
+
+              // Check if meal is swapped and get the new meal name
+              final swapInfo = await _getMealSwapInfo(
+                  student.id, subscription.id, normalizedDate);
+
+              String status = "Scheduled";
+              String mealName = subscription.getMealNameForDate(date);
+
+              if (isCancelled) {
+                status = "Cancelled";
+                // Include cancelled meals in display with Cancelled badge
+              } else if (swapInfo['isSwapped']) {
+                status = "Swapped";
+                // Use new meal name from swap info
+                if (swapInfo['newMealName'].isNotEmpty) {
+                  mealName = swapInfo['newMealName'];
+                }
+              }
+
+              // Create meal data
+              final mealData = MealData(
+                studentName: student.name,
+                name: mealName, // Use updated meal name if swapped
+                planType: _getFormattedPlanType(subscription),
+                items: subscription.getMealItems(),
+                status: status,
+                subscription: subscription,
+                canSwap: !isCancelled, // Can't swap cancelled meals
+                date: date,
+                studentId: student.id,
+                subscriptionId: subscription.id,
+              );
+
+              // Only add the first meal for this student
+              if (!foundMealForStudent) {
+                allUpcomingMeals.add(mealData);
+                foundMealForStudent = true;
+                break; // Exit date loop
+              }
+            }
+
+            // If we found a meal for this student, break out of subscription loop
+            if (foundMealForStudent) {
+              break;
+            }
           }
-        } catch (studentError) {
-          print('Error processing student ${student.name}: $studentError');
-          // Continue with next student even if there's an error with this one
-          mealsByStudent[student.id] = [];
+        } catch (error) {
+          log('Error processing student ${student.name}: $error');
         }
       }
 
+      // Sort the meals by date (closest first)
+      allUpcomingMeals.sort((a, b) => a.date.compareTo(b.date));
+
       if (mounted) {
         setState(() {
-          _upcomingMealsByStudent = mealsByStudent;
+          _upcomingMeals = allUpcomingMeals;
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('Error loading upcoming meals: $e');
+      log('Error loading upcoming meals: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
     }
+  }
+
+  // Helper method to generate scheduled dates
+  List<DateTime> _generateScheduleDates(
+    DateTime startDate,
+    DateTime endDate,
+    List<int> selectedWeekdays,
+    String planType,
+  ) {
+    List<DateTime> scheduledDates = [];
+
+    final int days = endDate.difference(startDate).inDays;
+
+    List<int> weekdaysToInclude;
+    if (selectedWeekdays.isEmpty) {
+      weekdaysToInclude = [1, 2, 3, 4, 5]; // Monday to Friday by default
+    } else {
+      weekdaysToInclude = selectedWeekdays;
+    }
+
+    for (int i = 0; i <= days; i++) {
+      final DateTime date = startDate.add(Duration(days: i));
+
+      if (!weekdaysToInclude.contains(date.weekday)) {
+        continue;
+      }
+
+      scheduledDates.add(date);
+    }
+
+    return scheduledDates;
+  }
+
+  // Helper to get formatted plan type
+  String _getFormattedPlanType(Subscription subscription) {
+    bool isCustomPlan = subscription.selectedWeekdays.isNotEmpty &&
+        subscription.selectedWeekdays.length < 5;
+    String customBadge = isCustomPlan ? " (Custom)" : "";
+
+    if (subscription.planType == 'express') {
+      return "Express 1-Day Lunch Plan";
+    }
+
+    if (subscription.endDate.difference(subscription.startDate).inDays <= 1) {
+      return "Single Day ${subscription.planType == 'breakfast' ? 'Breakfast' : 'Lunch'} Plan";
+    }
+
+    String mealType =
+        subscription.planType == 'breakfast' ? 'Breakfast' : 'Lunch';
+
+    int days = subscription.endDate.difference(subscription.startDate).inDays;
+
+    String planPeriod;
+    if (days <= 7) {
+      planPeriod = "Weekly";
+    } else if (days <= 31) {
+      planPeriod = "Monthly";
+    } else if (days <= 90) {
+      planPeriod = "Quarterly";
+    } else if (days <= 180) {
+      planPeriod = "Half-Yearly";
+    } else {
+      planPeriod = "Annual";
+    }
+
+    return "$planPeriod $mealType Plan$customBadge";
   }
 
   @override
@@ -221,66 +374,182 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
 
     return RefreshIndicator(
       onRefresh: _loadMeals,
-      child: _upcomingMealsByStudent.isEmpty
+      child: _upcomingMeals.isEmpty
           ? _buildEmptyState()
           : Column(
-              children: _students
-                  .where((student) =>
-                      _upcomingMealsByStudent.containsKey(student.id))
-                  .map((student) {
-                return _buildStudentMealsSection(student);
-              }).toList(),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Take only first 2 meals to display
+                ..._upcomingMeals
+                    .take(2)
+                    .map((meal) => _buildMealCard(meal))
+                    .toList(),
+              ],
             ),
     );
   }
 
-  Widget _buildStudentMealsSection(Student student) {
-    final meals = _upcomingMealsByStudent[student.id] ?? [];
+  Widget _buildMealCard(MealData meal) {
+    final formattedDate = DateFormat('EEE, dd MMM yyyy').format(meal.date);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // If no meals found, show a message
-        if (meals.isEmpty)
-          Card(
-            elevation: 2,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () {
+        // Add haptic feedback for better tactile response
+        HapticFeedback.lightImpact();
+
+        // Navigate to MySubscriptionScreen to view more details
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => MySubscriptionScreen(
+              defaultTabIndex: 0, // Upcoming Meals tab
+              startDate: DateTime.now(),
+              endDate: DateTime.now().add(const Duration(days: 30)),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+        );
+      },
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 1.0, end: 1.0),
+        duration: const Duration(milliseconds: 200),
+        builder: (context, scale, child) {
+          return Transform.scale(
+            scale: scale,
+            child: Card(
+              elevation: 4,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              shadowColor: AppTheme.deepPurple.withOpacity(0.15),
+              child: Stack(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.info_outline, color: Colors.grey),
-                      const SizedBox(width: 12),
-                      Expanded(
+                  // Main content
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Meal type icon
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: meal.subscription.planType == 'breakfast'
+                                    ? Colors.purple.withOpacity(0.1)
+                                    : meal.subscription.planType == 'express'
+                                        ? Colors.blue.withOpacity(0.1)
+                                        : Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (meal.subscription.planType ==
+                                                'breakfast'
+                                            ? Colors.purple
+                                            : meal.subscription.planType ==
+                                                    'express'
+                                                ? Colors.blue
+                                                : Colors.green)
+                                        .withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                meal.subscription.planType == 'breakfast'
+                                    ? Icons.free_breakfast
+                                    : Icons.lunch_dining,
+                                color: meal.subscription.planType == 'breakfast'
+                                    ? Colors.purple
+                                    : meal.subscription.planType == 'express'
+                                        ? Colors.blue
+                                        : Colors.green,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // Meal details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    meal.name, // Show actual meal name (e.g., "Indian Lunch")
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textDark,
+                                    ),
+                                  ),
+                                  Text(
+                                    meal.studentName, // Show student name
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  Text(
+                                    formattedDate, // Show formatted date
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Status badge (Swapped or Cancelled)
+                  if (meal.status.toLowerCase() == 'swapped' ||
+                      meal.status.toLowerCase() == 'cancelled')
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: meal.status.toLowerCase() == 'cancelled'
+                              ? Colors.red
+                              : Colors.orange,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (meal.status.toLowerCase() == 'cancelled'
+                                      ? Colors.red
+                                      : Colors.orange)
+                                  .withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
                         child: Text(
-                          'No upcoming meals found',
+                          meal.status.toLowerCase() == 'cancelled'
+                              ? 'Cancelled'
+                              : 'Swapped',
                           style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade700,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),
-          )
-        else
-          // Build a meal card for each meal (limited to max 2)
-          ...meals
-              .take(2)
-              .map((meal) => _buildMealCard(meal, student))
-              .toList(),
-      ],
+          );
+        },
+      ),
     );
   }
 
@@ -359,154 +628,6 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMealCard(MealSchedule meal, Student student) {
-    final mealStatus = _getMealStatus(meal);
-
-    // Always use the actual date format
-    String dateText = DateFormat('EEE, MMM d').format(meal.date);
-
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Meal type icon
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: meal.planType == 'breakfast'
-                        ? Colors.purple.withOpacity(0.1)
-                        : meal.planType == 'express'
-                            ? Colors.blue.withOpacity(0.1)
-                            : Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    meal.planType == 'breakfast'
-                        ? Icons.free_breakfast
-                        : Icons.lunch_dining,
-                    color: meal.planType == 'breakfast'
-                        ? Colors.purple
-                        : meal.planType == 'express'
-                            ? Colors.blue
-                            : Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Meal details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        student.mealPlanType ?? '',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      // Add student name
-                      Text(
-                        student.name,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      // Show actual date
-                      Text(
-                        DateFormat('EEE, MMM d').format(
-                            student.breakfastPlanStartDate ?? DateTime.now()),
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      if (mealStatus == 'Swapped')
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: Colors.orange.withOpacity(0.5),
-                            ),
-                          ),
-                          child: Text(
-                            'Swapped',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.orange,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // View details button
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MySubscriptionScreen(
-                          selectedStudentId: student.id,
-                          defaultTabIndex: 0,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.purple.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'View',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: AppTheme.purple,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 12,
-                          color: AppTheme.purple,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );

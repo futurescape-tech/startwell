@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/routes.dart';
@@ -288,13 +289,17 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _onScroll() {
     // Show footer when close to bottom (within 200 pixels of max scroll extent)
-    if (_scrollController.hasClients &&
-        _scrollController.position.pixels >
-            (_scrollController.position.maxScrollExtent - 200) &&
-        !_showFooter) {
-      setState(() {
-        _showFooter = true;
-      });
+    if (_scrollController.hasClients) {
+      // Check if close to bottom (within 200 pixels of max scroll extent)
+      bool shouldShowFooter = _scrollController.position.pixels >
+          (_scrollController.position.maxScrollExtent - 200);
+
+      // Only update state if there's a change in visibility
+      if (shouldShowFooter != _showFooter) {
+        setState(() {
+          _showFooter = shouldShowFooter;
+        });
+      }
     }
   }
 
@@ -483,10 +488,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    elevation: 2,
+                                    elevation: 4,
                                     margin: const EdgeInsets.only(bottom: 12),
+                                    shadowColor:
+                                        AppTheme.deepPurple.withOpacity(0.15),
                                     child: InkWell(
                                       onTap: () {
+                                        // Add haptic feedback for better tactile response
+                                        HapticFeedback.lightImpact();
+
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -498,97 +508,119 @@ class _DashboardScreenState extends State<DashboardScreen>
                                         );
                                       },
                                       borderRadius: BorderRadius.circular(12),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 48,
-                                              height: 48,
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.purple
-                                                    .withOpacity(0.1),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(
-                                                Icons.calendar_month,
-                                                color: AppTheme.purple,
-                                                size: 24,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    firstStudent.name,
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: AppTheme.textDark,
+                                      child: Ink(
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          color: Colors.white,
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 48,
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.purple
+                                                      .withOpacity(0.1),
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: AppTheme.purple
+                                                          .withOpacity(0.1),
+                                                      blurRadius: 4,
+                                                      offset:
+                                                          const Offset(0, 2),
                                                     ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    planCount == 1
-                                                        ? '1 Active Plan'
-                                                        : '$planCount Active Plans',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 14,
-                                                      color:
-                                                          AppTheme.textMedium,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.green.withOpacity(
-                                                  0.1,
+                                                  ],
                                                 ),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
+                                                child: const Icon(
+                                                  Icons.calendar_month,
+                                                  color: AppTheme.purple,
+                                                  size: 24,
+                                                ),
                                               ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Container(
-                                                    width: 8,
-                                                    height: 8,
-                                                    decoration:
-                                                        const BoxDecoration(
-                                                      color: Colors.green,
-                                                      shape: BoxShape.circle,
+                                              const SizedBox(width: 16),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      firstStudent.name,
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            AppTheme.textDark,
+                                                      ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    'Active',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color: Colors.green,
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      planCount == 1
+                                                          ? '1 Active Plan'
+                                                          : '$planCount Active Plans',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 14,
+                                                        color:
+                                                            AppTheme.textMedium,
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            const Icon(
-                                              Icons.chevron_right,
-                                              color: AppTheme.textMedium,
-                                            ),
-                                          ],
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 4,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      Colors.green.withOpacity(
+                                                    0.1,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Container(
+                                                      width: 8,
+                                                      height: 8,
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                        color: Colors.green,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      'Active',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: Colors.green,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Icon(
+                                                Icons.chevron_right,
+                                                color: AppTheme.textMedium,
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -793,10 +825,13 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+      elevation: 4,
+      shadowColor: AppTheme.orange.withOpacity(0.2),
       margin: const EdgeInsets.only(bottom: 20),
       child: InkWell(
         onTap: () {
+          // Add haptic feedback for better tactile response
+          HapticFeedback.lightImpact();
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -805,71 +840,84 @@ class _DashboardScreenState extends State<DashboardScreen>
           );
         },
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppTheme.orange.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.restaurant,
-                  color: AppTheme.orange,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Remaining Meals for ${student.name}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppTheme.orange.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.orange.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    RichText(
-                      text: TextSpan(
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.restaurant,
+                    color: AppTheme.orange,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Remaining Meals for ${student.name}',
                         style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: AppTheme.textMedium,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
                         ),
-                        children: [
-                          TextSpan(text: '$totalRemaining meals remaining '),
-                          TextSpan(
-                            text: breakdownText,
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppTheme.textMedium,
                           ),
-                        ],
+                          children: [
+                            TextSpan(text: '$totalRemaining meals remaining '),
+                            TextSpan(
+                              text: breakdownText,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: progress, // Use the calculated progress value
-                      backgroundColor: Colors.grey[200],
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppTheme.orange,
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: progress, // Use the calculated progress value
+                        backgroundColor: Colors.grey[200],
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppTheme.orange,
+                        ),
+                        minHeight: 6,
+                        borderRadius: BorderRadius.circular(3),
                       ),
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: AppTheme.textMedium),
-            ],
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right, color: AppTheme.textMedium),
+              ],
+            ),
           ),
         ),
       ),

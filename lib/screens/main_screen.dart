@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/user_profile.dart';
 import 'package:startwell/screens/dashboard_screen.dart';
@@ -23,6 +24,75 @@ class MainScreenState extends State<MainScreen> {
   late int _selectedIndex;
   final PageController _pageController = PageController();
   UserProfile? _userProfile;
+
+  // Helper method to build navigation items with custom styling
+  BottomNavigationBarItem _buildNavItem({
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required bool isSelected,
+    required String semanticLabel,
+  }) {
+    return BottomNavigationBarItem(
+      icon: TweenAnimationBuilder<double>(
+          tween: Tween<double>(
+              begin: isSelected ? 0.8 : 1.0, end: isSelected ? 1.0 : 1.0),
+          curve: Curves.elasticOut,
+          duration: const Duration(milliseconds: 500),
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppTheme.purple.withOpacity(0.12)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  // Add a subtle border for the selected item
+                  border: isSelected
+                      ? Border.all(
+                          color: AppTheme.purple.withOpacity(0.3), width: 1.5)
+                      : null,
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.purple.withOpacity(0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                            spreadRadius: 0.5,
+                          )
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isSelected ? activeIcon : icon,
+                      size: isSelected ? 30 : 26,
+                      semanticLabel: semanticLabel,
+                      // Add a subtle shadow to the selected icon
+                      shadows: isSelected
+                          ? [
+                              Shadow(
+                                  color: AppTheme.purple.withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1))
+                            ]
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+      label: label,
+      // Adjust tooltip to use the more descriptive semantic label
+      tooltip: semanticLabel,
+    );
+  }
 
   @override
   void initState() {
@@ -62,14 +132,18 @@ class MainScreenState extends State<MainScreen> {
 
   void _onItemTapped(int index) {
     if (_selectedIndex != index) {
+      // Add haptic feedback for better tactile response
+      HapticFeedback.selectionClick();
+
       setState(() {
         _selectedIndex = index;
       });
-      // Animate to the new page
+
+      // Animate to the new page with a custom curve for a bouncy effect
       _pageController.animateToPage(
         index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
       );
     }
   }
@@ -105,55 +179,66 @@ class MainScreenState extends State<MainScreen> {
           MealPlanScreen(userProfile: _userProfile),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: Colors.grey,
-          showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          elevation: 8,
-          selectedLabelStyle: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+      bottomNavigationBar: SafeArea(
+        // Wrap with SafeArea to ensure proper spacing on different devices
+        child: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
-          unselectedLabelStyle: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            selectedItemColor: AppTheme.purple,
+            unselectedItemColor: Colors.grey.shade600, // Higher contrast
+            showUnselectedLabels: true,
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            elevation: 8,
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
+            selectedLabelStyle: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelStyle: GoogleFonts.poppins(
+              fontWeight: FontWeight.w500,
+            ),
+            items: [
+              _buildNavItem(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home,
+                label: 'Home',
+                isSelected: _selectedIndex == 0,
+                semanticLabel: 'Home Screen',
+              ),
+              _buildNavItem(
+                icon: Icons.person_outline,
+                activeIcon: Icons.person,
+                label: 'Student',
+                isSelected: _selectedIndex == 1,
+                semanticLabel: 'Student Profiles',
+              ),
+              _buildNavItem(
+                icon: Icons.subscriptions_outlined,
+                activeIcon: Icons.subscriptions,
+                label: 'My Subscription',
+                isSelected: _selectedIndex == 2,
+                semanticLabel: 'My Meal Subscriptions',
+              ),
+              _buildNavItem(
+                icon: Icons.restaurant_menu_outlined,
+                activeIcon: Icons.restaurant_menu,
+                label: 'Meal Plan',
+                isSelected: _selectedIndex == 3,
+                semanticLabel: 'Meal Plan Options',
+              ),
+            ],
           ),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              activeIcon: Icon(Icons.home, size: 28),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person, size: 28),
-              label: 'Student',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.subscriptions),
-              activeIcon: Icon(Icons.subscriptions, size: 28),
-              label: 'My Subscription',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.restaurant_menu),
-              activeIcon: Icon(Icons.restaurant_menu, size: 28),
-              label: 'Meal Plan',
-            ),
-          ],
         ),
       ),
     );

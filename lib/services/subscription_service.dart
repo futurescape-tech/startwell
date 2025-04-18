@@ -7,6 +7,8 @@ import 'package:startwell/models/student_model.dart';
 import 'package:startwell/models/subscription_model.dart';
 import 'dart:async';
 import 'dart:developer' as dev;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 /// Service class to manage subscription-related operations.
 class SubscriptionService {
@@ -23,6 +25,7 @@ class SubscriptionService {
     // Initialize with empty cancellation history instead of adding sample data
     _cancellationHistory.clear();
     log('[cancelled meal flow] Initialized SubscriptionService with empty cancellation history');
+    _loadCancelledMealsFromStorage(); // Load cancelled meals from storage on initialization
   }
 
   // Internal storage for active subscriptions
@@ -33,6 +36,78 @@ class SubscriptionService {
 
   // Student profile service for name lookups
   final StudentProfileService _studentProfileService = StudentProfileService();
+
+  // Storage key for cancelled meals
+  static const String _storageKey = 'cancelled_meals_history';
+
+  // Load cancelled meals from SharedPreferences
+  Future<void> _loadCancelledMealsFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? storedMeals = prefs.getString(_storageKey);
+
+      if (storedMeals != null && storedMeals.isNotEmpty) {
+        final List<dynamic> mealsJson = jsonDecode(storedMeals);
+
+        // Convert dates stored as strings back to DateTime objects
+        for (var mealJson in mealsJson) {
+          try {
+            // Convert date strings to DateTime objects
+            if (mealJson['date'] is String) {
+              mealJson['date'] = DateTime.parse(mealJson['date']);
+            }
+            if (mealJson['cancelledAt'] is String) {
+              mealJson['cancelledAt'] = DateTime.parse(mealJson['cancelledAt']);
+            }
+
+            _cancellationHistory.add(Map<String, dynamic>.from(mealJson));
+          } catch (e) {
+            log('[cancelled meal flow] Error parsing meal date: $e');
+          }
+        }
+
+        log('[cancelled meal flow] Loaded ${_cancellationHistory.length} cancelled meals from storage');
+        _logAllCancellationRecords();
+      } else {
+        log('[cancelled meal flow] No cancelled meals found in storage');
+      }
+    } catch (e) {
+      log('[cancelled meal flow] Error loading cancelled meals from storage: $e');
+    }
+  }
+
+  // Save cancelled meals to SharedPreferences
+  Future<void> _saveCancelledMealsToStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Need to convert DateTime objects to strings before saving
+      final List<Map<String, dynamic>> serializableMeals = [];
+
+      for (var meal in _cancellationHistory) {
+        final Map<String, dynamic> serializedMeal = Map.from(meal);
+
+        // Convert DateTime objects to ISO strings
+        if (serializedMeal['date'] is DateTime) {
+          serializedMeal['date'] =
+              (serializedMeal['date'] as DateTime).toIso8601String();
+        }
+        if (serializedMeal['cancelledAt'] is DateTime) {
+          serializedMeal['cancelledAt'] =
+              (serializedMeal['cancelledAt'] as DateTime).toIso8601String();
+        }
+
+        serializableMeals.add(serializedMeal);
+      }
+
+      final String jsonString = jsonEncode(serializableMeals);
+      await prefs.setString(_storageKey, jsonString);
+
+      log('[cancelled meal flow] Saved ${_cancellationHistory.length} cancelled meals to storage');
+    } catch (e) {
+      log('[cancelled meal flow] Error saving cancelled meals to storage: $e');
+    }
+  }
 
   // Get a subscription by ID
   Future<Subscription?> getSubscriptionById(String subscriptionId) async {
@@ -59,7 +134,6 @@ class SubscriptionService {
   // Cancel a meal for a specific date and subscription
   Future<bool> cancelMealDelivery(String subscriptionId, DateTime date,
       {required String studentId}) async {
-    // Normalize the date to avoid time issues
     final normalizedDate = DateTime(date.year, date.month, date.day);
 
     log('[cancelled_meal_data_flow] Cancelling meal for subscription: $subscriptionId, date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}, student: $studentId');
@@ -107,6 +181,15 @@ class SubscriptionService {
 
       // Add to cancellation history
       _cancellationHistory.add(cancellation);
+
+      // Save the updated cancellation history to SharedPreferences
+      await _saveCancelledMealsToStorage();
+
+      // Also save this specific cancellation to SharedPreferences for fast local lookup
+      final prefs = await SharedPreferences.getInstance();
+      final localKey =
+          'cancelledMeal_${studentId}_${subscriptionId}_${DateFormat('yyyy-MM-dd').format(normalizedDate)}';
+      await prefs.setBool(localKey, true);
 
       log('[cancelled_meal_data_flow] Successfully cancelled meal, added to history. Total cancelled: ${_cancellationHistory.length}');
       log('[cancelled_meal_data_flow] Cancellation details - ID: ${cancellation['id']}, Student: ${cancellation['studentName']}, Meal: ${cancellation['mealName']}');

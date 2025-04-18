@@ -989,6 +989,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   Future<bool> _checkForCancelledMeals(DateTime date) async {
     // Normalize the date to avoid time issues
     final normalizedDate = DateTime(date.year, date.month, date.day);
+    final normalizedDateString =
+        DateFormat('yyyy-MM-dd').format(normalizedDate);
 
     try {
       // Get cancelled meals for the selected student
@@ -996,11 +998,32 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         return false;
       }
 
+      log('[cancel_meal_flow] Checking for cancelled meals on date: $normalizedDateString for student: $_selectedStudentId');
+
+      // First check in SharedPreferences for any subscription cancellation on this date
+      final prefs = await SharedPreferences.getInstance();
+
+      // Since this method only checks if ANY meal is cancelled for the date (not a specific meal),
+      // we need to check all active subscriptions
+      for (var subscription in _activeSubscriptions) {
+        final String key =
+            'cancelledMeal_${_selectedStudentId}_${subscription.id}_$normalizedDateString';
+
+        // Check if we have a cached cancellation status
+        if (prefs.getBool(key) == true) {
+          log('[cancel_meal_flow] Found cancelled meal in SharedPreferences: $key');
+          return true;
+        }
+      }
+
+      log('[cancel_meal_flow] No cancelled meal found in SharedPreferences, checking with service');
+
+      // If not found in SharedPreferences, check with the service
       final List<CancelledMeal> cancelledMeals =
           await _subscriptionService.getCancelledMeals(_selectedStudentId);
 
       // Log the cancelled meals we found
-      log('[cancel_meal_flow] Found ${cancelledMeals.length} cancelled meals for student: $_selectedStudentId');
+      log('[cancel_meal_flow] Service returned ${cancelledMeals.length} cancelled meals for student: $_selectedStudentId');
 
       // Check if any cancelled meals match the given date
       for (var meal in cancelledMeals) {
@@ -1010,7 +1033,13 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
           if (cancellationDate.year == normalizedDate.year &&
               cancellationDate.month == normalizedDate.month &&
               cancellationDate.day == normalizedDate.day) {
-            log('[cancel_meal_flow] Found cancelled meal for date: ${DateFormat('yyyy-MM-dd').format(normalizedDate)}, meal: ${meal.mealName}, subscription: ${meal.subscriptionId}');
+            log('[cancel_meal_flow] Found cancelled meal for date: $normalizedDateString, meal: ${meal.mealName}, subscription: ${meal.subscriptionId}');
+
+            // Store in SharedPreferences for future reference
+            final String key =
+                'cancelledMeal_${_selectedStudentId}_${meal.subscriptionId}_$normalizedDateString';
+            await prefs.setBool(key, true);
+
             return true;
           }
         } catch (e) {
@@ -2144,6 +2173,20 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
 
       if (success) {
         log('[cancel_meal_flow] Successfully cancelled meal in service');
+
+        // Also save to SharedPreferences for immediate local persistence
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final normalizedDate = DateFormat('yyyy-MM-dd').format(meal.date);
+          final key =
+              'cancelledMeal_${meal.studentId}_${meal.subscriptionId}_$normalizedDate';
+
+          await prefs.setBool(key, true);
+          log('[cancel_meal_flow] Saved cancellation to SharedPreferences: $key');
+        } catch (e) {
+          log('[cancel_meal_flow] Error saving cancellation to SharedPreferences: $e');
+          // Continue even if SharedPreferences save fails
+        }
 
         // Wait a moment to ensure cancellation is processed
         await Future.delayed(const Duration(milliseconds: 200));
