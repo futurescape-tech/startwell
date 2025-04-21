@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/utils/routes.dart';
 import 'package:startwell/utils/app_colors.dart';
+import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/ui_components.dart';
 import 'package:startwell/widgets/shimmer/launch_shimmer.dart';
 import 'package:startwell/screens/login_screen.dart';
@@ -173,7 +174,7 @@ class _LaunchScreenState extends State<LaunchScreen>
                     curve: Curves.easeOutCubic,
                     child: UIComponents.gradientButton(
                       text: 'Login',
-                      gradient: AppColors.purpleToOrange,
+                      gradient: AppTheme.purpleToDeepPurple,
                       onPressed: () {
                         Navigator.push(
                             context, _createPageRoute(const LoginScreen()));
@@ -204,7 +205,7 @@ class _LaunchScreenState extends State<LaunchScreen>
                     curve: Curves.easeOutCubic,
                     child: UIComponents.gradientButton(
                       text: 'Sign Up',
-                      gradient: AppColors.purpleToYellow,
+                      gradient: AppTheme.purpleToDeepPurple,
                       onPressed: () {
                         Navigator.push(
                             context, _createPageRoute(const SignupScreen()));

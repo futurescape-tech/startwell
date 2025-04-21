@@ -4,10 +4,14 @@ import 'package:startwell/themes/app_theme.dart';
 
 class HomeBannerCard extends StatefulWidget {
   final VoidCallback onExplorePressed;
+  final VoidCallback? onLoginPressed;
+  final VoidCallback? onSignupPressed;
 
   const HomeBannerCard({
     super.key,
     required this.onExplorePressed,
+    this.onLoginPressed,
+    this.onSignupPressed,
   });
 
   @override
@@ -87,15 +91,27 @@ class _HomeBannerCardState extends State<HomeBannerCard>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'School meals done right!',
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+              Expanded(
+                child: Text(
+                  'School meals done right!',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
               ),
+              if (widget.onLoginPressed != null &&
+                  widget.onSignupPressed != null)
+                Row(
+                  children: [
+                    _buildAuthButton('Login', widget.onLoginPressed!),
+                    const SizedBox(width: 10),
+                    _buildAuthButton('Sign Up', widget.onSignupPressed!),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 10),
@@ -114,6 +130,54 @@ class _HomeBannerCardState extends State<HomeBannerCard>
             child: _buildExploreButton(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAuthButton(String text, VoidCallback onPressed) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: AppTheme.purpleToDeepPurple,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              spreadRadius: 0,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                gradient: AppTheme.purpleToDeepPurple,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                text == 'Login' ? Icons.login : Icons.person_add,
+                size: 14,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              text,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

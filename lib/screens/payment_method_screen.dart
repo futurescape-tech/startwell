@@ -829,7 +829,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
             child: Text(
-              "Choose your meal type",
+              "Selected meal type",
               style: GoogleFonts.poppins(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,

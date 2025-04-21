@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:startwell/utils/routes.dart';
 import 'package:startwell/utils/app_colors.dart';
+import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/ui_components.dart';
 import 'package:startwell/screens/login_screen.dart';
 
@@ -196,7 +198,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                         height: 80,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          gradient: AppColors.purpleToYellow,
+                                          gradient: AppTheme.purpleToDeepPurple,
                                           boxShadow: [
                                             BoxShadow(
                                               color: AppColors.primary
@@ -412,7 +414,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                                       : 'Verify')
                                                   : 'Reset Password',
                                               gradient:
-                                                  AppColors.purpleToYellow,
+                                                  AppTheme.purpleToDeepPurple,
                                               onPressed: !_isVerified
                                                   ? (!_isCodeSent
                                                       ? _sendCode

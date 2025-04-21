@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/utils/routes.dart';
 import 'package:startwell/utils/app_colors.dart';
 import 'package:startwell/utils/ui_components.dart';
+import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/screens/forgot_password_screen.dart';
 import 'package:startwell/screens/signup_screen.dart';
 import 'package:startwell/screens/dashboard_screen.dart';
@@ -193,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         height: 80,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          gradient: AppColors.purpleToOrange,
+                                          gradient: AppTheme.purpleToDeepPurple,
                                           boxShadow: [
                                             BoxShadow(
                                               color: AppColors.primary
@@ -289,7 +290,7 @@ class _LoginScreenState extends State<LoginScreen>
                                                         vertical: 14),
                                                 decoration: BoxDecoration(
                                                   gradient: useMobileLogin
-                                                      ? AppColors.purpleToOrange
+                                                      ? AppTheme.orangeToYellow
                                                       : null,
                                                   borderRadius:
                                                       BorderRadius.circular(16),
@@ -322,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen>
                                                         vertical: 14),
                                                 decoration: BoxDecoration(
                                                   gradient: !useMobileLogin
-                                                      ? AppColors.purpleToOrange
+                                                      ? AppTheme.orangeToYellow
                                                       : null,
                                                   borderRadius:
                                                       BorderRadius.circular(16),
@@ -479,7 +480,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         // Login button
                                         UIComponents.gradientButton(
                                           text: 'Login',
-                                          gradient: AppColors.purpleToOrange,
+                                          gradient: AppTheme.purpleToDeepPurple,
                                           onPressed: _login,
                                           height: 56,
                                           borderRadius: 16,

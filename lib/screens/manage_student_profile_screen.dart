@@ -1048,28 +1048,28 @@ class _ManageStudentProfileScreenState
           decoration: BoxDecoration(gradient: AppTheme.purpleToDeepPurple),
         ),
         elevation: 0,
-        // actions: [
-        //   Padding(
-        //     padding: const EdgeInsets.only(right: 16.0),
-        //     child: widget.userProfile != null
-        //         ? ProfileAvatar(
-        //             userProfile: widget.userProfile,
-        //             radius: 18,
-        //             onAvatarTap: () {
-        //               Navigator.pushNamed(context, Routes.profileSettings);
-        //             },
-        //           )
-        //         : IconButton(
-        //             icon: const Icon(
-        //               Icons.account_circle,
-        //               color: AppTheme.white,
-        //             ),
-        //             onPressed: () {
-        //               Navigator.pushNamed(context, Routes.profileSettings);
-        //             },
-        //           ),
-        //   ),
-        // ],
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: widget.userProfile != null
+                ? ProfileAvatar(
+                    userProfile: widget.userProfile,
+                    radius: 18,
+                    onAvatarTap: () {
+                      Navigator.pushNamed(context, Routes.profileSettings);
+                    },
+                  )
+                : IconButton(
+                    icon: const Icon(
+                      Icons.account_circle,
+                      color: AppTheme.white,
+                    ),
+                    onPressed: () {
+                      Navigator.pushNamed(context, Routes.profileSettings);
+                    },
+                  ),
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

@@ -99,15 +99,60 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
   // Show Express time window message
   void _showExpressTimeMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Express 1 Day orders are only available from 12:00 AM to 8:00 AM.',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: Colors.orange,
-        duration: const Duration(seconds: 4),
-      ),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.access_time_rounded,
+                color: Colors.blue,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Express Order Timing',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Express 1-Day orders are only available from 12:00 AM to 8:00 AM.',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.purple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Okay',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -115,117 +160,190 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Meal Plans',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          backgroundColor: Colors.transparent,
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: AppTheme.purpleToDeepPurple,
-            ),
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: widget.userProfile != null
-                  ? ProfileAvatar(
-                      userProfile: widget.userProfile,
-                      radius: 18,
-                      onAvatarTap: () {
-                        Navigator.pushNamed(context, Routes.profileSettings);
-                      },
-                    )
-                  : IconButton(
-                      icon: const Icon(
-                        Icons.account_circle,
-                        color: AppTheme.white,
-                      ),
-                      onPressed: () {
-                        Navigator.pushNamed(context, Routes.profileSettings);
-                      },
-                    ),
-            ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(60),
-            child: Container(
-              height: 60,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              color: AppTheme.purple,
-              child: TabBar(
-                labelColor: AppTheme.textDark,
-                unselectedLabelColor: Colors.white.withOpacity(0.8),
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicator: BoxDecoration(
+      child: Builder(
+        builder: (BuildContext context) {
+          final TabController tabController = DefaultTabController.of(context);
+
+          // Add listener to rebuild when tab changes
+          tabController.addListener(() {
+            if (!tabController.indexIsChanging) {
+              setState(() {});
+            }
+          });
+
+          return Scaffold(
+            backgroundColor: Colors.white,
+            appBar: AppBar(
+              title: Text(
+                'Meal Plans',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
                 ),
-                dividerColor: Colors.transparent,
-                labelStyle: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+              ),
+              backgroundColor: Colors.transparent,
+              flexibleSpace: Container(
+                decoration: BoxDecoration(
+                  gradient: AppTheme.purpleToDeepPurple,
                 ),
-                unselectedLabelStyle: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
+              ),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: widget.userProfile != null
+                      ? ProfileAvatar(
+                          userProfile: widget.userProfile,
+                          radius: 18,
+                          onAvatarTap: () {
+                            Navigator.pushNamed(
+                                context, Routes.profileSettings);
+                          },
+                        )
+                      : IconButton(
+                          icon: const Icon(
+                            Icons.account_circle,
+                            color: AppTheme.white,
+                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(
+                                context, Routes.profileSettings);
+                          },
+                        ),
                 ),
-                tabs: [
-                  Tab(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('Breakfast'),
+              ],
+            ),
+            body: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title section
+                  Text(
+                    'Choose your meal type',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
                     ),
                   ),
-                  Tab(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('Lunch'),
+                  const SizedBox(height: 24),
+
+                  // Custom segmented control
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: TabBar(
+                      indicator: BoxDecoration(
+                        color: _getSelectedTabColor(tabController.index),
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      labelColor: Colors.white,
+                      unselectedLabelColor: AppTheme.textMedium,
+                      dividerColor: Colors.transparent,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelStyle: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      unselectedLabelStyle: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                      tabs: const [
+                        Tab(
+                          icon: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.ramen_dining, size: 16),
+                              SizedBox(width: 6),
+                              Text('Breakfast'),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          icon: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.lunch_dining, size: 16),
+                              SizedBox(width: 6),
+                              Text('Lunch'),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          icon: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.delivery_dining, size: 16),
+                              SizedBox(width: 6),
+                              Text('Express'),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Tab(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('Express 1-Day'),
+
+                  const SizedBox(height: 24),
+
+                  // Meal description card
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildBreakfastTab(),
+                        _buildLunchTab(),
+                        _buildExpressTab(),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
-        body: MediaQuery.of(context).size.width > 900
-            ? Center(
-                child: SizedBox(
-                  width: 900, // Max content width for larger screens
-                  child: TabBarView(
-                    children: [
-                      _buildBreakfastTab(),
-                      _buildLunchTab(),
-                      _buildExpressTab(),
-                    ],
-                  ),
-                ),
-              )
-            : TabBarView(
-                children: [
-                  _buildBreakfastTab(),
-                  _buildLunchTab(),
-                  _buildExpressTab(),
-                ],
-              ),
+          );
+        },
       ),
     );
   }
 
+  // Helper method to get tab color based on index
+  Color _getSelectedTabColor(int index) {
+    switch (index) {
+      case 0:
+        return Colors.pink; // Breakfast
+      case 1:
+        return Colors.green; // Lunch
+      case 2:
+        return Colors.blue; // Express
+      default:
+        return AppTheme.purple;
+    }
+  }
+
+  // Get appropriate color for price badge and buttons
+  Color _getTabColor(String mealType) {
+    switch (mealType) {
+      case 'breakfast':
+        return Colors.pink;
+      case 'lunch':
+        return Colors.green;
+      case 'express':
+        return Colors.blue;
+      default:
+        return AppTheme.purple;
+    }
+  }
+
   Widget _buildBreakfastTab() {
-    // Static breakfast meals list
     final breakfastMeals = [
       {
         'name': 'Breakfast of the Day',
@@ -259,43 +377,56 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     ];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info about breakfast timing
-          InfoBanner(
-            title: "Meal Details",
-            message:
-                "Good mornings Wake up to warm, fresh breakfast on school days",
-            type: InfoBannerType.info,
+          // Description card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.pink.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.pink.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.ramen_dining,
+                  color: Colors.pink,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Nutritious breakfast delivered to your child before school starts.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
-          // Breakfast meal cards
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: breakfastMeals.length,
-            itemBuilder: (context, index) {
-              final meal = breakfastMeals[index];
-              return _buildMealCard(
-                name: meal['name'] as String,
-                price: meal['price'] as int,
-                isVeg: meal['isVeg'] as bool,
-                isRecommended: meal['isRecommended'] as bool,
-                imageUrl: meal['image'] as String,
-                isExpressTab: false,
-                mealType: 'breakfast',
-              );
-            },
-          ),
+          // Meal Selection Cards
+          for (var meal in breakfastMeals)
+            _buildMealSelectionCard(
+              name: meal['name'] as String,
+              price: meal['price'] as int,
+              isVeg: meal['isVeg'] as bool,
+              isRecommended: meal['isRecommended'] as bool,
+              imageUrl: meal['image'] as String,
+              mealType: 'breakfast',
+              tabColor: Colors.pink,
+            ),
         ],
       ),
     );
   }
 
   Widget _buildLunchTab() {
-    // Static lunch meals list
     final lunchMeals = [
       {
         'name': 'Lunch of the Day',
@@ -328,36 +459,50 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     ];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Info about lunch timing
-          InfoBanner(
-            title: "Meal Details",
-            message:
-                "Fuel your afternoon with fresh lunches on all school days",
-            type: InfoBannerType.info,
+          // Description card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.green.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.lunch_dining,
+                  color: Colors.green,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Nutritious lunch delivered to your child during school lunch hours.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
-          // Lunch meal cards
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: lunchMeals.length,
-            itemBuilder: (context, index) {
-              final meal = lunchMeals[index];
-              return _buildMealCard(
-                name: meal['name'] as String,
-                price: meal['price'] as int,
-                isVeg: meal['isVeg'] as bool,
-                isRecommended: meal['isRecommended'] as bool,
-                imageUrl: meal['image'] as String,
-                isExpressTab: false,
-                mealType: 'lunch',
-              );
-            },
-          ),
+          // Meal Selection Cards
+          for (var meal in lunchMeals)
+            _buildMealSelectionCard(
+              name: meal['name'] as String,
+              price: meal['price'] as int,
+              isVeg: meal['isVeg'] as bool,
+              isRecommended: meal['isRecommended'] as bool,
+              imageUrl: meal['image'] as String,
+              mealType: 'lunch',
+              tabColor: Colors.green,
+            ),
         ],
       ),
     );
@@ -369,7 +514,6 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         ? "Express ordering is currently OPEN"
         : "Express ordering is currently CLOSED";
 
-    // Create express meals list with static images
     final List<Map<String, dynamic>> expressMeals = [
       {
         'name': 'Lunch of the Day',
@@ -401,85 +545,92 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       },
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate content padding based on screen width
-        final double horizontalPadding =
-            constraints.maxWidth > 600 ? 32.0 : 16.0;
-
-        return SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: 16,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Express availability info
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.blue.withOpacity(0.2),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                InfoBanner(
-                  title: isExpressAvailable
-                      ? "Express Ordering Open"
-                      : "Express Ordering Closed",
-                  message:
-                      "This meal includes a ₹50 express fee for same-day delivery only. $timeWindowStatus. Orders can only be placed between 12:00 AM to 8:00 AM (IST).",
-                  type: isExpressAvailable
-                      ? InfoBannerType.success
-                      : InfoBannerType.warning,
+                Icon(
+                  Icons.delivery_dining,
+                  color: Colors.blue,
+                  size: 24,
                 ),
-                const SizedBox(height: 16),
-
-                // Express meal cards
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: expressMeals.length,
-                  itemBuilder: (context, index) {
-                    final meal = expressMeals[index];
-                    // Adding express fee to base price
-                    final expressPrice = meal['price'] + 50;
-                    return _buildMealCard(
-                      name: meal['name'] as String,
-                      price: expressPrice,
-                      basePrice: meal['price'] as int,
-                      isVeg: true, // Force Veg icon for Express tab
-                      isRecommended: meal['isRecommended'] as bool,
-                      imageUrl: meal['image'] as String,
-                      isExpressTab: true,
-                      mealType: 'express 1 day lunch',
-                    );
-                  },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Same-day delivery with express fee',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$timeWindowStatus. Orders can only be placed between 12:00 AM to 8:00 AM (IST).',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        );
-      },
+          const SizedBox(height: 24),
+
+          // Express Meal Selection Cards
+          for (var meal in expressMeals)
+            _buildMealSelectionCard(
+              name: meal['name'] as String,
+              price: (meal['price'] as int) + 50, // Adding express fee
+              basePrice: meal['price'] as int,
+              isVeg: meal['isVeg'] as bool,
+              isRecommended: meal['isRecommended'] as bool,
+              imageUrl: meal['image'] as String,
+              mealType: 'express',
+              isExpressTab: true,
+              tabColor: Colors.blue,
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _buildMealCard({
+  Widget _buildMealSelectionCard({
     required String name,
     required int price,
     int? basePrice,
     required bool isVeg,
     required bool isRecommended,
     required String imageUrl,
-    required bool isExpressTab,
     required String mealType,
+    required Color tabColor,
+    bool isExpressTab = false,
   }) {
-    // For Express tab, check if we're within the ordering window
-    final bool expressOrderEnabled = !isExpressTab || isWithinExpressWindow();
-
-    // Determine if we should show veg icon - always true for Breakfast and Lunch tabs
-    final bool showVegIcon = isExpressTab ? isVeg : true;
-
-    // Determine if meal should show the "Most Recommended" tag based on tab and name
+    // Check if it's the most recommended meal to highlight it
     final bool shouldShowRecommendedTag = _shouldShowMostRecommendedTag(
       mealType,
       name,
     );
 
-    // Create meal data map for detail page
+    // Create meal data map for detail page and selection
     final mealData = {
       'name': name,
       'price': price,
@@ -488,112 +639,148 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       'image': imageUrl,
     };
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 3,
-      child: InkWell(
-        onTap: () {
-          // Prevent navigation to meal detail for Express tab outside ordering hours
-          if (isExpressTab && !expressOrderEnabled) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Express orders are currently closed. Please check back during ordering hours.',
-                  style: GoogleFonts.poppins(),
+    // For Express tab, check if we're within the ordering window
+    final bool expressOrderEnabled = !isExpressTab || isWithinExpressWindow();
+
+    // Get appropriate meal type label
+    final String mealTypeLabel = mealType == 'breakfast'
+        ? 'Breakfast'
+        : mealType == 'express'
+            ? 'Express'
+            : 'Lunch';
+
+    // Get appropriate meal description
+    final String mealDescription =
+        mealType == 'breakfast' ? 'Breakfast Meal' : 'Lunch Meal';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            // Prevent navigation to meal detail for Express tab outside ordering hours
+            if (isExpressTab && !expressOrderEnabled) {
+              _showExpressTimeMessage(context);
+              return;
+            }
+
+            // Navigate to meal detail page
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MealDetailPage(
+                  meal: mealData,
+                  sourceTab: mealType,
+                  isExpressTab: isExpressTab,
                 ),
-                duration: const Duration(seconds: 3),
               ),
             );
-            return;
-          }
-
-          // Allow navigation for non-Express tabs or during express ordering hours
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MealDetailPage(
-                meal: mealData,
-                sourceTab: mealType,
-                isExpressTab: isExpressTab,
-              ),
-            ),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Meal image with Most Recommended tag overlay
-            Stack(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(12),
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Meal image with tag
+              Stack(
+                children: [
+                  // Image
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                    child: Image.asset(
+                      imageUrl,
+                      height: 220,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 220,
+                          width: double.infinity,
+                          color: Colors.grey.shade200,
+                          child: Icon(
+                            mealType == 'breakfast'
+                                ? Icons.ramen_dining
+                                : mealType == 'express'
+                                    ? Icons.delivery_dining
+                                    : Icons.lunch_dining,
+                            size: 60,
+                            color: tabColor.withOpacity(0.5),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  child: Image.asset(
-                    imageUrl,
-                    width: double.infinity,
-                    height: 200,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 160,
-                        width: double.infinity,
-                        color: Colors.grey.shade200,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              isExpressTab
-                                  ? (isVeg ? Icons.stop : Icons.restaurant)
-                                  : Icons.stop,
-                              size: 40,
-                              color: isExpressTab
-                                  ? (isVeg ? Colors.green : Colors.brown)
-                                  : Colors.green,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              name,
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textDark,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
 
-                // Most Recommended tag with gradient background and animation
-                if (shouldShowRecommendedTag)
+                  // Meal type label
                   Positioned(
-                    top: 8,
-                    right: 8,
-                    child: AnimatedOpacity(
-                      opacity: 1.0,
-                      duration: const Duration(milliseconds: 800),
+                    bottom: 0,
+                    left: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: tabColor.withOpacity(0.8),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            mealType == 'breakfast'
+                                ? Icons.ramen_dining
+                                : mealType == 'express'
+                                    ? Icons.delivery_dining
+                                    : Icons.lunch_dining,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            mealTypeLabel,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Selected meal badge
+                  if (shouldShowRecommendedTag)
+                    Positioned(
+                      top: 12,
+                      right: 12,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF8E2DE2), // Purple
-                              Color(0xFFFF6A00), // Orange
-                            ],
+                            colors: [AppTheme.purple, AppTheme.deepPurple],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           ),
+                          borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.2),
@@ -601,283 +788,256 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                               offset: const Offset(0, 2),
                             ),
                           ],
-                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
                               Icons.star,
-                              size: 14,
+                              size: 16,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Most Recommended',
+                              'Recommended',
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                letterSpacing: 0.2,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-
-                // Express time window badge (only for Express tab outside window)
-                if (isExpressTab && !expressOrderEnabled)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(0),
-                          bottomRight: Radius.circular(0),
-                        ),
-                      ),
-                      child: Text(
-                        'Available 12:00 AM - 8:00 AM',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-
-            // Meal info section
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Meal name with Veg icon
-                  Row(
-                    children: [
-                      const VegIcon(),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Price display with responsive layout
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      // Adjust layout based on available width
-                      final bool useCompactLayout = constraints.maxWidth < 300;
-
-                      if (isExpressTab && basePrice != null) {
-                        return useCompactLayout
-                            ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        '₹$basePrice',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          color: Colors.grey,
-                                          decoration:
-                                              TextDecoration.lineThrough,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '₹$price per meal',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.purple,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '(+₹50 express fee)',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: Colors.orange,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                children: [
-                                  Text(
-                                    '₹$basePrice',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      color: Colors.grey,
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '₹$price per meal',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.purple,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '(+₹50 express fee)',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: Colors.orange,
-                                    ),
-                                  ),
-                                ],
-                              );
-                      } else {
-                        return Text(
-                          '₹$price per meal',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.purple,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Discount info - only for Breakfast and Lunch tabs
-                  if (!isExpressTab)
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Colors.orange, Colors.pink],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '💸 Save 20% on Annual - 200 days',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-
-                  // Express fee info - only for Express tab
-                  if (isExpressTab)
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: Colors.green.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Text(
-                        'Express Fee: ₹50 for same-day delivery',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.green,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-
-                  const SizedBox(height: 12),
-
-                  // Choose plan button with responsive width
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: Text(
-                        isExpressTab ? 'Order Express' : 'Choose Plan',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                      ),
-                      onPressed: isExpressTab
-                          ? (expressOrderEnabled
-                              ? () => _handleChoosePlanTap(
-                                    name,
-                                    price,
-                                    imageUrl,
-                                    mealType,
-                                    true,
-                                  )
-                              : () => _showExpressTimeMessage(context))
-                          : () => _handleChoosePlanTap(
-                                name,
-                                price,
-                                imageUrl,
-                                mealType,
-                                false,
-                              ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: expressOrderEnabled
-                            ? isExpressTab
-                                ? Colors.orange
-                                : AppTheme.purple
-                            : Colors.grey.shade400,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
-            ),
-          ],
+
+              // Meal details section
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Meal name row with veg icon
+                    Row(
+                      children: [
+                        // Veg icon instead of checkbox
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const VegIcon(),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Meal name
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: tabColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Text(
+                            '₹$price',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: tabColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Price and meal info row
+                    Row(
+                      children: [
+                        Icon(
+                          isVeg ? Icons.restaurant_menu : Icons.food_bank,
+                          color: Colors.green,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            mealDescription,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                        // Price with tab color
+                      ],
+                    ),
+
+                    // Express fee info (only for Express tab)
+                    if (isExpressTab && basePrice != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 28), // Align with text above
+                            Text(
+                              'Includes ₹50 express fee',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.orange,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Annual offer section - for all tabs except Express
+                    if (!isExpressTab)
+                      Container(
+                        margin: const EdgeInsets.only(top: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 0,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.savings_rounded,
+                                color: Colors.green,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ShaderMask(
+                                shaderCallback: (bounds) =>
+                                    const LinearGradient(
+                                  colors: [Colors.green, Colors.lightGreen],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ).createShader(bounds),
+                                child: Text(
+                                  'Save 20% on Annual - 200 days',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors
+                                        .white, // This will be masked by the gradient
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Add some space before the button
+                    const SizedBox(height: 16),
+
+                    // Choose plan button - for all cards
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.purpleToDeepPurple,
+                            borderRadius: BorderRadius.circular(50),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.deepPurple.withOpacity(0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: isExpressTab
+                                ? (expressOrderEnabled
+                                    ? () => _handleChoosePlanTap(
+                                          name,
+                                          price,
+                                          imageUrl,
+                                          mealType,
+                                          true,
+                                        )
+                                    : () => _showExpressTimeMessage(context))
+                                : () => _handleChoosePlanTap(
+                                      name,
+                                      price,
+                                      imageUrl,
+                                      mealType,
+                                      false,
+                                    ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                            ),
+                            child: Text(
+                              isExpressTab ? 'Order Express' : 'Choose Plan',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  void _handleChoosePlanTap(
+    String name,
+    int price,
+    String imageUrl,
+    String mealType,
+    bool isExpressTab,
+  ) {
+    if (isExpressTab) {
+      _navigateToExpressOrder(price, name, imageUrl);
+    } else {
+      _navigateToSubscriptionPlan(price, mealType, name, imageUrl);
+    }
   }
 
   void _navigateToSubscriptionPlan(
@@ -887,11 +1047,8 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     String imageUrl,
   ) {
     // Create a meal with proper name and image to pass to the subscription screen
-    final mealCategory = mealType == 'breakfast'
-        ? MealCategory.breakfast
-        : mealType == 'express 1 day lunch'
-            ? MealCategory.expressOneDay
-            : MealCategory.lunch;
+    final mealCategory =
+        mealType == 'breakfast' ? MealCategory.breakfast : MealCategory.lunch;
 
     final dummyMeal = Meal(
       id: 'dummy',
@@ -978,20 +1135,5 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
     // Default case - don't show tag
     return false;
-  }
-
-  // Handle "Choose Plan" button tap
-  void _handleChoosePlanTap(
-    String name,
-    int price,
-    String imageUrl,
-    String mealType,
-    bool isExpressTab,
-  ) {
-    if (isExpressTab) {
-      _navigateToExpressOrder(price, name, imageUrl);
-    } else {
-      _navigateToSubscriptionPlan(price, mealType, name, imageUrl);
-    }
   }
 }
