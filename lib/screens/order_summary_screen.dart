@@ -825,7 +825,14 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                   height: 20,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: AppTheme.purpleToDeepPurple,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.success,
+                        AppTheme.success.withOpacity(1)
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: AppTheme.purple.withOpacity(0.3),

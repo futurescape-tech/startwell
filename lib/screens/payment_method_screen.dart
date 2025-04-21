@@ -99,6 +99,10 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Calculate if discount applies
+    bool hasDiscount =
+        widget.planType != 'Single Day' && widget.mealDates.length > 7;
+
     return Scaffold(
       appBar: GradientAppBar(
         titleText: 'Payment Method',
@@ -113,13 +117,17 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.purple.withOpacity(0.15),
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: AppTheme.deepPurple.withOpacity(0.1),
+                    spreadRadius: 0,
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -128,10 +136,37 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 children: [
                   Row(
                     children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppTheme.purple.withOpacity(0.8),
+                              AppTheme.deepPurple.withOpacity(0.9),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.deepPurple.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.location_on_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Text(
                         'Selected Delivery Address',
                         style: GoogleFonts.poppins(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textDark,
                         ),
@@ -141,68 +176,152 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(4),
+                          color: AppTheme.success.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppTheme.success.withOpacity(0.3),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.check_circle,
                               size: 16,
-                              color: Colors.green,
+                              color: AppTheme.success,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Default',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: AppTheme.textMedium,
-                              ),
-                            ),
+                            // const SizedBox(width: 4),
+                            // Text(
+                            //   'Default',
+                            //   style: GoogleFonts.poppins(
+                            //     fontSize: 12,
+                            //     fontWeight: FontWeight.w500,
+                            //     color: AppTheme.success,
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Checkbox(
-                        value: true,
-                        onChanged: null, // non-editable
-                        activeColor: AppTheme.purple,
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.shade200,
+                        width: 1,
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.selectedStudent.schoolName,
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.selectedStudent.schoolAddress,
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                color: AppTheme.textMedium,
-                              ),
-                            ),
-                          ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.purple.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.school_rounded,
+                            size: 20,
+                            color: AppTheme.purple,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.selectedStudent.schoolName,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  color: AppTheme.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.selectedStudent.schoolAddress,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: AppTheme.textMedium,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.purple.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person,
+                                          size: 14,
+                                          color: AppTheme.purple,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          widget.selectedStudent.name,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppTheme.purple,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          AppTheme.deepPurple.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.class_,
+                                          size: 14,
+                                          color: AppTheme.deepPurple,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "${widget.selectedStudent.className} ${widget.selectedStudent.section}",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppTheme.deepPurple,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: Colors.blue.shade200,
                         width: 1,
@@ -215,12 +334,13 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                           color: Colors.blue.shade700,
                           size: 20,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'Meals will be provided to your child at school during breakfast and lunch hours.',
                             style: GoogleFonts.poppins(
-                              fontSize: 12,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
                               color: Colors.blue.shade700,
                             ),
                           ),
@@ -233,85 +353,145 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Payment Method Selection
-            _buildPaymentMethodSection(),
+            // Meal Plan Selection Section
+            _buildCardSection(
+              title: 'Meal Plan',
+              icon: Icons.restaurant_menu_rounded,
+              children: [
+                _buildMealPlanOptions(),
+              ],
+            ),
 
             const SizedBox(height: 24),
 
-            // Order Summary
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Order Summary',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textDark,
+            // Payment Method Section
+            _buildCardSection(
+              title: 'Select Payment Mode',
+              icon: Icons.payments_rounded,
+              children: [
+                // PhonePe
+                _buildPaymentMethodTile(
+                  0,
+                  'PhonePe',
+                  'Pay using UPI with PhonePe',
+                  'assets/images/payment/phonepe.png',
+                ),
+
+                // Razorpay
+                _buildPaymentMethodTile(
+                  1,
+                  'Razorpay',
+                  'Pay using Credit/Debit Card, UPI, Netbanking',
+                  'assets/images/payment/razorpay.png',
+                ),
+
+                // Startwell Wallet
+                _buildPaymentMethodTile(
+                  2,
+                  'Startwell Wallet',
+                  'Use your Startwell wallet balance',
+                  'assets/images/payment/wallet.png',
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Order Summary Section
+            _buildCardSection(
+              title: 'Order Summary',
+              icon: Icons.receipt_long_rounded,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.purple.withOpacity(0.15),
+                      width: 1,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildSummaryItem('Plan Type', widget.planType.toUpperCase()),
-                  _buildSummaryItem(
-                      'Duration',
-                      widget.isCustomPlan
-                          ? '${widget.mealDates.length} days custom plan'
-                          : '${widget.endDate.difference(widget.startDate).inDays + 1} days'),
-                  _buildSummaryItem('Student', widget.selectedStudent.name),
-                  _buildSummaryItem(
-                      'School', widget.selectedStudent.schoolName),
-                  _buildSummaryItem(
-                      'Meal Plan',
-                      widget.selectedMeals.isNotEmpty
-                          ? widget.selectedMeals.first.name
-                          : '${widget.mealType?.toUpperCase() ?? "Standard"} Meal Plan'),
-                  _buildSummaryItem(
-                      'Total Meals', '${widget.mealDates.length} meals'),
-                  _buildSummaryItem('Start Date',
-                      '${DateFormat('dd MMM yyyy').format(widget.startDate)}'),
-                  _buildSummaryItem('End Date',
-                      '${DateFormat('dd MMM yyyy').format(widget.endDate)}'),
-
-                  const Divider(height: 32),
-
-                  // Total amount
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total Amount',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textDark,
-                        ),
-                      ),
-                      Text(
-                        '₹${widget.totalAmount.toStringAsFixed(0)}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.purple,
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.07),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                ],
-              ),
+                  child: Column(
+                    children: [
+                      _buildStudentInfoRow(
+                        icon: Icons.lunch_dining_rounded,
+                        label: 'Meal Price',
+                        value:
+                            '₹${(widget.totalAmount / widget.mealDates.length).toStringAsFixed(0)} per meal',
+                        iconColor: AppTheme.purple,
+                        backgroundColor: AppTheme.purple.withOpacity(0.1),
+                      ),
+                      _buildStudentInfoRow(
+                        icon: Icons.list_alt_rounded,
+                        label: 'Number of Meals',
+                        value: '${widget.mealDates.length}',
+                        iconColor: AppTheme.purple,
+                        backgroundColor: AppTheme.purple.withOpacity(0.1),
+                      ),
+
+                      // Divider
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Divider(
+                          color: Colors.grey.shade200,
+                          height: 1,
+                        ),
+                      ),
+
+                      if (hasDiscount)
+                        _buildStudentInfoRow(
+                          icon: Icons.shopping_cart_outlined,
+                          label: 'Subtotal',
+                          value:
+                              '₹${(widget.totalAmount * 1.25).toStringAsFixed(0)}',
+                          valueStyle: GoogleFonts.poppins(
+                            fontSize: 14,
+                            decoration: TextDecoration.lineThrough,
+                            color: AppTheme.textMedium,
+                          ),
+                          iconColor: AppTheme.purple,
+                          backgroundColor: AppTheme.purple.withOpacity(0.1),
+                        ),
+                      if (hasDiscount)
+                        _buildStudentInfoRow(
+                          icon: Icons.discount_rounded,
+                          label: 'Discount (${(0.25 * 100).toInt()}%)',
+                          value:
+                              '-₹${((widget.totalAmount * 1.25) - widget.totalAmount).toStringAsFixed(0)}',
+                          valueStyle: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.success,
+                          ),
+                          isAlert: false,
+                          iconColor: AppTheme.success,
+                          backgroundColor: AppTheme.success.withOpacity(0.1),
+                        ),
+                      _buildStudentInfoRow(
+                        icon: Icons.payments_rounded,
+                        label: 'Total Amount',
+                        value: '₹${widget.totalAmount.toStringAsFixed(0)}',
+                        valueStyle: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.deepPurple,
+                        ),
+                        iconColor: AppTheme.deepPurple,
+                        backgroundColor: AppTheme.deepPurple.withOpacity(0.1),
+                        isLast: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 32),
@@ -328,63 +508,6 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            spreadRadius: 0,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Select Payment Mode',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textDark,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // PhonePe
-          _buildPaymentMethodTile(
-            0,
-            'PhonePe',
-            'Pay using UPI with PhonePe',
-            'assets/images/payment/phonepe.png',
-          ),
-
-          // Razorpay
-          _buildPaymentMethodTile(
-            1,
-            'Razorpay',
-            'Pay using Credit/Debit Card, UPI, Netbanking',
-            'assets/images/payment/razorpay.png',
-          ),
-
-          // Startwell Wallet
-          _buildPaymentMethodTile(
-            2,
-            'Startwell Wallet',
-            'Use your Startwell wallet balance',
-            'assets/images/payment/wallet.png',
-          ),
-        ],
       ),
     );
   }
@@ -474,17 +597,13 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
+                      color: Colors.deepPurple.shade50,
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Icon(
-                      index == 0
-                          ? Icons.phone_android
-                          : index == 1
-                              ? Icons.payment
-                              : Icons.account_balance_wallet,
-                      color: AppTheme.textMedium,
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
                       size: 20,
+                      color: Colors.deepPurple,
                     ),
                   );
                 },
@@ -496,23 +615,696 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     );
   }
 
-  Widget _buildSummaryItem(String label, String value) {
+  Widget _buildStudentInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    TextStyle? valueStyle,
+    bool isLast = false,
+    bool isAlert = false,
+    Color? iconColor,
+    Color? backgroundColor,
+  }) {
+    final iconColorValue = iconColor ?? AppTheme.textMedium;
+    final backgroundColorValue = backgroundColor ??
+        (isAlert ? Colors.red.withOpacity(0.08) : Colors.transparent);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              color: AppTheme.textMedium,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: backgroundColorValue,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: iconColorValue.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: iconColorValue,
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textDark,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppTheme.textMedium,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: valueStyle ??
+                      GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textDark,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardSection({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+    bool withoutPadding = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.deepPurple.withOpacity(0.1),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Card(
+        margin: EdgeInsets.zero,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.purple.withOpacity(0.8),
+                            AppTheme.deepPurple.withOpacity(0.9),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.deepPurple.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        icon,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              if (withoutPadding)
+                ...children
+              else
+                Padding(
+                  padding:
+                      const EdgeInsets.only(left: 24, right: 24, bottom: 24),
+                  child: Column(
+                    children: children,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMealPlanOptions() {
+    // Determine meal type - breakfast, lunch or express
+    final String mealType = widget.mealType ??
+        (widget.selectedMeals.isNotEmpty &&
+                widget.selectedMeals.first.categories
+                    .contains(MealCategory.breakfast)
+            ? 'breakfast'
+            : widget.isExpressOrder
+                ? 'express'
+                : 'lunch');
+
+    // Get meal name and image
+    final String mealName = widget.selectedMeals.isNotEmpty
+        ? widget.selectedMeals.first.name
+        : mealType == 'breakfast'
+            ? 'Breakfast of the Day'
+            : mealType == 'express'
+                ? 'Express Lunch'
+                : 'Lunch of the Day';
+
+    final String imageUrl = widget.selectedMeals.isNotEmpty &&
+            widget.selectedMeals.first.imageUrl.isNotEmpty
+        ? widget.selectedMeals.first.imageUrl
+        : mealType == 'breakfast'
+            ? 'assets/images/breakfast/breakfast of the day (most recommended).png'
+            : 'assets/images/lunch/lunch of the day (most recommended).png';
+
+    // Tab view for Breakfast, Lunch, Express options
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.purple.withOpacity(0.15),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.07),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header text
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Text(
+              "Choose your meal type",
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ),
+
+          // Meal plan tabs
+          Container(
+            height: 54,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                _buildMealPlanTab(
+                  'Breakfast',
+                  mealType == 'breakfast',
+                  Icons.ramen_dining,
+                  Colors.pink,
+                ),
+                _buildMealPlanTab(
+                  'Lunch',
+                  mealType == 'lunch',
+                  Icons.lunch_dining_rounded,
+                  AppTheme.success,
+                ),
+                _buildMealPlanTab(
+                  'Express',
+                  mealType == 'express',
+                  Icons.local_shipping_rounded,
+                  Colors.blue,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Brief explanation text based on meal type
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _getMealTypeColor(mealType).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _getMealTypeColor(mealType).withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _getMealTypeIcon(mealType),
+                  color: _getMealTypeColor(mealType),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _getMealTypeDescription(mealType),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: AppTheme.textMedium,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Meal card
+          _buildSelectedMealCard(mealName, imageUrl, mealType),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMealPlanTab(
+      String title, bool isSelected, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    color.withOpacity(0.9),
+                    color.withOpacity(0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                    spreadRadius: 0,
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? Colors.white : color.withOpacity(0.7),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? Colors.white : AppTheme.textMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getMealTypeColor(String mealType) {
+    switch (mealType) {
+      case 'breakfast':
+        return Colors.pink;
+      case 'express':
+        return Colors.blue;
+      case 'lunch':
+      default:
+        return AppTheme.success;
+    }
+  }
+
+  IconData _getMealTypeIcon(String mealType) {
+    switch (mealType) {
+      case 'breakfast':
+        return Icons.ramen_dining;
+      case 'express':
+        return Icons.local_shipping_rounded;
+      case 'lunch':
+      default:
+        return Icons.lunch_dining_rounded;
+    }
+  }
+
+  String _getMealTypeDescription(String mealType) {
+    switch (mealType) {
+      case 'breakfast':
+        return 'Fresh breakfast delivered to your child at school in the morning hours.';
+      case 'express':
+        return 'Same-day lunch delivery with express service (additional fee applies).';
+      case 'lunch':
+      default:
+        return 'Nutritious lunch delivered to your child during school lunch hours.';
+    }
+  }
+
+  Widget _buildSelectedMealCard(String name, String imageUrl, String mealType) {
+    // Determine if we should show express fee
+    final bool isExpress = mealType == 'express';
+    final double mealPrice = widget.totalAmount / widget.mealDates.length;
+    final Color typeColor = _getMealTypeColor(mealType);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: typeColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      elevation: 4,
+      shadowColor: typeColor.withOpacity(0.1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Meal image with gradient overlay for better text visibility
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Stack(
+                  children: [
+                    Image.asset(
+                      imageUrl,
+                      width: double.infinity,
+                      height: 160,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 160,
+                          width: double.infinity,
+                          color: typeColor.withOpacity(0.1),
+                          child: Icon(
+                            _getMealTypeIcon(mealType),
+                            size: 60,
+                            color: typeColor.withOpacity(0.3),
+                          ),
+                        );
+                      },
+                    ),
+                    // Gradient overlay for better text visibility
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.center,
+                            colors: [
+                              Colors.black.withOpacity(0.5),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Selected badge
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFFFF8A00), // orangeToYellow
+                        Color.fromARGB(255, 239, 243, 31), // success
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Selected Meal',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Meal type badge
+              Positioned(
+                bottom: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _getMealTypeIcon(mealType),
+                        color: typeColor,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        mealType.substring(0, 1).toUpperCase() +
+                            mealType.substring(1),
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Meal details
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Meal name with veg icon
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(1.0),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.green,
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.circle,
+                        size: 10,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Price and details row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          mealType == 'breakfast'
+                              ? Icons.ramen_dining
+                              : Icons.lunch_dining,
+                          size: 16,
+                          color: mealType == 'breakfast'
+                              ? Colors.pink
+                              : AppTheme.success,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          mealType == 'breakfast'
+                              ? 'Breakfast Meal'
+                              : mealType == 'express'
+                                  ? 'Express Lunch Meal'
+                                  : 'Lunch Meal',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: AppTheme.textMedium,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            typeColor.withOpacity(0.8),
+                            typeColor.withOpacity(0.6),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: typeColor.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '₹${mealPrice.toStringAsFixed(0)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Express fee info
+                if (isExpress) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.delivery_dining_outlined,
+                          size: 18,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Express Fee: ₹50 for same-day delivery',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
