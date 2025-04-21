@@ -103,7 +103,8 @@ class _DashboardScreenState extends State<DashboardScreen>
             .getActiveSubscriptionsForStudent(student.id);
 
         print(
-            'Student: ${student.name}, Active subscriptions: ${subscriptions.length}');
+          'Student: ${student.name}, Active subscriptions: ${subscriptions.length}',
+        );
 
         if (subscriptions.isNotEmpty) {
           hasAnyActivePlans = true;
@@ -345,19 +346,25 @@ class _DashboardScreenState extends State<DashboardScreen>
             color: Colors.white,
           ),
         ),
-        backgroundColor: AppTheme.purple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(gradient: AppTheme.purpleToDeepPurple),
+        ),
         elevation: 0,
-        leading: Row(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(width: 10),
-          Image.asset(
-            'assets/images/start_well.png',
-            fit: BoxFit.cover,
-            width: 46,
-            errorBuilder: (context, error, stackTrace) {
-              return const Icon(Icons.home, color: Colors.white, size: 28);
-            },
-          ),
-        ]),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(width: 10),
+            Image.asset(
+              'assets/images/start_well.png',
+              fit: BoxFit.cover,
+              width: 30,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.home, color: Colors.white, size: 28);
+              },
+            ),
+          ],
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
@@ -429,34 +436,41 @@ class _DashboardScreenState extends State<DashboardScreen>
                               borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.withOpacity(0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.calendar_month,
-                                      color: Colors.grey,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Text(
-                                      'No active subscription plans found',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        color: AppTheme.textMedium,
+                            shadowColor: AppTheme.deepPurple.withOpacity(0.15),
+                            child: Ink(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: AppTheme.offWhite,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.calendar_month,
+                                        color: Colors.grey,
+                                        size: 24,
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Text(
+                                        'No active subscription plans found',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          color: AppTheme.textMedium,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -510,9 +524,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                       borderRadius: BorderRadius.circular(12),
                                       child: Ink(
                                         decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          color: AppTheme.offWhite,
                                         ),
                                         child: Padding(
                                           padding: const EdgeInsets.all(16.0),
@@ -522,22 +537,24 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 width: 48,
                                                 height: 48,
                                                 decoration: BoxDecoration(
-                                                  color: AppTheme.purple
+                                                  color: Colors.blue
                                                       .withOpacity(0.1),
                                                   shape: BoxShape.circle,
                                                   boxShadow: [
                                                     BoxShadow(
-                                                      color: AppTheme.purple
+                                                      color: Colors.blue
                                                           .withOpacity(0.1),
                                                       blurRadius: 4,
-                                                      offset:
-                                                          const Offset(0, 2),
+                                                      offset: const Offset(
+                                                        0,
+                                                        2,
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
-                                                child: const Icon(
+                                                child: Icon(
                                                   Icons.calendar_month,
-                                                  color: AppTheme.purple,
+                                                  color: Colors.blue,
                                                   size: 24,
                                                 ),
                                               ),
@@ -580,10 +597,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                   vertical: 4,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      Colors.green.withOpacity(
-                                                    0.1,
-                                                  ),
+                                                  color: Colors.green
+                                                      .withOpacity(0.1),
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                 ),
@@ -615,9 +630,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
-                                              const Icon(
+                                              Icon(
                                                 Icons.chevron_right,
-                                                color: AppTheme.textMedium,
+                                                color: Colors.grey.shade600,
                                               ),
                                             ],
                                           ),
@@ -826,7 +841,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
-      shadowColor: AppTheme.orange.withOpacity(0.2),
+      shadowColor: AppTheme.purple.withOpacity(0.3),
       margin: const EdgeInsets.only(bottom: 20),
       child: InkWell(
         onTap: () {
@@ -843,7 +858,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
+            color: AppTheme.offWhite,
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -853,11 +868,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppTheme.orange.withOpacity(0.1),
+                    color: Colors.green.withOpacity(0.1),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.orange.withOpacity(0.1),
+                        color: Colors.green.withOpacity(0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -865,7 +880,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                   child: const Icon(
                     Icons.restaurant,
-                    color: AppTheme.orange,
+                    color: Colors.green,
                     size: 24,
                   ),
                 ),
@@ -901,21 +916,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: progress, // Use the calculated progress value
-                        backgroundColor: Colors.grey[200],
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppTheme.orange,
-                        ),
-                        minHeight: 6,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: AppTheme.textMedium),
+                Icon(Icons.chevron_right, color: Colors.grey.shade600),
               ],
             ),
           ),

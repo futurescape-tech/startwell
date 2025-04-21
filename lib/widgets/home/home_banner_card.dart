@@ -65,20 +65,38 @@ class _HomeBannerCardState extends State<HomeBannerCard>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: AppTheme.purpleToDeepPurple,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF8B008B), // Darker lavender (from B39DDB → 9575CD)
+            Color(0xFF8A2BE2), // Deeper purple (from 8C52FF → 6A1B9A)
+          ],
+        ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: AppTheme.softShadow,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'School meals done right!',
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.white,
-            ),
+          Row(
+            children: [
+              Text(
+                'School meals done right!',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Text(
@@ -86,7 +104,7 @@ class _HomeBannerCardState extends State<HomeBannerCard>
             style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w400,
-              color: AppTheme.white.withOpacity(0.9),
+              color: Colors.white.withOpacity(0.9),
               height: 1.4,
             ),
           ),
@@ -104,7 +122,7 @@ class _HomeBannerCardState extends State<HomeBannerCard>
     // Bounce-in animation with glow effect
     return AnimatedScale(
       scale: _isVisible ? 1.0 : 0.8,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 100),
       curve: Curves.elasticOut,
       child: AnimatedBuilder(
         animation: _animationController,
@@ -116,9 +134,9 @@ class _HomeBannerCardState extends State<HomeBannerCard>
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.orange.withOpacity(0.5),
+                    color: AppTheme.orange.withOpacity(0.1),
                     blurRadius: _glowAnimation.value,
-                    spreadRadius: _glowAnimation.value / 3,
+                    spreadRadius: _glowAnimation.value / 30,
                   ),
                 ],
               ),

@@ -5,6 +5,7 @@ import 'package:startwell/screens/subscription_selection_screen.dart';
 import 'package:startwell/services/meal_selection_manager.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/common/veg_icon.dart';
+import 'package:startwell/widgets/common/gradient_app_bar.dart';
 
 class Review {
   final String name;
@@ -66,20 +67,8 @@ class MealDetailPage extends StatelessWidget {
     final reviews = _getDummyReviews();
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Meal Details',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppTheme.purple,
+      appBar: GradientAppBar(
+        titleText: 'Meal Details',
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -98,8 +87,9 @@ class MealDetailPage extends StatelessWidget {
                   Container(
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(12)),
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
                     ),
                     child: Image.asset(
                       meal['image'],
@@ -243,7 +233,9 @@ class MealDetailPage extends StatelessWidget {
                     duration: const Duration(milliseconds: 600),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Colors.orange, Colors.pink],
@@ -327,8 +319,9 @@ class MealDetailPage extends StatelessWidget {
                             Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor:
-                                      AppTheme.purple.withOpacity(0.2),
+                                  backgroundColor: AppTheme.purple.withOpacity(
+                                    0.2,
+                                  ),
                                   child: Icon(
                                     Icons.person,
                                     color: AppTheme.purple,

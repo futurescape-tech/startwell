@@ -16,10 +16,7 @@ import 'package:startwell/utils/routes.dart';
 class MealPlanScreen extends StatefulWidget {
   final UserProfile? userProfile;
 
-  const MealPlanScreen({
-    super.key,
-    this.userProfile,
-  });
+  const MealPlanScreen({super.key, this.userProfile});
 
   @override
   State<MealPlanScreen> createState() => _MealPlanScreenState();
@@ -93,8 +90,9 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
   // Check if current time is within Express window (12:00 AM to 8:00 AM IST)
   bool isWithinExpressWindow() {
     // Convert to IST time (UTC + 5:30)
-    DateTime now =
-        DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+    DateTime now = DateTime.now().toUtc().add(
+          const Duration(hours: 5, minutes: 30),
+        );
     final nowHour = now.hour;
     return nowHour >= 0 && nowHour < 8;
   }
@@ -127,7 +125,12 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
               color: Colors.white,
             ),
           ),
-          backgroundColor: AppTheme.purple,
+          backgroundColor: Colors.transparent,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: AppTheme.purpleToDeepPurple,
+            ),
+          ),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
@@ -140,8 +143,10 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                       },
                     )
                   : IconButton(
-                      icon: const Icon(Icons.account_circle,
-                          color: AppTheme.white),
+                      icon: const Icon(
+                        Icons.account_circle,
+                        color: AppTheme.white,
+                      ),
                       onPressed: () {
                         Navigator.pushNamed(context, Routes.profileSettings);
                       },
@@ -396,55 +401,60 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       },
     ];
 
-    return LayoutBuilder(builder: (context, constraints) {
-      // Calculate content padding based on screen width
-      final double horizontalPadding = constraints.maxWidth > 600 ? 32.0 : 16.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate content padding based on screen width
+        final double horizontalPadding =
+            constraints.maxWidth > 600 ? 32.0 : 16.0;
 
-      return SingleChildScrollView(
-        child: Padding(
-          padding:
-              EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              InfoBanner(
-                title: isExpressAvailable
-                    ? "Express Ordering Open"
-                    : "Express Ordering Closed",
-                message:
-                    "This meal includes a ₹50 express fee for same-day delivery only. $timeWindowStatus. Orders can only be placed between 12:00 AM to 8:00 AM (IST).",
-                type: isExpressAvailable
-                    ? InfoBannerType.success
-                    : InfoBannerType.warning,
-              ),
-              const SizedBox(height: 16),
+        return SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: 16,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InfoBanner(
+                  title: isExpressAvailable
+                      ? "Express Ordering Open"
+                      : "Express Ordering Closed",
+                  message:
+                      "This meal includes a ₹50 express fee for same-day delivery only. $timeWindowStatus. Orders can only be placed between 12:00 AM to 8:00 AM (IST).",
+                  type: isExpressAvailable
+                      ? InfoBannerType.success
+                      : InfoBannerType.warning,
+                ),
+                const SizedBox(height: 16),
 
-              // Express meal cards
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: expressMeals.length,
-                itemBuilder: (context, index) {
-                  final meal = expressMeals[index];
-                  // Adding express fee to base price
-                  final expressPrice = meal['price'] + 50;
-                  return _buildMealCard(
-                    name: meal['name'] as String,
-                    price: expressPrice,
-                    basePrice: meal['price'] as int,
-                    isVeg: true, // Force Veg icon for Express tab
-                    isRecommended: meal['isRecommended'] as bool,
-                    imageUrl: meal['image'] as String,
-                    isExpressTab: true,
-                    mealType: 'express 1 day lunch',
-                  );
-                },
-              ),
-            ],
+                // Express meal cards
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: expressMeals.length,
+                  itemBuilder: (context, index) {
+                    final meal = expressMeals[index];
+                    // Adding express fee to base price
+                    final expressPrice = meal['price'] + 50;
+                    return _buildMealCard(
+                      name: meal['name'] as String,
+                      price: expressPrice,
+                      basePrice: meal['price'] as int,
+                      isVeg: true, // Force Veg icon for Express tab
+                      isRecommended: meal['isRecommended'] as bool,
+                      imageUrl: meal['image'] as String,
+                      isExpressTab: true,
+                      mealType: 'express 1 day lunch',
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
   Widget _buildMealCard({
@@ -464,8 +474,10 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     final bool showVegIcon = isExpressTab ? isVeg : true;
 
     // Determine if meal should show the "Most Recommended" tag based on tab and name
-    final bool shouldShowRecommendedTag =
-        _shouldShowMostRecommendedTag(mealType, name);
+    final bool shouldShowRecommendedTag = _shouldShowMostRecommendedTag(
+      mealType,
+      name,
+    );
 
     // Create meal data map for detail page
     final mealData = {
@@ -478,9 +490,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 3,
       child: InkWell(
         onTap: () {
@@ -519,8 +529,9 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                 Container(
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(12)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
                   ),
                   child: Image.asset(
                     imageUrl,
@@ -675,86 +686,89 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                   const SizedBox(height: 8),
 
                   // Price display with responsive layout
-                  LayoutBuilder(builder: (context, constraints) {
-                    // Adjust layout based on available width
-                    final bool useCompactLayout = constraints.maxWidth < 300;
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Adjust layout based on available width
+                      final bool useCompactLayout = constraints.maxWidth < 300;
 
-                    if (isExpressTab && basePrice != null) {
-                      return useCompactLayout
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      '₹$basePrice',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                        decoration: TextDecoration.lineThrough,
+                      if (isExpressTab && basePrice != null) {
+                        return useCompactLayout
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        '₹$basePrice',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: Colors.grey,
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '₹$price per meal',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.purple,
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '₹$price per meal',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.purple,
+                                        ),
                                       ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '(+₹50 express fee)',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.orange,
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '(+₹50 express fee)',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.orange,
                                   ),
-                                ),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                Text(
-                                  '₹$basePrice',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                    decoration: TextDecoration.lineThrough,
+                                ],
+                              )
+                            : Row(
+                                children: [
+                                  Text(
+                                    '₹$basePrice',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                      decoration: TextDecoration.lineThrough,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '₹$price per meal',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.purple,
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '₹$price per meal',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.purple,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '(+₹50 express fee)',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.orange,
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(+₹50 express fee)',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.orange,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            );
-                    } else {
-                      return Text(
-                        '₹$price per meal',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.purple,
-                        ),
-                      );
-                    }
-                  }),
+                                ],
+                              );
+                      } else {
+                        return Text(
+                          '₹$price per meal',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.purple,
+                          ),
+                        );
+                      }
+                    },
+                  ),
 
                   const SizedBox(height: 8),
 
@@ -763,7 +777,9 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                     Container(
                       margin: const EdgeInsets.only(top: 4),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Colors.orange, Colors.pink],
@@ -825,10 +841,20 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                       onPressed: isExpressTab
                           ? (expressOrderEnabled
                               ? () => _handleChoosePlanTap(
-                                  name, price, imageUrl, mealType, true)
+                                    name,
+                                    price,
+                                    imageUrl,
+                                    mealType,
+                                    true,
+                                  )
                               : () => _showExpressTimeMessage(context))
                           : () => _handleChoosePlanTap(
-                              name, price, imageUrl, mealType, false),
+                                name,
+                                price,
+                                imageUrl,
+                                mealType,
+                                false,
+                              ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: expressOrderEnabled
                             ? isExpressTab
@@ -855,7 +881,11 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
   }
 
   void _navigateToSubscriptionPlan(
-      int price, String mealType, String mealName, String imageUrl) {
+    int price,
+    String mealType,
+    String mealName,
+    String imageUrl,
+  ) {
     // Create a meal with proper name and image to pass to the subscription screen
     final mealCategory = mealType == 'breakfast'
         ? MealCategory.breakfast
@@ -951,8 +981,13 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
   }
 
   // Handle "Choose Plan" button tap
-  void _handleChoosePlanTap(String name, int price, String imageUrl,
-      String mealType, bool isExpressTab) {
+  void _handleChoosePlanTap(
+    String name,
+    int price,
+    String imageUrl,
+    String mealType,
+    bool isExpressTab,
+  ) {
     if (isExpressTab) {
       _navigateToExpressOrder(price, name, imageUrl);
     } else {

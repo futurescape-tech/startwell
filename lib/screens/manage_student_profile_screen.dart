@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/meal_model.dart';
 import 'package:startwell/models/student_model.dart';
@@ -189,8 +190,9 @@ class _ManageStudentProfileScreenState
     // If editing, pre-fill the form
     _isEditing = student != null;
     if (_isEditing) {
-      _editingStudentIndex =
-          _studentProfiles.indexWhere((s) => s.id == student!.id);
+      _editingStudentIndex = _studentProfiles.indexWhere(
+        (s) => s.id == student!.id,
+      );
       _schoolNameController.text = student!.schoolName;
       _studentNameController.text = student.name;
       _classController.text = student.className;
@@ -212,15 +214,26 @@ class _ManageStudentProfileScreenState
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFF8F8F8),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => Padding(
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: Color(0xFFF8F8F8),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.deepPurple.withOpacity(0.12),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
+          left: 20,
+          right: 20,
           top: 16,
         ),
         child: SingleChildScrollView(
@@ -230,39 +243,99 @@ class _ManageStudentProfileScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Handle bar at the top
+                Center(
+                  child: Container(
+                    height: 4,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _isEditing
-                          ? 'Edit Student Profile'
-                          : 'Create Student Profile',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.purple.withOpacity(0.2),
+                            AppTheme.deepPurple.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.purple.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFEDE5FB),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0xFF8B5CF6).withOpacity(0.1),
+                                  blurRadius: 4,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              _isEditing ? Icons.edit : Icons.person_add_alt_1,
+                              size: 16,
+                              color: AppTheme.purple,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _isEditing
+                                ? 'Edit Student Profile'
+                                : 'Create Student Profile',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.close,
+                            size: 16, color: Colors.red.shade700),
+                      ),
                       onPressed: () {
                         Navigator.pop(context);
                       },
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
                 // School Name
-                TextFormField(
+                _buildFormField(
                   controller: _schoolNameController,
-                  decoration: InputDecoration(
-                    labelText: 'School Name',
-                    labelStyle: GoogleFonts.poppins(),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  labelText: 'School Name',
+                  icon: Icons.school,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter school name';
@@ -270,18 +343,13 @@ class _ManageStudentProfileScreenState
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Student Name
-                TextFormField(
+                _buildFormField(
                   controller: _studentNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Student Name',
-                    labelStyle: GoogleFonts.poppins(),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  labelText: 'Student Name',
+                  icon: Icons.person,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter student name';
@@ -289,18 +357,13 @@ class _ManageStudentProfileScreenState
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Class
-                TextFormField(
+                _buildFormField(
                   controller: _classController,
-                  decoration: InputDecoration(
-                    labelText: 'Class',
-                    labelStyle: GoogleFonts.poppins(),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  labelText: 'Class',
+                  icon: Icons.class_,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter class';
@@ -308,18 +371,13 @@ class _ManageStudentProfileScreenState
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Division
-                TextFormField(
+                _buildFormField(
                   controller: _divisionController,
-                  decoration: InputDecoration(
-                    labelText: 'Division',
-                    labelStyle: GoogleFonts.poppins(),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  labelText: 'Division',
+                  icon: Icons.dashboard_customize,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter division';
@@ -327,18 +385,13 @@ class _ManageStudentProfileScreenState
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Floor
-                TextFormField(
+                _buildFormField(
                   controller: _floorController,
-                  decoration: InputDecoration(
-                    labelText: 'Floor',
-                    labelStyle: GoogleFonts.poppins(),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  labelText: 'Floor',
+                  icon: Icons.apartment,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter floor';
@@ -346,31 +399,22 @@ class _ManageStudentProfileScreenState
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Medical Allergies (optional)
-                TextFormField(
+                _buildFormField(
                   controller: _allergiesController,
-                  decoration: InputDecoration(
-                    labelText: 'Medical Allergies (Optional)',
-                    labelStyle: GoogleFonts.poppins(),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  labelText: 'Medical Allergies (Optional)',
+                  icon: Icons.healing,
+                  isOptional: true,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // School Address
-                TextFormField(
+                _buildFormField(
                   controller: _schoolAddressController,
-                  decoration: InputDecoration(
-                    labelText: 'School Address',
-                    labelStyle: GoogleFonts.poppins(),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                  labelText: 'School Address',
+                  icon: Icons.location_on,
                   maxLines: 3,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -379,7 +423,7 @@ class _ManageStudentProfileScreenState
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
                 // Submit button
                 SizedBox(
@@ -388,18 +432,28 @@ class _ManageStudentProfileScreenState
                   child: ElevatedButton(
                     onPressed: _saveStudentProfile,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.purple,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                      elevation: 0,
+                      padding: EdgeInsets.zero,
+                      elevation: 2,
                     ),
-                    child: Text(
-                      _isEditing ? 'Update Profile' : 'Create Profile',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.purpleToDeepPurple,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Container(
+                        alignment: Alignment.center,
+                        child: Text(
+                          _isEditing ? 'Update Profile' : 'Create Profile',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -408,6 +462,76 @@ class _ManageStudentProfileScreenState
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to build form fields with consistent styling
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String labelText,
+    required IconData icon,
+    int maxLines = 1,
+    bool isOptional = false,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.deepPurple.withOpacity(0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: labelText,
+          labelStyle: GoogleFonts.poppins(
+            color: AppTheme.textMedium,
+            fontSize: 14,
+          ),
+          prefixIcon:
+              Icon(icon, color: AppTheme.purple.withOpacity(0.7), size: 20),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppTheme.purple, width: 1.5),
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          floatingLabelBehavior: FloatingLabelBehavior.auto,
+          suffixIcon: isOptional
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: Text(
+                    'Optional',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                )
+              : null,
+          suffixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+        ),
+        maxLines: maxLines,
+        validator: validator,
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          color: AppTheme.textDark,
         ),
       ),
     );
@@ -446,8 +570,9 @@ class _ManageStudentProfileScreenState
                 _studentProfiles[_editingStudentIndex].lunchPlanEndDate,
           );
         });
-        _profileService
-            .updateStudentProfile(_studentProfiles[_editingStudentIndex]);
+        _profileService.updateStudentProfile(
+          _studentProfiles[_editingStudentIndex],
+        );
       } else {
         // Add new student
         setState(() {
@@ -528,6 +653,251 @@ class _ManageStudentProfileScreenState
     }
   }
 
+  // Build the list of student profiles
+  Widget _buildStudentsList() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.deepPurple.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Container(
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(
+                  color: AppTheme.deepPurple,
+                  width: 3,
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.only(left: 10),
+            margin: const EdgeInsets.only(bottom: 16, left: 4),
+            child: Text(
+              widget.isManagementMode ? 'Student Profiles' : 'Select a Student',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textDark,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+
+          // List of student profiles with animation
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _studentProfiles.length,
+            itemBuilder: (context, index) {
+              final student = _studentProfiles[index];
+              final isSelected = _selectedStudent?.id == student.id;
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isSelected
+                          ? AppTheme.purple.withOpacity(0.15)
+                          : AppTheme.deepPurple.withOpacity(0.05),
+                      blurRadius: isSelected ? 10 : 4,
+                      spreadRadius: isSelected ? 1 : 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: StudentCardWidget(
+                  student: student,
+                  isSelected: isSelected,
+                  onSelect: widget.isManagementMode ? null : _selectStudent,
+                  onEdit: _showStudentForm,
+                  onDelete: widget.isManagementMode
+                      ? student.hasActivePlan
+                          ? null
+                          : _deleteStudentProfile
+                      : null,
+                  isManagementMode: widget.isManagementMode,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build empty state widget
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            Color(0xFFF7F7F7),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.deepPurple.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Color(0xFFEDE5FB),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.person_outline,
+              size: 48,
+              color: Color(0xFF8B5CF6),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No student profile found.',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.isManagementMode
+                ? 'Create a profile to manage your students.'
+                : 'Please create one to continue your subscription.',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: AppTheme.textMedium,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: 220,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () => _showStudentForm(),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                elevation: 2,
+              ),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              label: Ink(
+                decoration: BoxDecoration(
+                  gradient: AppTheme.purpleToDeepPurple,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Create New Profile',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Transition to the order summary screen
+  void _proceedToOrderSummary() {
+    // Add a small animation before proceeding to the next screen
+    if (_selectedStudent != null) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+
+      // Apply a scale effect to the selected student card
+      setState(() {
+        // This triggers the animation in the UI
+      });
+
+      // Short delay for the animation
+      Future.delayed(const Duration(milliseconds: 150), () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                OrderSummaryScreen(
+              planType: widget.planType ?? '',
+              isCustomPlan: widget.isCustomPlan ?? false,
+              selectedWeekdays: widget.selectedWeekdays ?? [],
+              startDate: widget.startDate ?? DateTime.now(),
+              endDate: widget.endDate ?? DateTime.now(),
+              mealDates: widget.mealDates ?? [],
+              totalAmount: widget.totalAmount ?? 0,
+              selectedMeals: widget.selectedMeals ?? [],
+              isExpressOrder: widget.isExpressOrder ?? false,
+              selectedStudent: _selectedStudent!,
+              mealType: widget.mealType,
+            ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              var begin = const Offset(1.0, 0.0);
+              var end = Offset.zero;
+              var curve = Curves.easeInOut;
+              var tween =
+                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+          ),
+        );
+      });
+    }
+  }
+
   // Select a student
   void _selectStudent(Student student) {
     // If in management mode, just return
@@ -548,8 +918,10 @@ class _ManageStudentProfileScreenState
                   : 'lunch');
 
       // Validate meal plan assignment
-      final String? validationError =
-          MealPlanValidator.validateMealPlan(student, planType);
+      final String? validationError = MealPlanValidator.validateMealPlan(
+        student,
+        planType,
+      );
 
       if (validationError != null) {
         // Show error message
@@ -557,6 +929,9 @@ class _ManageStudentProfileScreenState
         return;
       }
     }
+
+    // Add haptic feedback
+    HapticFeedback.lightImpact();
 
     setState(() {
       if (_selectedStudent?.id == student.id) {
@@ -567,132 +942,85 @@ class _ManageStudentProfileScreenState
     });
   }
 
-  // Show validation error dialog
+  // Show validation error dialog with improved styling
   void _showValidationErrorDialog(String errorMessage) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'Cannot Select This Student',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: AppTheme.textDark,
-          ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              errorMessage,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: AppTheme.textDark,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                color: Colors.red[700],
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Cannot Select This Student',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                ),
               ),
             ),
           ],
         ),
+        content: Container(
+          decoration: BoxDecoration(
+            color: Colors.red[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.red[100]!,
+              width: 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                errorMessage,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.red[800],
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.purple,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: Text(
-              'OK',
+              'Got it',
               style: GoogleFonts.poppins(
-                color: AppTheme.purple,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Navigate to order summary
-  void _proceedToOrderSummary() {
-    if (_selectedStudent == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Please select a student profile to continue',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OrderSummaryScreen(
-          planType: widget.planType!,
-          isCustomPlan: widget.isCustomPlan!,
-          selectedWeekdays: widget.selectedWeekdays!,
-          startDate: widget.startDate!,
-          endDate: widget.endDate!,
-          mealDates: widget.mealDates!,
-          totalAmount: widget.totalAmount!,
-          selectedMeals: widget.selectedMeals!,
-          isExpressOrder: widget.isExpressOrder!,
-          selectedStudent: _selectedStudent!,
-          mealType: widget.mealType,
-        ),
-      ),
-    );
-  }
-
-  // Confirm and delete student profile
-  void _confirmDeleteStudentProfile(Student student) {
-    if (student.hasActivePlan) {
-      // Show message that profile cannot be deleted while having active plans
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Cannot delete ${student.name}\'s profile while they have active meal plans',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
-    // Show confirmation dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Delete Profile',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to delete ${student.name}\'s profile?',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close the dialog
-              _deleteStudentProfile(student);
-            },
-            child: Text(
-              'Delete',
-              style: GoogleFonts.poppins(color: Colors.red),
-            ),
-          ),
-        ],
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       ),
     );
   }
@@ -715,7 +1043,10 @@ class _ManageStudentProfileScreenState
             color: Colors.white,
           ),
         ),
-        backgroundColor: AppTheme.purple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(gradient: AppTheme.purpleToDeepPurple),
+        ),
         elevation: 0,
         actions: [
           Padding(
@@ -729,8 +1060,10 @@ class _ManageStudentProfileScreenState
                     },
                   )
                 : IconButton(
-                    icon:
-                        const Icon(Icons.account_circle, color: AppTheme.white),
+                    icon: const Icon(
+                      Icons.account_circle,
+                      color: AppTheme.white,
+                    ),
                     onPressed: () {
                       Navigator.pushNamed(context, Routes.profileSettings);
                     },
@@ -740,201 +1073,184 @@ class _ManageStudentProfileScreenState
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
+          : SafeArea(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Express order window banner (only shown for Express orders)
-                  if (isExpressOrder) ...[
-                    InfoBanner(
-                      title: isWithinExpressWindow
-                          ? "Express Order Window: 12:00 AM - 8:00 AM IST"
-                          : "Express Order Window Closed",
-                      message: isWithinExpressWindow
-                          ? "You're within the express order window. You can place your order for same-day delivery."
-                          : "Express orders are only available between 12:00 AM and 8:00 AM IST. Please try again during this time window.",
-                      type: isWithinExpressWindow
-                          ? InfoBannerType.success
-                          : InfoBannerType.warning,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Instructions
-                  InfoBanner(
-                    title: widget.isManagementMode
-                        ? "Instructions"
-                        : "Instructions",
-                    message: widget.isManagementMode
-                        ? "View, create, edit, or delete student profiles."
-                        : "Please select or create a student profile to continue with your subscription.",
-                    type: InfoBannerType.info,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Student profiles list
                   Expanded(
-                    child: _studentProfiles.isEmpty
-                        ? _buildEmptyState()
-                        : _buildStudentsList(),
-                  ),
+                    child: SingleChildScrollView(
+                      physics: AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Express order window banner (only shown for Express orders)
+                          if (isExpressOrder) ...[
+                            InfoBanner(
+                              title: isWithinExpressWindow
+                                  ? "Express Order Window: 12:00 AM - 8:00 AM IST"
+                                  : "Express Order Window Closed",
+                              message: isWithinExpressWindow
+                                  ? "You're within the express order window. You can place your order for same-day delivery."
+                                  : "Express orders are only available between 12:00 AM and 8:00 AM IST. Please try again during this time window.",
+                              type: isWithinExpressWindow
+                                  ? InfoBannerType.success
+                                  : InfoBannerType.warning,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
-                  // Create new profile button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showStudentForm(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.purple,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: AppTheme.purple),
-                        ),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.add),
-                      label: Text(
-                        'Create New Profile',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
+                          // Instructions
+                          InfoBanner(
+                            title: widget.isManagementMode
+                                ? "Instructions"
+                                : "Instructions",
+                            message: widget.isManagementMode
+                                ? "View, create, edit, or delete student profiles."
+                                : "Please select or create a student profile to continue with your subscription.",
+                            type: InfoBannerType.info,
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Student profiles list
+                          _studentProfiles.isEmpty
+                              ? _buildEmptyState()
+                              : _buildStudentsList(),
+                        ],
                       ),
                     ),
                   ),
 
-                  // Continue button (only shown in selection mode)
-                  if (!widget.isManagementMode) ...[
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: (_selectedStudent != null &&
-                                (!isExpressOrder || isWithinExpressWindow))
-                            ? _proceedToOrderSummary
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isExpressOrder ? Colors.orange : AppTheme.purple,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
+                  // Bottom buttons in a container with shadow
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -4),
                         ),
-                        child: Text(
-                          'Continue',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-
-                    // Warning for closed express window
-                    if (isExpressOrder && !isWithinExpressWindow) ...[
-                      const SizedBox(height: 8),
-                      Center(
-                        child: Text(
-                          'Express ordering is currently unavailable',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.red,
-                            fontStyle: FontStyle.italic,
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Create new profile button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showStudentForm(),
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: AppTheme.purple,
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                side: BorderSide(color: AppTheme.purple),
+                              ),
+                              elevation: 0,
+                            ),
+                            icon: Container(
+                              padding: const EdgeInsets.all(1),
+                              decoration: BoxDecoration(
+                                color: AppTheme.purple.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                size: 16,
+                              ),
+                            ),
+                            label: Text(
+                              'Create New Profile',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ],
+
+                        // Continue button (only shown in selection mode)
+                        if (!widget.isManagementMode) ...[
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: (_selectedStudent != null &&
+                                      (!isExpressOrder ||
+                                          isWithinExpressWindow))
+                                  ? _proceedToOrderSummary
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Ink(
+                                decoration: BoxDecoration(
+                                  gradient: isExpressOrder
+                                      ? LinearGradient(
+                                          colors: [
+                                            Colors.orange,
+                                            Colors.orange.shade700,
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        )
+                                      : AppTheme.purpleToDeepPurple,
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    'Continue',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Warning for closed express window
+                          if (isExpressOrder && !isWithinExpressWindow) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: Colors.red,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Express ordering is currently unavailable',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: Colors.red,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
-    );
-  }
-
-  // Empty state widget
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.person_outline,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No student profile found.',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textDark,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.isManagementMode
-                ? 'Create a profile to manage your students.'
-                : 'Please create one to continue your subscription.',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: AppTheme.textMedium,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: 200,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () => _showStudentForm(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.purple,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: Text(
-                'Create Student Profile',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Student profiles list
-  Widget _buildStudentsList() {
-    return ListView.builder(
-      itemCount: _studentProfiles.length,
-      itemBuilder: (context, index) {
-        final student = _studentProfiles[index];
-        final isSelected = _selectedStudent?.id == student.id;
-
-        return StudentCardWidget(
-          student: student,
-          isSelected: isSelected,
-          onSelect: widget.isManagementMode ? null : _selectStudent,
-          onEdit: _showStudentForm,
-          onDelete: _confirmDeleteStudentProfile,
-          isManagementMode: widget.isManagementMode,
-        );
-      },
     );
   }
 }

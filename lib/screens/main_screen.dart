@@ -35,45 +35,46 @@ class MainScreenState extends State<MainScreen> {
   }) {
     return BottomNavigationBarItem(
       icon: TweenAnimationBuilder<double>(
-          tween: Tween<double>(
-              begin: isSelected ? 0.8 : 1.0, end: isSelected ? 1.0 : 1.0),
-          curve: Curves.elasticOut,
-          duration: const Duration(milliseconds: 500),
-          builder: (context, scale, child) {
-            return Transform.scale(
-              scale: scale,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppTheme.purple.withOpacity(0.12)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                  // Add a subtle border for the selected item
-                  border: isSelected
-                      ? Border.all(
-                          color: AppTheme.purple.withOpacity(0.3), width: 1.5)
-                      : null,
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppTheme.purple.withOpacity(0.15),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                            spreadRadius: 0.5,
-                          )
-                        ]
-                      : null,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
+        tween: Tween<double>(
+            begin: isSelected ? 0.8 : 1.0, end: isSelected ? 1.0 : 1.0),
+        curve: Curves.elasticOut,
+        duration: const Duration(milliseconds: 500),
+        builder: (context, scale, _) {
+          return Transform.scale(
+            scale: scale,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.purple.withOpacity(0.12)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                border: isSelected
+                    ? Border.all(
+                        color: AppTheme.purple.withOpacity(0.3), width: 1.5)
+                    : null,
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.purple.withOpacity(0.15),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                          spreadRadius: 0.5,
+                        )
+                      ]
+                    : null,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ShaderMask(
+                    shaderCallback: (bounds) =>
+                        AppTheme.purpleToDeepPurple.createShader(bounds),
+                    child: Icon(
                       isSelected ? activeIcon : icon,
                       size: isSelected ? 30 : 26,
                       semanticLabel: semanticLabel,
-                      // Add a subtle shadow to the selected icon
+                      color: Colors.white, // Base color for gradient
                       shadows: isSelected
                           ? [
                               Shadow(
@@ -83,13 +84,15 @@ class MainScreenState extends State<MainScreen> {
                             ]
                           : null,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          }),
+            ),
+          );
+        },
+        child: null,
+      ),
       label: label,
-      // Adjust tooltip to use the more descriptive semantic label
       tooltip: semanticLabel,
     );
   }
@@ -190,54 +193,66 @@ class MainScreenState extends State<MainScreen> {
                 offset: const Offset(0, -2),
               ),
             ],
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
           ),
-          child: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-            selectedItemColor: AppTheme.purple,
-            unselectedItemColor: Colors.grey.shade600, // Higher contrast
-            showUnselectedLabels: true,
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            elevation: 8,
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            selectedLabelStyle: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
             ),
-            unselectedLabelStyle: GoogleFonts.poppins(
-              fontWeight: FontWeight.w500,
+            child: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              selectedItemColor: AppTheme.purple,
+              unselectedItemColor: Colors.grey.shade600, // Higher contrast
+              showUnselectedLabels: true,
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.white.withOpacity(0.9),
+              elevation:
+                  0, // Set to 0 as we're handling shadow in the Container
+              selectedFontSize: 12,
+              unselectedFontSize: 12,
+              selectedLabelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+              ),
+              items: [
+                _buildNavItem(
+                  icon: Icons.home_outlined,
+                  activeIcon: Icons.home,
+                  label: 'Home',
+                  isSelected: _selectedIndex == 0,
+                  semanticLabel: 'Home Screen',
+                ),
+                _buildNavItem(
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person,
+                  label: 'Student',
+                  isSelected: _selectedIndex == 1,
+                  semanticLabel: 'Student Profiles',
+                ),
+                _buildNavItem(
+                  icon: Icons.subscriptions_outlined,
+                  activeIcon: Icons.subscriptions,
+                  label: 'My Subscription',
+                  isSelected: _selectedIndex == 2,
+                  semanticLabel: 'My Meal Subscriptions',
+                ),
+                _buildNavItem(
+                  icon: Icons.restaurant_menu_outlined,
+                  activeIcon: Icons.restaurant_menu,
+                  label: 'Meal Plan',
+                  isSelected: _selectedIndex == 3,
+                  semanticLabel: 'Meal Plan Options',
+                ),
+              ],
             ),
-            items: [
-              _buildNavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                label: 'Home',
-                isSelected: _selectedIndex == 0,
-                semanticLabel: 'Home Screen',
-              ),
-              _buildNavItem(
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
-                label: 'Student',
-                isSelected: _selectedIndex == 1,
-                semanticLabel: 'Student Profiles',
-              ),
-              _buildNavItem(
-                icon: Icons.subscriptions_outlined,
-                activeIcon: Icons.subscriptions,
-                label: 'My Subscription',
-                isSelected: _selectedIndex == 2,
-                semanticLabel: 'My Meal Subscriptions',
-              ),
-              _buildNavItem(
-                icon: Icons.restaurant_menu_outlined,
-                activeIcon: Icons.restaurant_menu,
-                label: 'Meal Plan',
-                isSelected: _selectedIndex == 3,
-                semanticLabel: 'Meal Plan Options',
-              ),
-            ],
           ),
         ),
       ),

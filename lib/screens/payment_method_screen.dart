@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:convert'; // Add import for json encode/decode
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +10,9 @@ import 'package:startwell/utils/meal_plan_validator.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/screens/payment_dummy_screens.dart';
 import 'package:intl/intl.dart';
+import 'package:startwell/widgets/common/gradient_app_bar.dart';
+import 'package:startwell/widgets/common/gradient_button.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Add SharedPreferences
 
 class PaymentMethodScreen extends StatefulWidget {
   final String planType;
@@ -47,17 +51,57 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       0; // 0: PhonePe, 1: Razorpay, 2: Startwell Wallet
 
   @override
+  void initState() {
+    super.initState();
+    _storeOrderSummary();
+  }
+
+  // Store order summary in SharedPreferences for use in Plan Details page
+  Future<void> _storeOrderSummary() async {
+    try {
+      // Only proceed if we have a selected student
+      if (widget.selectedStudent.id.isEmpty) {
+        return;
+      }
+
+      // Create a map with order summary data
+      final Map<String, dynamic> orderSummary = {
+        'planType': widget.planType,
+        'isCustomPlan': widget.isCustomPlan,
+        'startDate': widget.startDate.toIso8601String(),
+        'endDate': widget.endDate.toIso8601String(),
+        'totalMeals': widget.mealDates.length,
+        'totalAmount': widget.totalAmount,
+        'pricePerMeal': widget.totalAmount / widget.mealDates.length,
+        'mealType': widget.mealType ??
+            (widget.selectedMeals.isNotEmpty
+                ? widget.selectedMeals.first.categories
+                        .contains(MealCategory.breakfast)
+                    ? 'breakfast'
+                    : 'lunch'
+                : 'lunch'),
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      // Generate a unique ID for this subscription
+      final String planId = 'plan_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Store in SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'order_summary_${widget.selectedStudent.id}_$planId';
+      await prefs.setString(key, jsonEncode(orderSummary));
+
+      log('Order summary stored in SharedPreferences with key: $key');
+    } catch (e) {
+      log('Error storing order summary: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Payment Method',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppTheme.purple,
+      appBar: GradientAppBar(
+        titleText: 'Payment Method',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -276,23 +320,10 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
+              child: GradientButton(
+                text: 'Continue',
+                isFullWidth: true,
                 onPressed: () => _navigateToPaymentScreen(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.purple,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'Continue',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
               ),
             ),
           ],

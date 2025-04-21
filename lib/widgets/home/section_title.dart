@@ -29,7 +29,7 @@ class SectionTitle extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: AppTheme.purple,
+                color: AppTheme.textDark,
               ),
             ),
             if (actionText != null && onActionPressed != null)

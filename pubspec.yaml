@@ -105,7 +105,6 @@ flutter:
     - assets/images/background_footer.png
     - assets/images/payment/razorpay.png
     # App logo
-    - assets/images/start_well.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

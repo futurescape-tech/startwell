@@ -15,6 +15,7 @@ import 'package:startwell/services/subscription_service.dart' as services;
 import 'package:startwell/models/subscription_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/screens/my_subscription_screen.dart';
+import 'package:startwell/utils/meal_constants.dart';
 
 // Define the MealData class to hold meal information
 class MealData {
@@ -420,7 +421,7 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              shadowColor: AppTheme.deepPurple.withOpacity(0.15),
+              shadowColor: AppTheme.purple.withOpacity(0.2),
               child: Stack(
                 children: [
                   // Main content
@@ -436,21 +437,13 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: meal.subscription.planType == 'breakfast'
-                                    ? Colors.purple.withOpacity(0.1)
-                                    : meal.subscription.planType == 'express'
-                                        ? Colors.blue.withOpacity(0.1)
-                                        : Colors.green.withOpacity(0.1),
+                                color: MealConstants.getBgColor(
+                                    meal.subscription.planType),
                                 borderRadius: BorderRadius.circular(10),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (meal.subscription.planType ==
-                                                'breakfast'
-                                            ? Colors.purple
-                                            : meal.subscription.planType ==
-                                                    'express'
-                                                ? Colors.blue
-                                                : Colors.green)
+                                    color: MealConstants.getIconColor(
+                                            meal.subscription.planType)
                                         .withOpacity(0.1),
                                     blurRadius: 4,
                                     offset: const Offset(0, 2),
@@ -458,14 +451,10 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                                 ],
                               ),
                               child: Icon(
-                                meal.subscription.planType == 'breakfast'
-                                    ? Icons.free_breakfast
-                                    : Icons.lunch_dining,
-                                color: meal.subscription.planType == 'breakfast'
-                                    ? Colors.purple
-                                    : meal.subscription.planType == 'express'
-                                        ? Colors.blue
-                                        : Colors.green,
+                                MealConstants.getIcon(
+                                    meal.subscription.planType),
+                                color: MealConstants.getIconColor(
+                                    meal.subscription.planType),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -518,15 +507,21 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: meal.status.toLowerCase() == 'cancelled'
-                              ? Colors.red
-                              : Colors.orange,
+                              ? Colors.red.withOpacity(0.15)
+                              : Colors.orange.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
+                          // border: Border.all(
+                          //   color: meal.status.toLowerCase() == 'cancelled'
+                          //       ? Colors.red.withOpacity(0.3)
+                          //       : Colors.orange.withOpacity(0.3),
+                          //   width: 1,
+                          // ),
                           boxShadow: [
                             BoxShadow(
                               color: (meal.status.toLowerCase() == 'cancelled'
                                       ? Colors.red
                                       : Colors.orange)
-                                  .withOpacity(0.2),
+                                  .withOpacity(0.1),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -537,9 +532,11 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                               ? 'Cancelled'
                               : 'Swapped',
                           style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+                            color: meal.status.toLowerCase() == 'cancelled'
+                                ? Colors.red
+                                : Colors.orange,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -573,6 +570,7 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
               borderRadius: BorderRadius.circular(12),
             ),
             elevation: 2,
+            shadowColor: AppTheme.purple.withOpacity(0.2),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(

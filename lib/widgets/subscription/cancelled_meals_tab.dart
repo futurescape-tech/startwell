@@ -7,6 +7,10 @@ import 'package:startwell/models/cancelled_meal.dart';
 import 'package:startwell/services/subscription_service.dart';
 import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/models/student_model.dart';
+import 'package:startwell/utils/meal_constants.dart';
+import 'package:startwell/themes/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class CancelledMealsTab extends StatefulWidget {
   final String? studentId;
@@ -135,28 +139,51 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
       // Force a slight delay to ensure any recent cancellations are processed
       await Future.delayed(const Duration(milliseconds: 100));
 
-      final meals =
+      // Get cancelled meals from service
+      final servicesMeals =
           await _subscriptionService.getCancelledMeals(_selectedStudentId);
 
-      log('[cancelled_meal_data_flow] Loaded ${meals.length} cancelled meals');
+      // Also check SharedPreferences for locally stored cancellations
+      final List<CancelledMeal> localCancellations =
+          await _getLocalCancelledMeals(_selectedStudentId);
+
+      // Combine both sources, avoiding duplicates
+      final combinedMeals = [...servicesMeals];
+
+      // Add local cancellations that don't exist in service meals
+      for (final localMeal in localCancellations) {
+        bool exists = servicesMeals.any((meal) =>
+            meal.subscriptionId == localMeal.subscriptionId &&
+            _isSameDay(meal.cancellationDate, localMeal.cancellationDate));
+
+        if (!exists) {
+          combinedMeals.add(localMeal);
+        }
+      }
+
+      // Sort by timestamp, newest first
+      combinedMeals.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+      log('[cancelled_meal_data_flow] Loaded ${combinedMeals.length} cancelled meals (${servicesMeals.length} from service, ${localCancellations.length} local)');
 
       if (mounted) {
         setState(() {
-          _cancelledMeals = meals;
+          _cancelledMeals = combinedMeals;
           _isLoading = false;
         });
 
         // Log details about loaded meals for debugging
-        if (meals.isEmpty) {
+        if (combinedMeals.isEmpty) {
           log('[cancelled_meal_data_flow] No cancelled meals found for student $_selectedStudentId');
         } else {
           log('[cancelled_meal_data_flow] === CANCELLED MEALS DETAILS ===');
-          for (var meal in meals) {
+          for (var meal in combinedMeals) {
             log('[cancelled_meal_data_flow] Meal: ${meal.mealName}');
             log('[cancelled_meal_data_flow] Date: ${DateFormat('yyyy-MM-dd').format(meal.cancellationDate)}');
             log('[cancelled_meal_data_flow] Student: ${meal.studentName} (${meal.studentId})');
             log('[cancelled_meal_data_flow] Cancelled at: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(meal.timestamp)}');
             log('[cancelled_meal_data_flow] Reason: ${meal.reason ?? "Not specified"}');
+            log('[cancelled_meal_data_flow] Plan type: ${meal.planType}, displayed as: ${meal.planType == 'breakfast' ? 'Breakfast' : 'Lunch'}');
             log('[cancelled_meal_data_flow] --------------------------');
           }
           log('[cancelled_meal_data_flow] === END OF CANCELLED MEALS DETAILS ===');
@@ -173,15 +200,81 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
     }
   }
 
+  // Helper method to get cancelled meals from SharedPreferences
+  Future<List<CancelledMeal>> _getLocalCancelledMeals(String? studentId) async {
+    if (studentId == null) return [];
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<CancelledMeal> localMeals = [];
+
+      // Get all keys that might contain cancelled meals for this student
+      final allKeys = prefs
+          .getKeys()
+          .where((key) =>
+              key.startsWith('cancelledMeal_$studentId') ||
+              key.contains('_${studentId}_'))
+          .toList();
+
+      log('[cancelled_meal_data_flow] Found ${allKeys.length} potential local cancelled meal keys');
+
+      for (final key in allKeys) {
+        // Skip boolean flags
+        if (prefs.getBool(key) != null) continue;
+
+        // Try to parse the JSON data
+        final jsonData = prefs.getString(key);
+        if (jsonData != null && jsonData.isNotEmpty) {
+          try {
+            final mealData = jsonDecode(jsonData);
+
+            // Convert date strings to DateTime objects
+            if (mealData['date'] is String) {
+              mealData['date'] = DateTime.parse(mealData['date']);
+            }
+            if (mealData['cancelledAt'] is String) {
+              mealData['cancelledAt'] = DateTime.parse(mealData['cancelledAt']);
+            }
+
+            // Create CancelledMeal object
+            final cancelledMeal = CancelledMeal.fromMap(mealData);
+            localMeals.add(cancelledMeal);
+            log('[cancelled_meal_data_flow] Added local cancelled meal: ${cancelledMeal.mealName} on ${DateFormat('yyyy-MM-dd').format(cancelledMeal.cancellationDate)}');
+            log('[cancelled_meal_data_flow] Meal plan type: ${cancelledMeal.planType}, displayed as: ${cancelledMeal.planType == 'breakfast' ? 'Breakfast' : 'Lunch'}');
+          } catch (e) {
+            log('[cancelled_meal_data_flow] Error parsing local cancelled meal: $e');
+          }
+        }
+      }
+
+      return localMeals;
+    } catch (e) {
+      log('[cancelled_meal_data_flow] Error getting local cancelled meals: $e');
+      return [];
+    }
+  }
+
+  // Helper to check if two dates are the same day
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
   @override
   Widget build(BuildContext context) {
     // If not initialized yet, show a loading indicator
     if (!_initialized) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          color: AppTheme.purple,
+        ),
+      );
     }
 
     return Column(
       children: [
+        _buildScreenHeader(),
         _buildStudentSelector(),
         Expanded(
           child: _isLoading
@@ -189,13 +282,15 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const CircularProgressIndicator(),
+                      CircularProgressIndicator(
+                        color: AppTheme.purple,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'Loading cancelled meals...',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: AppTheme.textMedium,
                         ),
                       ),
                     ],
@@ -208,22 +303,29 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 48,
-                              color: Colors.red.shade300,
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppTheme.error.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.error_outline,
+                                size: 40,
+                                color: AppTheme.error,
+                              ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                             Text(
                               _errorMessage!,
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.grey.shade800,
+                                color: AppTheme.textDark,
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 20),
                             ElevatedButton.icon(
                               onPressed: () =>
                                   _loadCancelledMeals(forceRefresh: true),
@@ -231,7 +333,13 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
                               label: const Text('Try Again'),
                               style: ElevatedButton.styleFrom(
                                 foregroundColor: Colors.white,
-                                backgroundColor: Colors.blue,
+                                backgroundColor: AppTheme.purple,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
                               ),
                             ),
                           ],
@@ -246,49 +354,100 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
     );
   }
 
+  Widget _buildScreenHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.error.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.cancel_outlined,
+              color: AppTheme.error,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            "Cancelled Meals",
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStudentSelector() {
     if (_students.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      padding: const EdgeInsets.all(16.0),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.grey.shade300),
+          color: AppTheme.white,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: AppTheme.softShadow,
+          border: Border.all(
+            color: AppTheme.deepPurple.withOpacity(0.1),
+            width: 1,
+          ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: _selectedStudentId,
             isExpanded: true,
-            icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+            icon: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppTheme.purple,
+            ),
+            dropdownColor: AppTheme.white,
             items: _students.map((student) {
               return DropdownMenuItem(
                 value: student.id,
-                child: Text(
-                  student.name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade800,
-                  ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.purple.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.person,
+                        size: 14,
+                        color: AppTheme.purple,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      student.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                  ],
                 ),
               );
             }).toList(),
             onChanged: (String? newValue) {
-              if (newValue != null) {
+              if (newValue != null && newValue != _selectedStudentId) {
                 setState(() {
                   _selectedStudentId = newValue;
+                  _isLoading = true;
+                  _cancelledMeals = [];
                 });
-                _loadCancelledMeals();
+                _loadCancelledMeals(forceRefresh: true);
               }
             },
           ),
@@ -299,39 +458,43 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(100),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.purple.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_circle_outline,
+                size: 64,
+                color: AppTheme.purple,
+              ),
             ),
-            child: Icon(
-              Icons.no_meals,
-              size: 64,
-              color: Colors.red.shade300,
+            const SizedBox(height: 24),
+            Text(
+              'No cancelled meals found',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textDark,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'No cancelled meals found',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade800,
+            const SizedBox(height: 8),
+            Text(
+              'Any cancelled meals will appear here',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppTheme.textMedium,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Any cancelled meals will appear here',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -369,158 +532,374 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
                 !_isSameDay(sortedMeals[index - 1].cancellationDate,
                     meal.cancellationDate));
 
+        // Determine the colors based on meal type
+        final bool isBreakfast = meal.planType == 'breakfast';
+        final Color primaryColor = isBreakfast
+            ? const Color(0xFFFF9800) // Orange for breakfast
+            : const Color(0xFF4CAF50); // Green for lunch
+        final Color bgColor = primaryColor.withOpacity(0.1);
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Date header if needed
             if (showDateHeader) ...[
               Padding(
-                padding: const EdgeInsets.only(top: 16, bottom: 8),
+                padding: const EdgeInsets.only(top: 8, bottom: 12),
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300, width: 1),
+                    color: AppTheme.purple.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppTheme.purple.withOpacity(0.2), width: 1),
                   ),
-                  child: Text(
-                    DateFormat('EEEE, MMMM d, yyyy')
-                        .format(meal.cancellationDate),
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade800,
-                    ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: AppTheme.purple,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        DateFormat('EEEE, MMMM d, yyyy')
+                            .format(meal.cancellationDate),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
 
             Card(
-              elevation: 3,
-              shadowColor: Colors.black.withOpacity(0.1),
+              elevation: 4,
+              shadowColor: AppTheme.error.withOpacity(0.2),
               margin: const EdgeInsets.only(bottom: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey.shade200, width: 1),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                  border: Border.all(
+                    color: meal.planType == 'breakfast'
+                        ? MealConstants.breakfastBorderColor.withOpacity(0.8)
+                        : AppTheme.error.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header row with student name and cancellation badge
-                    Row(
-                      children: [
-                        // Meal type icon
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: meal.planType == 'breakfast'
-                                ? Colors.purple.withOpacity(0.1)
-                                : Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            meal.planType == 'breakfast'
-                                ? Icons.free_breakfast
-                                : Icons.lunch_dining,
-                            color: meal.planType == 'breakfast'
-                                ? Colors.purple
-                                : Colors.green,
-                            size: 24,
-                          ),
+                    // Header with meal type and student name
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: meal.planType == 'breakfast'
+                            ? MealConstants.breakfastBgColor.withOpacity(0.2)
+                            : AppTheme.error.withOpacity(0.1),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(15),
+                          topRight: Radius.circular(15),
                         ),
-                        const SizedBox(width: 16),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.error.withOpacity(0.15),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              meal.planType == 'breakfast'
+                                  ? MealConstants.breakfastIcon
+                                  : Icons.lunch_dining,
+                              color: meal.planType == 'breakfast'
+                                  ? MealConstants.breakfastIconColor
+                                  : AppTheme.error,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
 
-                        // Student name and meal item
-                        Expanded(
-                          child: Column(
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  student.name,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                                Text(
+                                  meal.mealName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: AppTheme.error.withOpacity(0.7),
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Cancelled badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.error.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.error.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Cancelled',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Main content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Cancellation notice
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.error.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.error.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: AppTheme.error,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    "This ${meal.planType == 'breakfast' ? 'breakfast' : 'lunch'} meal was cancelled and will not be delivered.",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      color: AppTheme.error.withOpacity(0.8),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Meal type badge
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: meal.planType == 'breakfast'
+                                  ? Colors.pink.withOpacity(0.1)
+                                  : Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: meal.planType == 'breakfast'
+                                    ? Colors.pink.withOpacity(0.3)
+                                    : Colors.green.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  meal.planType == 'breakfast'
+                                      ? Icons.wb_sunny_outlined
+                                      : Icons.lunch_dining_outlined,
+                                  color: meal.planType == 'breakfast'
+                                      ? Colors.pink
+                                      : Colors.green,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  meal.planType == 'breakfast'
+                                      ? 'Breakfast'
+                                      : 'Lunch',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: meal.planType == 'breakfast'
+                                        ? Colors.pink
+                                        : Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Meal details in two columns
+                          Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                student.name,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade800,
+                              // Left column
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildInfoRow(
+                                      Icons.restaurant_menu_rounded,
+                                      'Meal Type',
+                                      meal.planType == 'breakfast'
+                                          ? 'Breakfast'
+                                          : 'Lunch',
+                                      AppTheme.error,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildInfoRow(
+                                      Icons.person,
+                                      'Cancelled By',
+                                      meal.cancelledBy == 'parent'
+                                          ? 'Parent'
+                                          : 'Admin',
+                                      AppTheme.error.withOpacity(0.7),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Text(
-                                meal.mealName,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
+
+                              // Right column
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildInfoRow(
+                                      Icons.event_rounded,
+                                      'Scheduled Date',
+                                      DateFormat('EEE, MMM d')
+                                          .format(meal.cancellationDate),
+                                      AppTheme.error,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildInfoRow(
+                                      Icons.access_time_rounded,
+                                      'Cancelled On',
+                                      DateFormat('MMM d, h:mm a')
+                                          .format(meal.timestamp),
+                                      AppTheme.error,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
 
-                        // Cancelled badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.red.withOpacity(0.5),
-                              width: 1,
+                          // Reason section (if available)
+                          if (meal.reason != null &&
+                              meal.reason!.isNotEmpty) ...[
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Divider(
+                                height: 1,
+                                color:
+                                    Color(0x1A000000), // black with 0.2 opacity
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            'Cancelled',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.red,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.error.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    Icons.note_alt,
+                                    size: 16,
+                                    color: AppTheme.error,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Cancellation Reason',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.textDark,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        meal.reason!,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          color: AppTheme.textMedium,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Divider(height: 1),
-                    ),
-
-                    // Meal details
-                    _buildDetailRow(
-                      Icons.restaurant_menu,
-                      'Meal Type',
-                      meal.planType == 'breakfast' ? 'Breakfast' : 'Lunch',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.calendar_today,
-                      'Scheduled Date',
-                      DateFormat('EEE, MMM d, yyyy')
-                          .format(meal.cancellationDate),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.person,
-                      'Cancelled By',
-                      meal.cancelledBy == 'parent' ? 'Parent' : 'Admin',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildDetailRow(
-                      Icons.access_time,
-                      'Cancelled On',
-                      DateFormat('EEE, MMM d, yyyy h:mm a')
-                          .format(meal.timestamp),
-                    ),
-                    if (meal.reason != null && meal.reason!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      _buildDetailRow(
-                        Icons.note,
-                        'Reason',
-                        meal.reason!,
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
@@ -531,23 +910,24 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildInfoRow(
+      IconData icon, String label, String value, Color iconColor) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(6),
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             icon,
-            size: 16,
-            color: Colors.grey.shade700,
+            size: 14,
+            color: iconColor,
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,30 +935,24 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
               Text(
                 label,
                 style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
+                  fontSize: 11,
+                  color: AppTheme.textLight,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
                 value,
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: 13,
+                  color: AppTheme.textDark,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade800,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
       ],
     );
-  }
-
-  // Helper to check if two dates are the same day
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
   }
 }

@@ -7,6 +7,11 @@ import 'package:startwell/services/meal_service.dart';
 import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/models/student_model.dart';
 import 'package:startwell/models/subscription_model.dart';
+import 'package:startwell/widgets/common/gradient_app_bar.dart';
+import 'package:startwell/widgets/common/gradient_button.dart';
+import 'package:startwell/utils/meal_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class ActivePlanDetailsPage extends StatefulWidget {
   final String studentId;
@@ -26,11 +31,70 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
   Student? _student;
   List<Map<String, dynamic>> _planSummaries = [];
   List<Student> _associatedStudents = [];
+  Map<String, String> _deliveryModes = {};
+  Map<String, Map<String, dynamic>> _orderSummaryData = {};
 
   @override
   void initState() {
     super.initState();
+    _loadStoredOrderSummary();
     _loadData();
+  }
+
+  // Load stored order summary data from SharedPreferences
+  Future<void> _loadStoredOrderSummary() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Get all keys that start with "order_summary_"
+      final keys = prefs
+          .getKeys()
+          .where((key) => key.startsWith('order_summary_${widget.studentId}_'))
+          .toList();
+
+      for (final key in keys) {
+        final String? jsonData = prefs.getString(key);
+        if (jsonData != null) {
+          final Map<String, dynamic> data = json.decode(jsonData);
+          final String planId =
+              key.replaceFirst('order_summary_${widget.studentId}_', '');
+          _orderSummaryData[planId] = data;
+        }
+      }
+
+      if (_orderSummaryData.isNotEmpty) {
+        print('Loaded ${_orderSummaryData.length} stored order summaries');
+      }
+    } catch (e) {
+      print('Error loading stored order summary: $e');
+    }
+  }
+
+  // Store delivery mode in SharedPreferences
+  Future<void> _storeDeliveryMode(
+      String studentId, String planId, String deliveryMode) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          'deliveryMode_${studentId}_${planId}', deliveryMode);
+    } catch (e) {
+      print('Error storing delivery mode: $e');
+    }
+  }
+
+  // Get delivery mode from SharedPreferences
+  Future<String?> _getDeliveryMode(String studentId, String planId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('deliveryMode_${studentId}_${planId}');
+    } catch (e) {
+      print('Error getting delivery mode: $e');
+      return null;
+    }
+  }
+
+  // Determine delivery mode based on plan's selected weekdays
+  String _determineDeliveryMode(Subscription plan) {
+    return plan.selectedWeekdays.isEmpty ? 'Regular Plan' : 'Custom Plan';
   }
 
   Future<void> _loadData() async {
@@ -65,16 +129,31 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
           final int cancelledCount = cancelledMeals.length;
 
           // Calculate consumed meals
-          final int consumedMeals = (plan.planType == 'express')
-              ? 0
-              : _calculateConsumedMeals(plan, cancelledCount);
+          final int consumedMeals =
+              _calculateConsumedMeals(plan, cancelledCount);
+
+          // Determine and store delivery mode
+          final deliveryMode = _determineDeliveryMode(plan);
+          await _storeDeliveryMode(widget.studentId, plan.id, deliveryMode);
+          _deliveryModes[plan.id] = deliveryMode;
+
+          // Look for stored order summary
+          Map<String, dynamic> summaryData = {};
+          if (_orderSummaryData.containsKey(plan.id)) {
+            summaryData = _orderSummaryData[plan.id]!;
+            print('Found stored order summary for plan ${plan.id}');
+          }
 
           _planSummaries.add({
             'plan': plan,
-            'totalMeals': totalMeals,
+            'totalMeals': summaryData['totalMeals'] ?? totalMeals,
             'consumed': consumedMeals,
-            'remaining': totalMeals - consumedMeals,
-            'pricePerMeal': 60, // This could be fetched from a pricing service
+            'remaining':
+                (summaryData['totalMeals'] ?? totalMeals) - consumedMeals,
+            'pricePerMeal': summaryData['pricePerMeal'] ?? 60,
+            'deliveryMode': deliveryMode,
+            'totalAmount': summaryData['totalAmount'],
+            'hasStoredSummary': summaryData.isNotEmpty,
           });
         }
 
@@ -185,7 +264,10 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
       // Sum all weekday counts and subtract cancelled meals
       final totalPassed =
           weekdayCounts.values.fold(0, (sum, count) => sum + count);
-      return totalPassed - cancelledCount;
+      int consumed = totalPassed - cancelledCount;
+
+      // Prevent negative values
+      return consumed < 0 ? 0 : consumed;
     } else {
       // Default Mon-Fri plan
       final weekdays = [1, 2, 3, 4, 5]; // Monday to Friday
@@ -199,7 +281,10 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
         }
       }
 
-      return count - cancelledCount;
+      int consumed = count - cancelledCount;
+
+      // Prevent negative values
+      return consumed < 0 ? 0 : consumed;
     }
   }
 
@@ -207,16 +292,8 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text(
-          'Plan Details',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppTheme.purple,
+      appBar: GradientAppBar(
+        titleText: 'Plan Details',
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -227,17 +304,56 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Student Name (if available)
+                      // Enhanced Student Header with Avatar
                       if (_student != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Text(
-                            _student!.name,
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textDark,
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 16, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: AppTheme.softShadow,
+                            border: Border.all(
+                              color: AppTheme.purple.withOpacity(0.1),
+                              width: 1.5,
                             ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Colors.red.shade100,
+                                child: const Icon(
+                                  Icons.person_outline,
+                                  color: Colors.red,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _student!.name,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textDark,
+                                      ),
+                                    ),
+                                    Text(
+                                      _student!.schoolName,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: AppTheme.textMedium,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
 
@@ -246,8 +362,6 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
                         _buildPlanCard(_planSummaries[i], i),
 
                       const SizedBox(height: 24),
-
-                      // Associated Students section has been removed
                     ],
                   ),
                 ),
@@ -256,105 +370,260 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
 
   Widget _buildPlanCard(Map<String, dynamic> planSummary, int index) {
     final Subscription plan = planSummary['plan'];
+    final bool isBreakfastPlan = plan.planType == 'breakfast';
+    final bool hasStoredSummary = planSummary['hasStoredSummary'] ?? false;
+
+    // Ensure consumed meals is never negative
+    final int consumed =
+        planSummary['consumed'] < 0 ? 0 : planSummary['consumed'];
+    final int remaining = planSummary['totalMeals'] - consumed;
+
+    // Get delivery mode
+    final String deliveryMode = planSummary['deliveryMode'] ?? 'Loading...';
+
+    // Get plan period description
+    final String planPeriod = _getPlanPeriodDescription(plan);
+
+    // Format the price per meal
+    final String pricePerMeal = '₹${planSummary['pricePerMeal']}';
+
+    // Calculate total price
+    final num totalPrice =
+        hasStoredSummary && planSummary['totalAmount'] != null
+            ? planSummary['totalAmount']
+            : planSummary['totalMeals'] * planSummary['pricePerMeal'];
+
+    // Use MealConstants for consistent styling
+    final Color planIconColor = MealConstants.getIconColor(plan.planType);
+    final Color planBgColor = MealConstants.getBgColor(plan.planType);
+    final Color planBorderColor = MealConstants.getBorderColor(plan.planType);
+    final IconData planIcon = MealConstants.getIcon(plan.planType);
 
     return Card(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
+      elevation: 4,
+      shadowColor: AppTheme.deepPurple.withOpacity(0.15),
       margin: const EdgeInsets.only(bottom: 24),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          // Soft border with gradient-like effect
+          border: Border.all(
+            color: planBorderColor,
+            width: 1.5,
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Plan Type Header
-            Text(
-              _getPlanTypeDisplay(plan),
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textDark,
+            // Plan Type Header (Enhanced with icon)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: planBgColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(15),
+                  topRight: Radius.circular(15),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      planIcon,
+                      color: planIconColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _getPlanTypeDisplay(plan),
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Active',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
 
-            // Section 1: Subscription Details
-            _buildSectionHeader('Subscription Details'),
-            Column(
-              children: [
-                _buildDetailRow(
-                  'Start Date',
-                  DateFormat('dd MMM yyyy').format(plan.startDate),
-                ),
-                _buildDetailRow(
-                  'End Date',
-                  DateFormat('dd MMM yyyy').format(plan.endDate),
-                ),
-                _buildDetailRow(
-                  'Auto Renew',
-                  'Enabled', // This would come from a real setting in the full app
-                ),
-                _buildStatusRow(
-                  'Status',
-                  'Active', // We're only showing active plans here
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Section 2: Meals & Pricing
-            _buildSectionHeader('Meals & Pricing'),
-            Column(
-              children: [
-                _buildDetailRow(
-                  'Meals Per Day',
-                  '1 meal (${plan.planType == 'breakfast' ? 'Breakfast' : 'Lunch'})',
-                ),
-                _buildDetailRow(
-                  'Delivery Days',
-                  _getDeliveryDaysText(plan),
-                ),
-                _buildDetailRow(
-                  'Total Meals',
-                  '${planSummary['totalMeals']} meals',
-                ),
-                _buildDetailRow(
-                  'Consumed Meals',
-                  '${planSummary['consumed']} meals',
-                ),
-                _buildDetailRow(
-                  'Remaining Meals',
-                  '${planSummary['remaining']} meals',
-                ),
-                _buildDetailRow(
-                  'Price Per Meal',
-                  '₹${planSummary['pricePerMeal']}',
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Container for the main content
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Section 1: Subscription Details
+                  _buildSectionHeader('Subscription Details'),
+                  const SizedBox(height: 8),
+                  Column(
                     children: [
-                      Text(
-                        'Total Price',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textDark,
-                        ),
+                      _buildDetailRow(
+                        'Start Date',
+                        DateFormat('dd MMM yyyy').format(plan.startDate),
                       ),
-                      Text(
-                        '₹${planSummary['totalMeals'] * planSummary['pricePerMeal']}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
+                      _buildDetailRow(
+                        'End Date',
+                        DateFormat('dd MMM yyyy').format(plan.endDate),
+                      ),
+                      _buildDetailRow(
+                        'Auto Renew',
+                        'Enabled', // This would come from a real setting in the full app
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 24),
+
+                  // Section 2: Meals & Pricing
+                  _buildSectionHeader('Meals & Pricing'),
+                  const SizedBox(height: 8),
+                  Column(
+                    children: [
+                      _buildDetailRow(
+                        'Plan Type',
+                        '${_getPlanTypeDisplay(plan)} ${plan.selectedWeekdays.isEmpty ? "(Regular)" : "(Custom)"}',
+                      ),
+                      _buildDetailRow(
+                        'Duration',
+                        planPeriod,
+                      ),
+                      _buildDetailRow(
+                        'Meals Per Day',
+                        '1 meal (${plan.planType == 'breakfast' ? 'Breakfast' : 'Lunch'})',
+                      ),
+                      _buildDetailRow(
+                        'Delivery Mode',
+                        deliveryMode,
+                      ),
+                      _buildDetailRow(
+                        'Delivery Days',
+                        _getDeliveryDaysText(plan),
+                      ),
+                      _buildDetailRow(
+                        'Total Meals',
+                        '${planSummary['totalMeals']} meals',
+                      ),
+                      _buildDetailRow(
+                        'Consumed Meals',
+                        '$consumed meals',
+                      ),
+                      _buildDetailRow(
+                        'Remaining Meals',
+                        '$remaining meals',
+                        valueStyle: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                      _buildDetailRow(
+                        'Price Per Meal',
+                        pricePerMeal,
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.purple.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Total Price',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                            Text(
+                              '₹${totalPrice.toInt()}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (hasStoredSummary)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.info_outline,
+                                    size: 16, color: Colors.blue.shade800),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Order summary synced from payment details',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.blue.shade800,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -393,24 +662,9 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
               ),
             ),
             const SizedBox(height: 32),
-            ElevatedButton(
+            GradientButton(
+              text: 'Go Back',
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.purple,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Go Back',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
             ),
           ],
         ),
@@ -455,15 +709,32 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
       'Saturday',
       'Sunday'
     ];
-    final selectedDays =
-        plan.selectedWeekdays.map((day) => weekdayNames[day]).toList();
+
+    final List<String> selectedDays = [];
+    for (int day in plan.selectedWeekdays) {
+      if (day >= 1 && day <= 7) {
+        selectedDays.add(weekdayNames[day]);
+      }
+    }
+
+    if (selectedDays.isEmpty) {
+      return "Monday to Friday"; // Fallback
+    }
 
     return selectedDays.join(', ');
   }
 
   Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: AppTheme.deepPurple,
+            width: 3,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.only(left: 8),
       child: Text(
         title,
         style: GoogleFonts.poppins(
@@ -475,7 +746,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, {TextStyle? valueStyle}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -485,16 +756,18 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
             label,
             style: GoogleFonts.poppins(
               fontSize: 15,
-              color: AppTheme.textMedium,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
             ),
           ),
           Text(
             value,
-            style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textDark,
-            ),
+            style: valueStyle ??
+                GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                ),
           ),
         ],
       ),
@@ -548,5 +821,18 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
         ],
       ),
     );
+  }
+
+  // New helper method for calculating plan period description
+  String _getPlanPeriodDescription(Subscription plan) {
+    final int days = plan.endDate.difference(plan.startDate).inDays + 1;
+
+    if (plan.selectedWeekdays.isNotEmpty) {
+      // If it's a custom plan
+      return '${_calculateTotalMeals(plan)} days custom plan';
+    } else {
+      // If it's a regular plan
+      return '$days days';
+    }
   }
 }

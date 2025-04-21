@@ -162,6 +162,52 @@ TextField(
 )
 ```
 
+## AppBar Styling
+
+StartWell app features beautifully styled AppBars with rounded bottom corners for a modern look:
+
+### Standard AppBar
+The default AppBar theme includes:
+- Purple background color
+- White text with Poppins font
+- Rounded bottom corners (16px radius)
+- Proper elevation for subtle shadows
+- Centered title by default
+
+```dart
+AppBar(
+  title: Text('Screen Title'),
+  // All styling is automatically applied through the theme
+)
+```
+
+### Gradient AppBar
+For screens that need more visual appeal, use the GradientAppBar:
+
+```dart
+GradientAppBar(
+  titleText: 'Screen Title',
+  // Optional custom gradient
+  customGradient: AppTheme.orangeToYellow,
+  // Optional custom elevation
+  elevation: 3,
+)
+```
+
+### Helper Methods
+You can also use the UIComponents helper for quick implementation:
+
+```dart
+UIComponents.gradientAppBar(
+  title: 'Screen Title',
+  context: context,
+  // Optional parameters
+  actions: [IconButton(...)],
+  customGradient: AppTheme.deepPurpleToYellow,
+  elevation: 2,
+)
+```
+
 ## Shadows
 
 The theme provides consistent shadow styles:

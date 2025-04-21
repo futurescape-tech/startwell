@@ -29,7 +29,7 @@ class QuickActions extends StatelessWidget {
               child: _buildActionButton(
                 icon: Icons.restaurant_menu,
                 label: 'Meal Plan',
-                iconColor: AppTheme.deepPurple,
+                iconColor: AppTheme.success,
                 onPressed: onMealPlanPressed,
               ),
             ),
@@ -38,7 +38,7 @@ class QuickActions extends StatelessWidget {
               child: _buildActionButton(
                 icon: Icons.person,
                 label: 'Manage Student',
-                iconColor: AppTheme.orange,
+                iconColor: AppTheme.error,
                 onPressed: onManageStudentPressed,
               ),
             ),
@@ -99,10 +99,10 @@ class QuickActions extends StatelessWidget {
             child: Ink(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                color: AppTheme.white,
+                color: AppTheme.offWhite,
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.deepPurple.withOpacity(0.05),
+                    color: Colors.grey.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                     spreadRadius: 0.5,

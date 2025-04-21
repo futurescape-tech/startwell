@@ -1,11 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/wallet_transaction.dart';
 import 'package:startwell/services/wallet_service.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/app_colors.dart';
 import 'package:startwell/widgets/empty_state.dart';
 import 'package:startwell/widgets/loading.dart';
+
+// Move the extension outside the class definition
+extension WidgetAnimationExtension on Widget {
+  Widget animate() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: AppTheme.orangeToYellow,
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.deepPurple.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: this,
+    );
+  }
+}
 
 class StartwellWalletPage extends StatefulWidget {
   const StartwellWalletPage({super.key});
@@ -359,8 +380,19 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Startwell Wallet'),
-        backgroundColor: AppColors.primary,
+        title: Text(
+          'Startwell Wallet',
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.purpleToDeepPurple,
+          ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _fetchWalletData,
@@ -386,19 +418,20 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
               color: Colors.red.shade400,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               "Could not load wallet data",
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
+                color: AppTheme.textDark,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               _errorMessage,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Colors.grey,
+                color: AppTheme.textMedium,
               ),
               textAlign: TextAlign.center,
             ),
@@ -406,11 +439,19 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
             ElevatedButton.icon(
               onPressed: _fetchWalletData,
               icon: const Icon(Icons.refresh),
-              label: const Text('Try Again'),
+              label: Text(
+                'Try Again',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppTheme.purple,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -527,8 +568,8 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
             label,
             style: const TextStyle(
@@ -538,7 +579,7 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 5),
-            Text(
+          Text(
             amount,
             style: const TextStyle(
               color: Colors.white,
@@ -546,9 +587,9 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
               fontWeight: FontWeight.bold,
             ),
             overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -557,33 +598,46 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: _showAddMoneyModal,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Money'),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: Text(
+          'Add Money',
+          style: GoogleFonts.poppins(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          elevation: 2,
+          backgroundColor: Colors.transparent,
+          shadowColor: AppTheme.deepPurple.withOpacity(0.3),
+          foregroundColor: Colors.white,
+        ).copyWith(
+          backgroundColor: MaterialStateProperty.all(Colors.transparent),
+          overlayColor: MaterialStateProperty.resolveWith<Color?>(
+            (Set<MaterialState> states) {
+              if (states.contains(MaterialState.pressed)) {
+                return Colors.white.withOpacity(0.1);
+              }
+              return null;
+            },
+          ),
         ),
       ),
-    );
+    ).animate();
   }
 
   Widget _buildTransactionHistorySection(double maxWidth) {
     return SizedBox(
       width: maxWidth - 32, // Account for padding
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-          const Text(
-              'Transaction History',
-            style: TextStyle(
-                fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Transaction History'),
           const SizedBox(height: 15),
           if (_transactions.isEmpty)
             EmptyState(
@@ -596,73 +650,133 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               itemCount: _transactions.length,
-              separatorBuilder: (context, index) => const Divider(),
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final transaction = _transactions[index];
                 return _buildTransactionItem(transaction);
               },
             ),
-          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: AppTheme.deepPurple,
+            width: 3,
+          ),
         ),
+      ),
+      padding: const EdgeInsets.only(left: 8),
+      child: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.textDark,
+        ),
+      ),
     );
   }
 
   Widget _buildTransactionItem(WalletTransaction transaction) {
     final DateFormat dateFormat = DateFormat('EEE, dd MMM yyyy');
-
     final bool isCredit = transaction.type == TransactionType.credit;
+    final Color indicatorColor = isCredit ? Colors.green : Colors.red;
 
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isCredit ? Colors.green.shade100 : Colors.red.shade100,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-          color: isCredit ? Colors.green : Colors.red,
-        ),
+    return Card(
+      elevation: 2,
+      shadowColor: AppTheme.deepPurple.withOpacity(0.15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      title: Text(
-        transaction.description,
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        '${dateFormat.format(transaction.date)} • ${transaction.paymentMode}',
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.grey.shade600,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: SizedBox(
-        width: 100, // Fixed width to prevent overflow
-        child: Text(
-          '${isCredit ? '+' : '-'} ${_formatAmount(transaction.amount)}',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: isCredit ? Colors.green : Colors.red,
+      child: InkWell(
+        onTap: () => _showTransactionDetails(transaction),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9F9F9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border(
+              left: BorderSide(
+                color: indicatorColor,
+                width: 4,
+              ),
+            ),
           ),
-          textAlign: TextAlign.right,
-          overflow: TextOverflow.ellipsis,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isCredit
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isCredit ? Icons.arrow_downward : Icons.arrow_upward,
+                    color: indicatorColor,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        transaction.description,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: AppTheme.textDark,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${dateFormat.format(transaction.date)} • ${transaction.paymentMode}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: AppTheme.textMedium,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${isCredit ? '+' : '-'} ${_formatAmount(transaction.amount)}',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: indicatorColor,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      onTap: () => _showTransactionDetails(transaction),
     );
   }
 
   void _showTransactionDetails(WalletTransaction transaction) {
     final details = transaction.toDisplayMap();
+    final bool isCredit = transaction.type == TransactionType.credit;
+    final Color indicatorColor = isCredit ? Colors.green : Colors.red;
 
     showModalBottomSheet(
       context: context,
@@ -678,12 +792,33 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Transaction Details',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isCredit
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isCredit ? Icons.arrow_downward : Icons.arrow_upward,
+                    color: indicatorColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Transaction Details',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             Flexible(
@@ -706,32 +841,33 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           SizedBox(
             width: 120,
             child: Text(
               label.toUpperCase(),
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textMedium,
               ),
             ),
           ),
-        Expanded(
+          Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
+                color: AppTheme.textDark,
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
-                  ),
-                ),
-              ],
             ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,9 @@ import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/screens/main_screen.dart';
 import 'package:startwell/screens/my_subscription_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:startwell/widgets/common/gradient_app_bar.dart';
+import 'package:startwell/widgets/common/gradient_button.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PhonePeDummyScreen extends StatefulWidget {
   final String planType;
@@ -47,16 +51,8 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'PhonePe Payment',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppTheme.purple,
+      appBar: GradientAppBar(
+        titleText: 'PhonePe Payment',
       ),
       body: Column(
         children: [
@@ -106,23 +102,10 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
             child: SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
+              child: GradientButton(
+                text: 'Pay Now',
+                isFullWidth: true,
                 onPressed: () => _processPayment(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.purple,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'Pay Now',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
               ),
             ),
           ),
@@ -259,7 +242,9 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
             actions: [
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: GradientButton(
+                  text: 'Manage Subscription',
+                  isFullWidth: true,
                   onPressed: () {
                     // Close dialog
                     Navigator.pop(context);
@@ -292,20 +277,6 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                       (route) => false, // Remove all previous routes
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Manage Subscription',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -369,6 +340,19 @@ class RazorpayDummyScreen extends StatefulWidget {
     this.mealType,
   }) : super(key: key);
 
+  // Common code for storing subscription link info
+  static Future<void> saveSubscriptionLink(
+      String studentId, String subscriptionId, String planId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final linkKey = 'subscription_plan_link_${studentId}_${subscriptionId}';
+      await prefs.setString(linkKey, planId);
+      log('Saved subscription link: $linkKey -> $planId');
+    } catch (e) {
+      log('Error saving subscription link: $e');
+    }
+  }
+
   @override
   State<RazorpayDummyScreen> createState() => _RazorpayDummyScreenState();
 }
@@ -377,16 +361,8 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Razorpay Payment',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppTheme.purple,
+      appBar: GradientAppBar(
+        titleText: 'Razorpay Payment',
       ),
       body: Column(
         children: [
@@ -436,23 +412,10 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
             child: SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
+              child: GradientButton(
+                text: 'Pay Now',
+                isFullWidth: true,
                 onPressed: () => _processPayment(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.purple,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'Pay Now',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
               ),
             ),
           ),
@@ -589,47 +552,10 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
             actions: [
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Close dialog
-                    Navigator.pop(context);
-
-                    // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
-                    DateTime actualStartDate = widget.startDate;
-                    // No longer override start date - use what was selected by the user
-                    // if (planType == 'breakfast' || planType == 'lunch') {
-                    //   // Set standardized plan start date to April 14, 2025
-                    //   actualStartDate = DateTime(2025, 4, 14);
-                    // }
-
-                    // Navigate directly to MySubscriptionScreen with Upcoming Meals tab (index 0)
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MySubscriptionScreen(
-                          defaultTabIndex: 0,
-                          selectedStudentId: widget.selectedStudent.id,
-                          startDate: actualStartDate,
-                          endDate: widget.endDate,
-                        ),
-                      ),
-                      (route) => false, // Remove all previous routes
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Manage Subscription',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                child: GradientButton(
+                  text: 'Manage Subscription',
+                  isFullWidth: true,
+                  onPressed: () => _onSuccessfulPayment(),
                 ),
               ),
             ],
@@ -661,6 +587,64 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  void _onSuccessfulPayment() async {
+    // Generate a unique subscription ID
+    final String subscriptionId =
+        'sub_${DateTime.now().millisecondsSinceEpoch}';
+    final String planId = 'plan_${DateTime.now().millisecondsSinceEpoch}';
+
+    // Save order summary with planId
+    await _saveOrderSummary(planId);
+
+    // Save the link between the subscription and plan
+    await RazorpayDummyScreen.saveSubscriptionLink(
+        widget.selectedStudent.id, subscriptionId, planId);
+
+    log("Payment successful. Subscription ID: $subscriptionId, Plan ID: $planId");
+
+    // Continue with existing navigation
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DummyPaymentSuccessScreen(
+          // ... existing parameters
+          subscriptionId: subscriptionId,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveOrderSummary(String planId) async {
+    try {
+      final Map<String, dynamic> orderSummary = {
+        'planType': widget.planType,
+        'isCustomPlan': widget.isCustomPlan,
+        'startDate': widget.startDate.toIso8601String(),
+        'endDate': widget.endDate.toIso8601String(),
+        'totalMeals': widget.mealDates.length,
+        'totalAmount': widget.totalAmount,
+        'pricePerMeal': widget.totalAmount / widget.mealDates.length,
+        'mealType': widget.mealType ??
+            (widget.selectedMeals.isNotEmpty
+                ? (widget.selectedMeals.first.categories
+                        .contains(MealCategory.breakfast)
+                    ? 'breakfast'
+                    : 'lunch')
+                : 'lunch'),
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      // Store in SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'order_summary_${widget.selectedStudent.id}_$planId';
+      await prefs.setString(key, jsonEncode(orderSummary));
+
+      log('Order summary stored with plan ID: $planId');
+    } catch (e) {
+      log('Error storing order summary: $e');
     }
   }
 }
@@ -703,16 +687,8 @@ class _StartwellWalletDummyScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Startwell Wallet',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppTheme.purple,
+      appBar: GradientAppBar(
+        titleText: 'Startwell Wallet',
       ),
       body: Column(
         children: [
@@ -762,23 +738,10 @@ class _StartwellWalletDummyScreenState
             child: SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
+              child: GradientButton(
+                text: 'Pay Now',
+                isFullWidth: true,
                 onPressed: () => _processPayment(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.purple,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'Pay Now',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
               ),
             ),
           ),
@@ -915,7 +878,9 @@ class _StartwellWalletDummyScreenState
             actions: [
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: GradientButton(
+                  text: 'Manage Subscription',
+                  isFullWidth: true,
                   onPressed: () {
                     // Close dialog
                     Navigator.pop(context);
@@ -942,20 +907,6 @@ class _StartwellWalletDummyScreenState
                       (route) => false, // Remove all previous routes
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'Manage Subscription',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -988,5 +939,77 @@ class _StartwellWalletDummyScreenState
         ),
       );
     }
+  }
+}
+
+class DummyPaymentSuccessScreen extends StatelessWidget {
+  final String subscriptionId;
+
+  const DummyPaymentSuccessScreen({
+    Key? key,
+    required this.subscriptionId,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: GradientAppBar(
+        titleText: 'Payment Success',
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle,
+              size: 100,
+              color: Colors.green,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Payment Successful!',
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your subscription is now active',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: AppTheme.textMedium,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Subscription ID: $subscriptionId',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppTheme.textMedium,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: GradientButton(
+                text: 'Go to My Subscriptions',
+                isFullWidth: true,
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MainScreen(initialTabIndex: 2),
+                    ),
+                    (route) => false,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:startwell/utils/date_utils.dart';
+import 'package:startwell/models/meal_model.dart';
+import 'package:startwell/utils/meal_constants.dart';
 
 class MealCard extends StatelessWidget {
   final DateTime date;
@@ -332,11 +334,13 @@ class MealCard extends StatelessWidget {
                                 foregroundColor: Colors.white,
                                 disabledBackgroundColor: Colors.grey.shade300,
                                 disabledForegroundColor: Colors.grey.shade600,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
+                                elevation: 2,
+                                shadowColor: AppTheme.purple.withOpacity(0.4),
                               ),
                             ),
                           ),
@@ -383,14 +387,19 @@ class MealCard extends StatelessWidget {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppTheme.error,
                             disabledBackgroundColor: Colors.grey.shade300,
                             disabledForegroundColor: Colors.grey.shade600,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
+                              side:
+                                  BorderSide(color: AppTheme.error, width: 1.5),
                             ),
+                            elevation: 1,
+                            shadowColor: AppTheme.error.withOpacity(0.2),
                           ),
                         ),
                       ),
@@ -428,27 +437,53 @@ class MealCard extends StatelessWidget {
             : [Colors.green.shade300, Colors.green.shade500]
         : [Colors.orange.shade300, Colors.orange.shade500];
 
+    final Color iconColor = Colors.white;
+    final IconData statusIcon = isScheduled
+        ? isBreakfast
+            ? Icons.breakfast_dining
+            : Icons.lunch_dining
+        : Icons.swap_horiz_rounded;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: gradientColors,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
         ),
-      ),
-      child: Center(
-        child: Text(
-          isBreakfast ? 'BREAKFAST' : 'LUNCH',
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors[1].withOpacity(0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
-        ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            statusIcon,
+            color: iconColor,
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            isBreakfast ? 'BREAKFAST' : 'LUNCH',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     );
   }

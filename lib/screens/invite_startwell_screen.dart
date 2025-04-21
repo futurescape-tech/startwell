@@ -123,8 +123,9 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
                 if (value == null || value.isEmpty) {
                   return 'Please enter your email';
                 }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                    .hasMatch(value)) {
+                if (!RegExp(
+                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                ).hasMatch(value)) {
                   return 'Please enter a valid email address';
                 }
                 return null;
@@ -186,30 +187,21 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
           ),
         ),
         RadioListTile<String>(
-          title: Text(
-            "A Parent",
-            style: GoogleFonts.poppins(),
-          ),
+          title: Text("A Parent", style: GoogleFonts.poppins()),
           value: "Parent",
           groupValue: _selectedRole,
           activeColor: AppTheme.purple,
           onChanged: (value) => setState(() => _selectedRole = value!),
         ),
         RadioListTile<String>(
-          title: Text(
-            "School Management",
-            style: GoogleFonts.poppins(),
-          ),
+          title: Text("School Management", style: GoogleFonts.poppins()),
           value: "School Management",
           groupValue: _selectedRole,
           activeColor: AppTheme.purple,
           onChanged: (value) => setState(() => _selectedRole = value!),
         ),
         RadioListTile<String>(
-          title: Text(
-            "Student",
-            style: GoogleFonts.poppins(),
-          ),
+          title: Text("Student", style: GoogleFonts.poppins()),
           value: "Student",
           groupValue: _selectedRole,
           activeColor: AppTheme.purple,
@@ -227,8 +219,9 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
         onPressed: _submitForm,
         style: ElevatedButton.styleFrom(
           padding: EdgeInsets.zero,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         child: Ink(
           decoration: BoxDecoration(
@@ -267,31 +260,38 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
   void _showSuccessDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Success',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(
-          "Thanks for reaching out!\nWe're excited to bring StartWell meals to your school.\nExpect a call or email from us very soon.",
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Navigate back to home screen
-            },
-            child:
-                Text('OK', style: GoogleFonts.poppins(color: AppTheme.purple)),
+      builder:
+          (BuildContext context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 8),
+                Text(
+                  'Success',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: Text(
+              "Thanks for reaching out!\nWe're excited to bring StartWell meals to your school.\nExpect a call or email from us very soon.",
+              style: GoogleFonts.poppins(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context); // Navigate back to home screen
+                },
+                child: Text(
+                  'OK',
+                  style: GoogleFonts.poppins(color: AppTheme.purple),
+                ),
+              ),
+            ],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ],
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
     );
   }
 }

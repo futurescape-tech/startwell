@@ -10,6 +10,7 @@ import 'package:startwell/widgets/profile_avatar.dart';
 import 'package:startwell/widgets/subscription/upcoming_meals_tab.dart';
 import 'package:startwell/widgets/subscription/cancelled_meals_tab.dart';
 import 'package:startwell/utils/routes.dart';
+import 'package:startwell/widgets/common/gradient_app_bar.dart';
 
 // Global key for direct access to the MySubscriptionScreen state
 final GlobalKey<_MySubscriptionScreenState> mySubscriptionScreenKey =
@@ -65,7 +66,9 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
     // Add listener to handle tab changes
     _tabController.addListener(_handleTabChange);
 
-    log("MySubscriptionScreen initState - _currentlySelectedStudentId set to: ${_currentlySelectedStudentId ?? 'null'}");
+    log(
+      "MySubscriptionScreen initState - _currentlySelectedStudentId set to: ${_currentlySelectedStudentId ?? 'null'}",
+    );
     log("MySubscriptionScreen startDate: ${widget.startDate}");
     log("MySubscriptionScreen endDate: ${widget.endDate}");
     log("MySubscriptionScreen defaultTabIndex: ${widget.defaultTabIndex}");
@@ -85,14 +88,20 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
 
       // If switched to Cancelled Meals tab (index 1), refresh the data
       if (_tabController.index == 1) {
-        log("[cancelled_meal_data_flow] Switched to Cancelled Meals tab, refreshing data");
+        log(
+          "[cancelled_meal_data_flow] Switched to Cancelled Meals tab, refreshing data",
+        );
         // Delay slightly to allow the tab animation to complete
         Future.delayed(const Duration(milliseconds: 300), () {
           if (_cancelledMealsTabKey.currentState != null) {
             _cancelledMealsTabKey.currentState!.refreshCancelledMeals();
-            log("[cancelled_meal_data_flow] Triggered refresh on Cancelled Meals tab");
+            log(
+              "[cancelled_meal_data_flow] Triggered refresh on Cancelled Meals tab",
+            );
           } else {
-            log("[cancelled_meal_data_flow] WARNING: Could not find Cancelled Meals tab state");
+            log(
+              "[cancelled_meal_data_flow] WARNING: Could not find Cancelled Meals tab state",
+            );
           }
         });
       }
@@ -102,7 +111,9 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
   // Public method to change tabs programmatically
   void switchToTab(int index) {
     if (index >= 0 && index < _tabController.length) {
-      log("[cancelled_meal_data_flow] Programmatically switching to tab: $index");
+      log(
+        "[cancelled_meal_data_flow] Programmatically switching to tab: $index",
+      );
       _tabController.animateTo(index);
 
       // Force refresh immediately when switching to Cancelled tab
@@ -119,17 +130,10 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'My Subscription',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: AppTheme.purple,
-        elevation: 0,
+      backgroundColor: AppTheme.white,
+      appBar: GradientAppBar(
+        titleText: 'My Subscription',
+        customGradient: AppTheme.purpleToDeepPurple,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
@@ -141,93 +145,112 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
                       Navigator.pushNamed(context, Routes.profileSettings);
                     },
                   )
-                : IconButton(
-                    icon:
-                        const Icon(Icons.account_circle, color: AppTheme.white),
-                    onPressed: () {
-                      Navigator.pushNamed(context, Routes.profileSettings);
-                    },
+                : Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: AppTheme.purpleToDeepPurple,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.deepPurple.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        )
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.account_circle,
+                        color: AppTheme.white,
+                      ),
+                      onPressed: () {
+                        Navigator.pushNamed(context, Routes.profileSettings);
+                      },
+                    ),
                   ),
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48), // Slightly reduced height
+          preferredSize: const Size.fromHeight(48),
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: AppTheme.purple
-                  .withOpacity(0.9), // Slightly darker background for contrast
+              color: AppTheme.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: TabBar(
               controller: _tabController,
-              isScrollable: true, // Allows tabs to be scrollable
+              labelColor: AppTheme.purple,
+              unselectedLabelColor: AppTheme.textMedium,
+              indicatorColor: AppTheme.purple,
+              indicatorWeight: 3,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
               labelStyle: GoogleFonts.poppins(
-                fontSize: 14, // Further reduced font size
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
               unselectedLabelStyle: GoogleFonts.poppins(
-                fontSize: 14, // Further reduced font size
-                fontWeight: FontWeight.w400,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white.withOpacity(0.7),
-
-              // Enhanced indicator for better selected tab visibility
-              indicatorColor: AppTheme
-                  .yellow, // Use yellow from AppTheme for better contrast
-              indicatorWeight: 3.0,
-              indicatorSize: TabBarIndicatorSize.tab,
-
-              // Add indicator padding for more distinct highlight
-              indicatorPadding: const EdgeInsets.symmetric(horizontal: 12),
-
-              labelPadding: const EdgeInsets.symmetric(
-                  horizontal: 8), // Tighter label padding
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 8), // Reduced outer padding
-
-              // Use a more pronounced decoration for the indicator
-              indicator: BoxDecoration(
-                borderRadius: BorderRadius.circular(6), // Smaller radius
-                color: Colors.white
-                    .withOpacity(0.15), // Lighter overlay for selection
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppTheme.yellow,
-                    width: 3.0,
-                  ),
-                ),
-              ),
-
-              tabs: const [
+              tabs: [
                 Tab(
-                  height: 40, // Slightly taller for better touch targets
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.fastfood, size: 18), // Smaller icon
-                      SizedBox(
-                          width: 6), // Slightly more spacing for readability
-                      Text('Upcoming Meals'),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.restaurant,
+                          size: 18,
+                          color: AppTheme.purple,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Upcoming Meals',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Tab(
-                  height: 40, // Slightly taller for better touch targets
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.cancel_outlined, size: 18), // Smaller icon
-                      SizedBox(
-                          width: 6), // Slightly more spacing for readability
-                      Text('Cancelled Meals'),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.cancel_outlined,
+                          size: 18,
+                          color: AppTheme.purple,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Cancelled Meals',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -236,22 +259,34 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Upcoming Meals Tab
-          UpcomingMealsTab(
-            selectedStudentId: _currentlySelectedStudentId,
-            startDate: widget.startDate,
-            endDate: widget.endDate,
-          ),
+      body: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.deepPurple.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            // Upcoming Meals Tab
+            UpcomingMealsTab(
+              selectedStudentId: _currentlySelectedStudentId,
+              startDate: widget.startDate,
+              endDate: widget.endDate,
+            ),
 
-          // Cancelled Meals Tab
-          CancelledMealsTab(
-            key: _cancelledMealsTabKey,
-            studentId: _currentlySelectedStudentId,
-          ),
-        ],
+            // Cancelled Meals Tab
+            CancelledMealsTab(
+              key: _cancelledMealsTabKey,
+              studentId: _currentlySelectedStudentId,
+            ),
+          ],
+        ),
       ),
     );
   }

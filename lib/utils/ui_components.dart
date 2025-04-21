@@ -12,6 +12,7 @@ class UIComponents {
     List<Widget>? actions,
     bool showBackButton = true,
     Gradient? customGradient,
+    double elevation = 2,
   }) {
     return AppBar(
       title: Text(
@@ -34,10 +35,18 @@ class UIComponents {
       flexibleSpace: Container(
         decoration: BoxDecoration(
           gradient: customGradient ?? AppTheme.purpleToDeepPurple,
+          borderRadius: const BorderRadius.vertical(
+            bottom: Radius.circular(16),
+          ),
         ),
       ),
       backgroundColor: Colors.transparent,
-      elevation: 0,
+      elevation: elevation,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(16),
+        ),
+      ),
     );
   }
 
