@@ -397,12 +397,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                           child: HomeBannerCard(
                             onExplorePressed: () =>
                                 _navigateToTab(3), // Meal Plan tab
-                            onLoginPressed: () {
-                              Navigator.pushNamed(context, '/login');
-                            },
-                            onSignupPressed: () {
-                              Navigator.pushNamed(context, '/signup');
-                            },
                           ),
                         ),
                         const SizedBox(height: 10),

@@ -110,7 +110,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             children: [
               Icon(
                 Icons.access_time_rounded,
-                color: Colors.blue,
+                color: Colors.orange,
                 size: 24,
               ),
               const SizedBox(width: 8),
@@ -232,22 +232,33 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                   // Custom segmented control
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      // color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.purple.shade50),
                     ),
                     child: TabBar(
+                      splashFactory: NoSplash.splashFactory,
+                      overlayColor: MaterialStateProperty.resolveWith<Color?>(
+                          (Set<MaterialState> states) {
+                        // Use the default focused overlay color
+                        return states.contains(MaterialState.focused)
+                            ? null
+                            : Colors.transparent;
+                      }),
                       indicator: BoxDecoration(
-                        color: _getSelectedTabColor(tabController.index),
+                        color: _getSelectedTabColor(tabController.index)
+                            .withOpacity(0.1),
+                        //color: Colors.gre.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        // boxShadow: [
+                        //   BoxShadow(
+                        //     color: Colors.black.withOpacity(0.1),
+                        //     blurRadius: 4,
+                        //     offset: const Offset(0, 2),
+                        //   ),
+                        // ],
                       ),
-                      labelColor: Colors.white,
+                      labelColor: _getSelectedTabColor(tabController.index),
                       unselectedLabelColor: AppTheme.textMedium,
                       dividerColor: Colors.transparent,
                       indicatorSize: TabBarIndicatorSize.tab,
@@ -323,7 +334,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       case 1:
         return Colors.green; // Lunch
       case 2:
-        return Colors.blue; // Express
+        return Colors.orange; // Express
       default:
         return AppTheme.purple;
     }
@@ -553,17 +564,17 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
+              color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Colors.blue.withOpacity(0.2),
+                color: Colors.orange.withOpacity(0.2),
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.delivery_dining,
-                  color: Colors.blue,
+                  color: Colors.orange,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -576,7 +587,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue.shade700,
+                          color: Colors.orange.shade700,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -707,7 +718,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                       imageUrl,
                       height: 220,
                       width: double.infinity,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           height: 220,
@@ -728,59 +739,62 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                   ),
 
                   // Meal type label
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: tabColor.withOpacity(0.8),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            mealType == 'breakfast'
-                                ? Icons.ramen_dining
-                                : mealType == 'express'
-                                    ? Icons.delivery_dining
-                                    : Icons.lunch_dining,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            mealTypeLabel,
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // Positioned(
+                  //   bottom: 0,
+                  //   left: 0,
+                  //   child: Container(
+                  //     padding: const EdgeInsets.symmetric(
+                  //         horizontal: 12, vertical: 6),
+                  //     decoration: BoxDecoration(
+                  //       color: tabColor.withOpacity(0.8),
+                  //       borderRadius: const BorderRadius.only(
+                  //         topRight: Radius.circular(12),
+                  //       ),
+                  //     ),
+                  //     child: Row(
+                  //       mainAxisSize: MainAxisSize.min,
+                  //       children: [
+                  //         Icon(
+                  //           mealType == 'breakfast'
+                  //               ? Icons.ramen_dining
+                  //               : mealType == 'express'
+                  //                   ? Icons.delivery_dining
+                  //                   : Icons.lunch_dining,
+                  //           color: Colors.white,
+                  //           size: 16,
+                  //         ),
+                  //         const SizedBox(width: 6),
+                  //         Text(
+                  //           mealTypeLabel,
+                  //           style: GoogleFonts.poppins(
+                  //             color: Colors.white,
+                  //             fontSize: 14,
+                  //             fontWeight: FontWeight.w500,
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
 
                   // Selected meal badge
                   if (shouldShowRecommendedTag)
                     Positioned(
-                      top: 12,
-                      right: 12,
+                      top: 0,
+                      right: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppTheme.purple, AppTheme.deepPurple],
+                            colors: [AppTheme.orange, Colors.purple],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           ),
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(12),
+                            bottomLeft: Radius.circular(12),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.2),
@@ -799,7 +813,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Recommended',
+                              'Top Pick',
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -827,7 +841,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             color: Colors.green.withOpacity(0.1),
-                            shape: BoxShape.circle,
+                            // shape: BoxShape.circle,
                           ),
                           child: const VegIcon(),
                         ),
@@ -848,7 +862,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: tabColor.withOpacity(0.2),
+                            color: Colors.purple.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(9),
                           ),
                           child: Text(
@@ -856,7 +870,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: tabColor,
+                              color: Colors.deepPurple,
                             ),
                           ),
                         ),
@@ -920,16 +934,16 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
+                                color: Colors.purple.withOpacity(0.1),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.green.withOpacity(0.2),
+                                  color: Colors.deepOrange.withOpacity(0.2),
                                   width: 1,
                                 ),
                               ),
                               child: const Icon(
                                 Icons.savings_rounded,
-                                color: Colors.green,
+                                color: Colors.purple,
                                 size: 16,
                               ),
                             ),
@@ -938,7 +952,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                               child: ShaderMask(
                                 shaderCallback: (bounds) =>
                                     const LinearGradient(
-                                  colors: [Colors.green, Colors.lightGreen],
+                                  colors: [Colors.purple, Colors.deepOrange],
                                   begin: Alignment.centerLeft,
                                   end: Alignment.centerRight,
                                 ).createShader(bounds),
@@ -972,7 +986,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                             borderRadius: BorderRadius.circular(50),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.deepPurple.withOpacity(0.3),
+                                color: Colors.grey.shade400.withOpacity(0.3),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),

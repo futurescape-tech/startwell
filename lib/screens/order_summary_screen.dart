@@ -499,7 +499,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                           width: double.infinity,
                           height: 60,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(50),
                             gradient: AppTheme.purpleToDeepPurple,
                             boxShadow: [
                               BoxShadow(
@@ -799,15 +799,15 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    height: 70,
-                    width: 70,
+                    height: 90,
+                    width: 90,
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: Colors.white,
                     ),
                     child: meal.imageUrl.isNotEmpty
                         ? Image.asset(
                             meal.imageUrl,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
                               return _buildMealPlaceholder();
                             },
@@ -817,39 +817,6 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 ),
               ),
               // Selected indicator circle in upper left
-              Positioned(
-                top: 0,
-                left: 0,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.success,
-                        AppTheme.success.withOpacity(1)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.purple.withOpacity(0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 12,
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
 
@@ -872,6 +839,36 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textDark,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [Colors.green, Colors.green.withOpacity(1)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          // boxShadow: [
+                          //   BoxShadow(
+                          //     color: AppTheme.purple.withOpacity(0.3),
+                          //     blurRadius: 4,
+                          //     offset: const Offset(0, 1),
+                          //   ),
+                          // ],
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 12,
+                          ),
                         ),
                       ),
                     ),

@@ -56,7 +56,7 @@ class UIComponents {
     required VoidCallback onPressed,
     Gradient? gradient,
     double height = 50,
-    double borderRadius = 16,
+    double borderRadius = 50,
     bool isFullWidth = true,
     EdgeInsetsGeometry? padding,
     TextStyle? textStyle,

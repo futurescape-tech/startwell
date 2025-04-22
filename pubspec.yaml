@@ -97,7 +97,7 @@ flutter:
     - assets/images/lunch/International Lunch.png
     - assets/images/lunch/Jain Lunch.png
     - assets/images/veg.png
-    # Payment method icons
+    - assets/images/logo.png
     - assets/images/payment/wallet.png
     - assets/images/payment/phonepe.png
     - assets/images/payment/gpay.png

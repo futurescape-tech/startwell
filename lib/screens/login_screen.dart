@@ -188,32 +188,13 @@ class _LoginScreenState extends State<LoginScreen>
                                     scale: _showLogo ? 1.0 : 0.8,
                                     duration: const Duration(milliseconds: 800),
                                     curve: Curves.easeOutCubic,
-                                    child: Center(
-                                      child: Container(
-                                        width: 80,
-                                        height: 80,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          gradient: AppTheme.purpleToDeepPurple,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.primary
-                                                  .withOpacity(0.3),
-                                              blurRadius: 15,
-                                              offset: const Offset(0, 5),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.lunch_dining,
-                                          size: 40,
-                                          color: Colors.white,
-                                        ),
-                                      ),
+                                    child: Image.asset(
+                                      'assets/images/logo.png',
+                                      height: 70,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 30),
 
                                 // Welcome text with animation
                                 AnimatedOpacity(
@@ -274,8 +255,11 @@ class _LoginScreenState extends State<LoginScreen>
                                     curve: Curves.easeOutCubic,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Colors.grey.shade100,
-                                        borderRadius: BorderRadius.circular(16),
+                                        //color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(50),
+                                        border: Border.all(
+                                          color: Colors.purple.withOpacity(0.1),
+                                        ),
                                       ),
                                       child: Row(
                                         children: [
@@ -290,10 +274,11 @@ class _LoginScreenState extends State<LoginScreen>
                                                         vertical: 14),
                                                 decoration: BoxDecoration(
                                                   gradient: useMobileLogin
-                                                      ? AppTheme.orangeToYellow
+                                                      ? AppTheme
+                                                          .purpleToDeepPurple
                                                       : null,
                                                   borderRadius:
-                                                      BorderRadius.circular(16),
+                                                      BorderRadius.circular(50),
                                                 ),
                                                 child: Center(
                                                   child: Text(
@@ -323,10 +308,11 @@ class _LoginScreenState extends State<LoginScreen>
                                                         vertical: 14),
                                                 decoration: BoxDecoration(
                                                   gradient: !useMobileLogin
-                                                      ? AppTheme.orangeToYellow
+                                                      ? AppTheme
+                                                          .purpleToDeepPurple
                                                       : null,
                                                   borderRadius:
-                                                      BorderRadius.circular(16),
+                                                      BorderRadius.circular(50),
                                                 ),
                                                 child: Center(
                                                   child: Text(
@@ -482,8 +468,8 @@ class _LoginScreenState extends State<LoginScreen>
                                           text: 'Login',
                                           gradient: AppTheme.purpleToDeepPurple,
                                           onPressed: _login,
-                                          height: 56,
-                                          borderRadius: 16,
+                                          height: 60,
+                                          borderRadius: 50,
                                           elevated: true,
                                         ),
                                         const SizedBox(height: 30),

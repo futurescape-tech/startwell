@@ -420,8 +420,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                                       ? _sendCode
                                                       : _verifyCode)
                                                   : _resetPassword,
-                                              height: 56,
-                                              borderRadius: 16,
+                                              height: 60,
+                                              borderRadius: 50,
                                               elevated: true,
                                             ),
                                           );

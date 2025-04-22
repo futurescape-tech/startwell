@@ -106,7 +106,7 @@ class MealDetailPage extends StatelessWidget {
                         meal['image'],
                         width: double.infinity,
                         height: 200,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             height: 200,
@@ -124,40 +124,40 @@ class MealDetailPage extends StatelessWidget {
                   ),
 
                   // Meal type label
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: mealTypeColor.withOpacity(0.8),
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(12),
-                          bottomLeft: Radius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            mealIcon,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            mealTypeLabel,
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // Positioned(
+                  //   bottom: 0,
+                  //   left: 0,
+                  //   child: Container(
+                  //     padding: const EdgeInsets.symmetric(
+                  //         horizontal: 12, vertical: 6),
+                  //     decoration: BoxDecoration(
+                  //       color: mealTypeColor.withOpacity(0.8),
+                  //       borderRadius: const BorderRadius.only(
+                  //         topRight: Radius.circular(12),
+                  //         bottomLeft: Radius.circular(12),
+                  //       ),
+                  //     ),
+                  //     child: Row(
+                  //       mainAxisSize: MainAxisSize.min,
+                  //       children: [
+                  //         Icon(
+                  //           mealIcon,
+                  //           color: Colors.white,
+                  //           size: 16,
+                  //         ),
+                  //         const SizedBox(width: 6),
+                  //         Text(
+                  //           mealTypeLabel,
+                  //           style: GoogleFonts.poppins(
+                  //             color: Colors.white,
+                  //             fontSize: 14,
+                  //             fontWeight: FontWeight.w500,
+                  //           ),
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ),
+                  // ),
 
                   // Show "Most Recommended" badge for specific meals
                   if ((sourceTab == 'breakfast' &&
@@ -165,18 +165,21 @@ class MealDetailPage extends StatelessWidget {
                       (sourceTab == 'lunch' &&
                           meal['name'] == 'Lunch of the Day'))
                     Positioned(
-                      top: 12,
-                      right: 12,
+                      top: 0,
+                      right: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [AppTheme.purple, AppTheme.deepPurple],
+                            colors: [AppTheme.orange, AppTheme.purple],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           ),
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(12),
+                            bottomLeft: Radius.circular(12),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.2),
@@ -195,7 +198,7 @@ class MealDetailPage extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Recommended',
+                              'Top Pick',
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -218,7 +221,7 @@ class MealDetailPage extends StatelessWidget {
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.1),
-                      shape: BoxShape.circle,
+                      //shape: BoxShape.circle,
                     ),
                     child: const VegIcon(),
                   ),
@@ -237,7 +240,7 @@ class MealDetailPage extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: mealTypeColor.withOpacity(0.2),
+                      color: Colors.purple.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: Text(
@@ -245,7 +248,7 @@ class MealDetailPage extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: mealTypeColor,
+                        color: Colors.deepPurple,
                       ),
                     ),
                   ),
@@ -268,16 +271,16 @@ class MealDetailPage extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.purple.withOpacity(0.1),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.green.withOpacity(0.2),
+                            color: Colors.deepOrange.withOpacity(0.2),
                             width: 1,
                           ),
                         ),
                         child: const Icon(
                           Icons.savings_rounded,
-                          color: Colors.green,
+                          color: Colors.purple,
                           size: 16,
                         ),
                       ),
@@ -285,7 +288,7 @@ class MealDetailPage extends StatelessWidget {
                       Expanded(
                         child: ShaderMask(
                           shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Colors.green, Colors.lightGreen],
+                            colors: [Colors.purple, Colors.deepOrange],
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                           ).createShader(bounds),
@@ -310,9 +313,11 @@ class MealDetailPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: mealBgColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: mealTypeColor.withOpacity(0.2)),
+                  color: Colors.pink.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.pink.withOpacity(0.2)),
+                  // borderRadius: BorderRadius.circular(12),
+                  // border: Border.all(color: Colors.grey.withOpacity(0.2)),
                 ),
                 child: Row(
                   children: [

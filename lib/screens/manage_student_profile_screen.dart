@@ -800,50 +800,50 @@ class _ManageStudentProfileScreenState
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          SizedBox(
-            width: 220,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () => _showStudentForm(),
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                elevation: 2,
-              ),
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ),
-              label: Ink(
-                decoration: BoxDecoration(
-                  gradient: AppTheme.purpleToDeepPurple,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'Create New Profile',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // SizedBox(
+          //   width: 220,
+          //   height: 50,
+          //   child: ElevatedButton.icon(
+          //     onPressed: () => _showStudentForm(),
+          //     style: ElevatedButton.styleFrom(
+          //       padding: EdgeInsets.zero,
+          //       shape: RoundedRectangleBorder(
+          //         borderRadius: BorderRadius.circular(24),
+          //       ),
+          //       elevation: 2,
+          //     ),
+          //     icon: Container(
+          //       padding: const EdgeInsets.all(8),
+          //       decoration: BoxDecoration(
+          //         color: Colors.white.withOpacity(0.2),
+          //         shape: BoxShape.circle,
+          //       ),
+          //       child: const Icon(
+          //         Icons.add,
+          //         color: Colors.white,
+          //         size: 18,
+          //       ),
+          //     ),
+          //     label: Ink(
+          //       decoration: BoxDecoration(
+          //         gradient: AppTheme.purpleToDeepPurple,
+          //         borderRadius: BorderRadius.circular(24),
+          //       ),
+          //       child: Container(
+          //         alignment: Alignment.center,
+          //         padding: const EdgeInsets.symmetric(horizontal: 16),
+          //         child: Text(
+          //           'Create New Profile',
+          //           style: GoogleFonts.poppins(
+          //             fontSize: 16,
+          //             fontWeight: FontWeight.w600,
+          //             color: Colors.white,
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -1140,20 +1140,20 @@ class _ManageStudentProfileScreenState
                         // Create new profile button
                         SizedBox(
                           width: double.infinity,
-                          height: 50,
+                          height: 60,
                           child: ElevatedButton.icon(
                             onPressed: () => _showStudentForm(),
                             style: ElevatedButton.styleFrom(
                               foregroundColor: AppTheme.purple,
                               backgroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
+                                borderRadius: BorderRadius.circular(50),
                                 side: BorderSide(color: AppTheme.purple),
                               ),
                               elevation: 0,
                             ),
                             icon: Container(
-                              padding: const EdgeInsets.all(1),
+                              //padding: const EdgeInsets.all(1),
                               decoration: BoxDecoration(
                                 color: AppTheme.purple.withOpacity(0.1),
                                 shape: BoxShape.circle,
@@ -1176,9 +1176,22 @@ class _ManageStudentProfileScreenState
                         // Continue button (only shown in selection mode)
                         if (!widget.isManagementMode) ...[
                           const SizedBox(height: 16),
-                          SizedBox(
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: isExpressOrder
+                                  ? LinearGradient(
+                                      colors: [
+                                        Colors.purple,
+                                        Colors.deepPurple.shade500,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : AppTheme.purpleToDeepPurple,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
                             width: double.infinity,
-                            height: 50,
+                            height: 60,
                             child: ElevatedButton(
                               onPressed: (_selectedStudent != null &&
                                       (!isExpressOrder ||
@@ -1186,36 +1199,22 @@ class _ManageStudentProfileScreenState
                                   ? _proceedToOrderSummary
                                   : null,
                               style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.zero,
+                                backgroundColor: isExpressOrder
+                                    ? Colors.deepPurple
+                                    : AppTheme
+                                        .deepPurple, // your solid color here
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
+                                  borderRadius: BorderRadius.circular(50),
                                 ),
-                                elevation: 2,
+                                elevation: 0,
+                                padding: EdgeInsets.zero,
                               ),
-                              child: Ink(
-                                decoration: BoxDecoration(
-                                  gradient: isExpressOrder
-                                      ? LinearGradient(
-                                          colors: [
-                                            Colors.orange,
-                                            Colors.orange.shade700,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        )
-                                      : AppTheme.purpleToDeepPurple,
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'Continue',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                              child: Text(
+                                'Continue',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),

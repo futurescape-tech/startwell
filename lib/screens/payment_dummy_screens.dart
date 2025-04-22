@@ -101,7 +101,7 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
             padding: const EdgeInsets.all(16.0),
             child: SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 60,
               child: GradientButton(
                 text: 'Pay Now',
                 isFullWidth: true,

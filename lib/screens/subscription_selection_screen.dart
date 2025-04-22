@@ -2428,7 +2428,7 @@ class _SubscriptionSelectionScreenState
                 width: double.infinity,
                 height: 60,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(50),
                   gradient: AppTheme.purpleToDeepPurple,
                   boxShadow: [
                     BoxShadow(

@@ -499,7 +499,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             // Continue button
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 60,
               child: GradientButton(
                 text: 'Continue',
                 isFullWidth: true,
@@ -842,8 +842,8 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
           Container(
             height: 54,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(14),
+              //color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.02),
@@ -851,6 +851,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   offset: const Offset(0, 2),
                 ),
               ],
+              border: Border.all(color: Colors.purple.shade50),
             ),
             child: Row(
               children: [
@@ -870,7 +871,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   'Express',
                   mealType == 'express',
                   Icons.local_shipping_rounded,
-                  Colors.blue,
+                  Colors.orange,
                 ),
               ],
             ),
@@ -924,31 +925,23 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       String title, bool isSelected, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.symmetric(
+          vertical: 12,
+        ),
+        // margin: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           gradient: isSelected
               ? LinearGradient(
                   colors: [
-                    color.withOpacity(0.9),
-                    color.withOpacity(0.7),
+                    color.withOpacity(0.1),
+                    color.withOpacity(0.1),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
               : null,
           color: isSelected ? null : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                    spreadRadius: 0,
-                  ),
-                ]
-              : null,
+          borderRadius: BorderRadius.circular(50),
         ),
         child: Center(
           child: Row(
@@ -957,7 +950,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               Icon(
                 icon,
                 size: 16,
-                color: isSelected ? Colors.white : color.withOpacity(0.7),
+                color: isSelected ? color : color.withOpacity(0.7),
               ),
               const SizedBox(width: 6),
               Text(
@@ -965,7 +958,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? Colors.white : AppTheme.textMedium,
+                  color: isSelected ? color : AppTheme.textMedium,
                 ),
               ),
             ],
@@ -1018,6 +1011,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     final Color typeColor = _getMealTypeColor(mealType);
 
     return Card(
+      color: Colors.white,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -1043,7 +1037,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       imageUrl,
                       width: double.infinity,
                       height: 160,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           height: 160,
@@ -1058,28 +1052,28 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       },
                     ),
                     // Gradient overlay for better text visibility
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.center,
-                            colors: [
-                              Colors.black.withOpacity(0.5),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Positioned.fill(
+                    //   child: Container(
+                    //     decoration: BoxDecoration(
+                    //       gradient: LinearGradient(
+                    //         begin: Alignment.bottomCenter,
+                    //         end: Alignment.center,
+                    //         colors: [
+                    //           Colors.black.withOpacity(0.5),
+                    //           Colors.transparent,
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
 
               // Selected badge
               Positioned(
-                top: 12,
-                right: 12,
+                top: 0,
+                right: 0,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -1088,8 +1082,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [
-                        Color(0xFFFF8A00), // orangeToYellow
-                        Color.fromARGB(255, 239, 243, 31), // success
+                        Colors.orange,
+                        Colors.deepPurple, // orangeToYellow
+                        // Color.fromARGB(255, 239, 243, 31), // success
                       ],
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
@@ -1101,19 +1096,22 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                         offset: const Offset(0, 2),
                       ),
                     ],
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.check_circle_outline_rounded,
+                        Icons.star,
                         size: 16,
                         color: Colors.white,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Selected Meal',
+                        'Top Pick',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 12,
@@ -1127,39 +1125,39 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               ),
 
               // Meal type badge
-              Positioned(
-                bottom: 12,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _getMealTypeIcon(mealType),
-                        color: typeColor,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        mealType.substring(0, 1).toUpperCase() +
-                            mealType.substring(1),
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Positioned(
+              //   bottom: 12,
+              //   left: 12,
+              //   child: Container(
+              //     padding: const EdgeInsets.symmetric(
+              //       horizontal: 12,
+              //       vertical: 6,
+              //     ),
+              //     decoration: BoxDecoration(
+              //       color: Colors.black.withOpacity(0.6),
+              //       borderRadius: BorderRadius.circular(8),
+              //     ),
+              //     child: Row(
+              //       children: [
+              //         Icon(
+              //           _getMealTypeIcon(mealType),
+              //           color: typeColor,
+              //           size: 16,
+              //         ),
+              //         const SizedBox(width: 6),
+              //         Text(
+              //           mealType.substring(0, 1).toUpperCase() +
+              //               mealType.substring(1),
+              //           style: GoogleFonts.poppins(
+              //             color: Colors.white,
+              //             fontSize: 12,
+              //             fontWeight: FontWeight.w600,
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
             ],
           ),
 
@@ -1239,27 +1237,20 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            typeColor.withOpacity(0.8),
-                            typeColor.withOpacity(0.6),
+                            Colors.purple.withOpacity(0.2),
+                            Colors.purple.withOpacity(0.2),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: typeColor.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: Text(
                         '₹${mealPrice.toStringAsFixed(0)}',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Colors.deepPurple,
                         ),
                       ),
                     ),

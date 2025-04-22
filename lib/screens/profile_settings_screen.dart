@@ -855,6 +855,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             // Edit profile button
             SizedBox(
               width: double.infinity,
+              height: 50,
               child: ElevatedButton.icon(
                 onPressed: _showEditProfileForm,
                 icon: const Icon(Icons.edit_outlined, size: 16),
@@ -871,7 +872,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   backgroundColor: Colors.white.withOpacity(0.8),
                   foregroundColor: AppTheme.purple,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(50),
                     side: BorderSide(color: AppTheme.purple.withOpacity(0.3)),
                   ),
                 ),

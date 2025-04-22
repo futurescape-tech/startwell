@@ -2140,6 +2140,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           OutlinedButton.icon(
                             icon: Icon(
                               Icons.cancel_outlined,
+                              color: AppTheme.error,
                               size: 18,
                             ),
                             label: Text(
@@ -2168,6 +2169,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           ElevatedButton.icon(
                             icon: Icon(
                               Icons.swap_horiz_rounded,
+                              color: AppTheme.textDark,
                               size: 18,
                             ),
                             label: Text(
@@ -2996,7 +2998,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        icon: const Icon(Icons.cancel_outlined, size: 16),
+                        icon: const Icon(Icons.cancel_outlined,
+                            color: Colors.white, size: 16),
                         label: Text(
                           'Cancel Meal',
                           style: GoogleFonts.poppins(

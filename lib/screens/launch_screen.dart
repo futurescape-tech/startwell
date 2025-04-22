@@ -51,179 +51,162 @@ class _LaunchScreenState extends State<LaunchScreen>
     final logoSize = screenHeight * 0.15; // Responsive logo size
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.primaryToDeepPurple,
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30.0),
-            child: Column(
-              children: [
-                SizedBox(height: screenHeight * 0.08), // Responsive spacing
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+      ),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 30.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(height: screenHeight * 0.08), // Responsive spacing
 
-                // Logo with animations
-                AnimatedOpacity(
-                  opacity: _showLogo ? 1.0 : 0.0,
+              // Logo with animations
+              AnimatedOpacity(
+                opacity: _showLogo ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 1000),
+                curve: Curves.easeOutCubic,
+                child: AnimatedSlide(
+                  offset: _showLogo ? const Offset(0, 0) : const Offset(0, 0.2),
                   duration: const Duration(milliseconds: 1000),
                   curve: Curves.easeOutCubic,
-                  child: AnimatedSlide(
-                    offset:
-                        _showLogo ? const Offset(0, 0) : const Offset(0, 0.2),
+                  child: AnimatedScale(
+                    scale: _showLogo ? 1.0 : 0.8,
                     duration: const Duration(milliseconds: 1000),
                     curve: Curves.easeOutCubic,
-                    child: AnimatedScale(
-                      scale: _showLogo ? 1.0 : 0.8,
-                      duration: const Duration(milliseconds: 1000),
-                      curve: Curves.easeOutCubic,
-                      child: Container(
-                        width: logoSize,
-                        height: logoSize,
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: AppColors.purpleToOrange,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
-                                blurRadius: 20,
-                                spreadRadius: 5,
-                              )
-                            ]),
-                        child: Icon(
-                          Icons.lunch_dining,
-                          size: logoSize * 0.6,
-                          color: Colors.white,
-                        ),
-                      ),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      height: 200,
                     ),
                   ),
                 ),
-                SizedBox(height: screenHeight * 0.04),
+              ),
+              SizedBox(height: screenHeight * 0.04),
 
-                // App title with animations
-                AnimatedOpacity(
-                  opacity: _showTitle ? 1.0 : 0.0,
+              // App title with animations
+              // AnimatedOpacity(
+              //   opacity: _showTitle ? 1.0 : 0.0,
+              //   duration: const Duration(milliseconds: 1000),
+              //   curve: Curves.easeOutCubic,
+              //   child: AnimatedSlide(
+              //     offset:
+              //         _showTitle ? const Offset(0, 0) : const Offset(0, 0.2),
+              //     duration: const Duration(milliseconds: 1000),
+              //     curve: Curves.easeOutCubic,
+              //     child: ShaderMask(
+              //       shaderCallback: (bounds) {
+              //         return AppColors.orangeToYellow.createShader(bounds);
+              //       },
+              //       child: Text(
+              //         'StartWell',
+              //         style: GoogleFonts.poppins(
+              //           fontSize: 40,
+              //           fontWeight: FontWeight.bold,
+              //           color: Colors.white,
+              //           letterSpacing: 1.2,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // ),
+              SizedBox(height: screenHeight * 0.02),
+
+              // Welcome message with animations
+
+              const Spacer(),
+
+              AnimatedOpacity(
+                opacity: _showMessage ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 1000),
+                curve: Curves.easeOutCubic,
+                child: AnimatedSlide(
+                  offset:
+                      _showMessage ? const Offset(0, 0) : const Offset(0, 0.3),
                   duration: const Duration(milliseconds: 1000),
                   curve: Curves.easeOutCubic,
-                  child: AnimatedSlide(
-                    offset:
-                        _showTitle ? const Offset(0, 0) : const Offset(0, 0.2),
-                    duration: const Duration(milliseconds: 1000),
-                    curve: Curves.easeOutCubic,
-                    child: ShaderMask(
-                      shaderCallback: (bounds) {
-                        return AppColors.orangeToYellow.createShader(bounds);
-                      },
-                      child: Text(
-                        'StartWell',
-                        style: GoogleFonts.poppins(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      // gradient: AppTheme.purpleToOrange,
+                      //color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                ),
-                SizedBox(height: screenHeight * 0.02),
-
-                // Welcome message with animations
-                AnimatedOpacity(
-                  opacity: _showMessage ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 1000),
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedSlide(
-                    offset: _showMessage
-                        ? const Offset(0, 0)
-                        : const Offset(0, 0.3),
-                    duration: const Duration(milliseconds: 1000),
-                    curve: Curves.easeOutCubic,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'Welcome to StartWell – Smart Tiffin Solutions for Smart Parents!',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Colors.white,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const Spacer(),
-
-                // Login button with animations
-                AnimatedOpacity(
-                  opacity: _showButtons ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 1000),
-                  curve: Curves.easeOutCubic,
-                  child: AnimatedSlide(
-                    offset: _showButtons
-                        ? const Offset(0, 0)
-                        : const Offset(0, 0.5),
-                    duration: const Duration(milliseconds: 1000),
-                    curve: Curves.easeOutCubic,
-                    child: UIComponents.gradientButton(
-                      text: 'Login',
-                      gradient: AppTheme.purpleToDeepPurple,
-                      onPressed: () {
-                        Navigator.push(
-                            context, _createPageRoute(const LoginScreen()));
-                      },
-                      height: 56,
-                      borderRadius: 16,
-                      elevated: true,
-                      textStyle: GoogleFonts.poppins(
+                    child: Text(
+                      'Welcome to StartWell – Smart Tiffin Solutions for Smart Parents!',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Colors.grey.shade700,
+                        height: 1.5,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Sign up button with animations
-                AnimatedOpacity(
-                  opacity: _showButtons ? 1.0 : 0.0,
+              ),
+              SizedBox(height: 50),
+              // Login button with animations
+              AnimatedOpacity(
+                opacity: _showButtons ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 1000),
+                curve: Curves.easeOutCubic,
+                child: AnimatedSlide(
+                  offset:
+                      _showButtons ? const Offset(0, 0) : const Offset(0, 0.5),
                   duration: const Duration(milliseconds: 1000),
                   curve: Curves.easeOutCubic,
-                  child: AnimatedSlide(
-                    offset: _showButtons
-                        ? const Offset(0, 0)
-                        : const Offset(0, 0.5),
-                    duration: const Duration(milliseconds: 1000),
-                    curve: Curves.easeOutCubic,
-                    child: UIComponents.gradientButton(
-                      text: 'Sign Up',
-                      gradient: AppTheme.purpleToDeepPurple,
-                      onPressed: () {
-                        Navigator.push(
-                            context, _createPageRoute(const SignupScreen()));
-                      },
-                      height: 56,
-                      borderRadius: 16,
-                      elevated: true,
-                      textStyle: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                  child: UIComponents.gradientButton(
+                    text: 'Get Started',
+                    gradient: AppTheme.purpleToDeepPurple,
+                    onPressed: () {
+                      Navigator.push(
+                          context, _createPageRoute(const LoginScreen()));
+                    },
+                    height: 70,
+                    borderRadius: 50,
+                    elevated: true,
+                    textStyle: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-                SizedBox(height: screenHeight * 0.08),
-              ],
-            ),
+              ),
+              //const SizedBox(height: 20),
+
+              // Sign up button with animations
+              // AnimatedOpacity(
+              //   opacity: _showButtons ? 1.0 : 0.0,
+              //   duration: const Duration(milliseconds: 1000),
+              //   curve: Curves.easeOutCubic,
+              //   child: AnimatedSlide(
+              //     offset:
+              //         _showButtons ? const Offset(0, 0) : const Offset(0, 0.5),
+              //     duration: const Duration(milliseconds: 1000),
+              //     curve: Curves.easeOutCubic,
+              //     child: UIComponents.gradientButton(
+              //       text: 'Sign Up',
+              //       gradient: AppTheme.purpleToDeepPurple,
+              //       onPressed: () {
+              //         Navigator.push(
+              //             context, _createPageRoute(const SignupScreen()));
+              //       },
+              //       height: 60,
+              //       borderRadius: 50,
+              //       elevated: true,
+              //       textStyle: GoogleFonts.poppins(
+              //         fontSize: 18,
+              //         fontWeight: FontWeight.bold,
+              //         color: Colors.white,
+              //       ),
+              //     ),
+              //   ),
+              // ),
+              SizedBox(height: screenHeight * 0.08),
+            ],
           ),
         ),
       ),

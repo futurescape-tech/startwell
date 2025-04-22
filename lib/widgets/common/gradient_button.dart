@@ -17,11 +17,11 @@ class GradientButton extends StatelessWidget {
   const GradientButton({
     required this.onPressed,
     required this.text,
-    this.borderRadius = 12.0,
+    this.borderRadius = 50.0,
     this.padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
     this.textStyle,
     this.width,
-    this.height,
+    this.height = 60,
     this.isFullWidth = false,
     this.icon,
     this.isEnabled = true,
@@ -45,7 +45,7 @@ class GradientButton extends StatelessWidget {
             boxShadow: isEnabled
                 ? [
                     BoxShadow(
-                      color: AppTheme.deepPurple.withOpacity(0.2),
+                      color: AppTheme.purple.withOpacity(0.2),
                       blurRadius: 6,
                       offset: const Offset(0, 3),
                     ),
@@ -53,6 +53,7 @@ class GradientButton extends StatelessWidget {
                 : null,
           ),
           child: Container(
+            height: height,
             padding: padding,
             alignment: Alignment.center,
             child: Row(
