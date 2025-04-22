@@ -340,7 +340,7 @@ class _StartwellLocationPageState extends State<StartwellLocationPage> {
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(50),
                             ),
                             elevation: 2,
                           ),
@@ -372,7 +372,7 @@ class _StartwellLocationPageState extends State<StartwellLocationPage> {
                             side: BorderSide(color: AppTheme.purple),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(50),
                             ),
                           ),
                           icon: const Icon(

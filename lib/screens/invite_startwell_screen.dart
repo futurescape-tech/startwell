@@ -234,7 +234,7 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
           ),
           child: Container(
             alignment: Alignment.center,
-            height: 50,
+            height: 60,
             child: Text(
               "Sign Me Up!",
               style: GoogleFonts.poppins(
@@ -260,38 +260,37 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
   void _showSuccessDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder:
-          (BuildContext context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 8),
-                Text(
-                  'Success',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                ),
-              ],
+      builder: (BuildContext context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text(
+              'Success',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
             ),
-            content: Text(
-              "Thanks for reaching out!\nWe're excited to bring StartWell meals to your school.\nExpect a call or email from us very soon.",
-              style: GoogleFonts.poppins(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Navigate back to home screen
-                },
-                child: Text(
-                  'OK',
-                  style: GoogleFonts.poppins(color: AppTheme.purple),
-                ),
-              ),
-            ],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+          ],
+        ),
+        content: Text(
+          "Thanks for reaching out!\nWe're excited to bring StartWell meals to your school.\nExpect a call or email from us very soon.",
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Navigate back to home screen
+            },
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(color: AppTheme.purple),
             ),
           ),
+        ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
     );
   }
 }

@@ -79,10 +79,11 @@ class _SignupScreenState extends State<SignupScreen>
 
   void _signup() {
     if (_formKey.currentState?.validate() ?? false) {
-      // For now, just navigate to dashboard since this is a mock implementation
-      Navigator.pushReplacement(
+      // Navigate to MainScreen and remove all previous routes
+      Navigator.pushAndRemoveUntil(
         context,
         _createPageRoute(const MainScreen()),
+        (Route<dynamic> route) => false, // Predicate that removes all routes
       );
     }
   }

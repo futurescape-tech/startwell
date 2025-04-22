@@ -86,9 +86,10 @@ class _LoginScreenState extends State<LoginScreen>
 
   void _login() {
     if (_formKey.currentState?.validate() ?? false) {
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         _createPageRoute(const MainScreen()),
+        (Route<dynamic> route) => false,
       );
     }
   }
