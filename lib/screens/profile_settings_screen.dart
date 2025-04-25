@@ -397,7 +397,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   elevation: 2,
                   shadowColor: AppTheme.deepPurple.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(50),
                   ),
                 ),
                 child: Text(
