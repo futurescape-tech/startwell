@@ -287,14 +287,12 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
 
                       const SizedBox(height: 16),
 
-                      // Selected meals section
+                      // Meal Plan Section (moved from Payment Method screen)
                       _buildCardSection(
-                        title: 'Selected Meal',
+                        title: 'Meal Plan',
                         icon: Icons.restaurant_menu_rounded,
-                        withoutPadding: true,
                         children: [
-                          for (var meal in widget.selectedMeals)
-                            _buildEnhancedMealCard(meal),
+                          _buildMealPlanSection(),
                         ],
                       ),
 
@@ -315,179 +313,183 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                         ),
 
                       // Student information section
-                      _buildCardSection(
-                        title: 'Student Information',
-                        icon: Icons.person_rounded,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppTheme.purple.withOpacity(0.15),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.07),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
+                      if (false) // Hide Student Information section
+                        _buildCardSection(
+                          title: 'Student Information',
+                          icon: Icons.person_rounded,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppTheme.purple.withOpacity(0.15),
+                                  width: 1,
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                _buildStudentInfoRow(
-                                  icon: Icons.person_outline_rounded,
-                                  label: 'Student Name',
-                                  value: widget.selectedStudent.name,
-                                ),
-                                _buildStudentInfoRow(
-                                  icon: Icons.school_rounded,
-                                  label: 'Class',
-                                  value: widget.selectedStudent.className,
-                                ),
-                                _buildStudentInfoRow(
-                                  icon: Icons.book_rounded,
-                                  label: 'Section',
-                                  value: widget.selectedStudent.section,
-                                ),
-                                _buildStudentInfoRow(
-                                  icon: Icons.domain_rounded,
-                                  label: 'Floor',
-                                  value: widget.selectedStudent.floor,
-                                ),
-                                if (widget.selectedStudent.allergies.isNotEmpty)
-                                  _buildStudentInfoRow(
-                                    icon: Icons.medical_services_rounded,
-                                    label: 'Medical Allergies',
-                                    value: widget.selectedStudent.allergies,
-                                    valueStyle: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      color: Colors.red[700],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    isAlert: true,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.07),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
                                   ),
-                                _buildStudentInfoRow(
-                                  icon: Icons.location_on_rounded,
-                                  label: 'School Address',
-                                  value: widget.selectedStudent.schoolAddress,
-                                  isLast: true,
-                                ),
-                              ],
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildStudentInfoRow(
+                                    icon: Icons.person_outline_rounded,
+                                    label: 'Student Name',
+                                    value: widget.selectedStudent.name,
+                                  ),
+                                  _buildStudentInfoRow(
+                                    icon: Icons.school_rounded,
+                                    label: 'Class',
+                                    value: widget.selectedStudent.className,
+                                  ),
+                                  _buildStudentInfoRow(
+                                    icon: Icons.book_rounded,
+                                    label: 'Section',
+                                    value: widget.selectedStudent.section,
+                                  ),
+                                  _buildStudentInfoRow(
+                                    icon: Icons.domain_rounded,
+                                    label: 'Floor',
+                                    value: widget.selectedStudent.floor,
+                                  ),
+                                  if (widget
+                                      .selectedStudent.allergies.isNotEmpty)
+                                    _buildStudentInfoRow(
+                                      icon: Icons.medical_services_rounded,
+                                      label: 'Medical Allergies',
+                                      value: widget.selectedStudent.allergies,
+                                      valueStyle: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: Colors.red[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      isAlert: true,
+                                    ),
+                                  _buildStudentInfoRow(
+                                    icon: Icons.location_on_rounded,
+                                    label: 'School Address',
+                                    value: widget.selectedStudent.schoolAddress,
+                                    isLast: true,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
 
-                      const SizedBox(height: 16),
+                      // Add a small spacing after hiding the Student Information section
+                      const SizedBox(height: 8),
 
                       // Payment summary section
-                      _buildCardSection(
-                        title: 'Payment Details',
-                        icon: Icons.receipt_long_rounded,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppTheme.purple.withOpacity(0.15),
-                                width: 1,
+                      if (false) // Hide Payment Details section as it's moved to Payment Method screen
+                        _buildCardSection(
+                          title: 'Payment Details',
+                          icon: Icons.receipt_long_rounded,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppTheme.purple.withOpacity(0.15),
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.07),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.07),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                _buildStudentInfoRow(
-                                  icon: Icons.lunch_dining_rounded,
-                                  label: 'Meal Price',
-                                  value:
-                                      '₹${(widget.totalAmount / widget.mealDates.length).toStringAsFixed(0)} per meal',
-                                ),
-                                _buildStudentInfoRow(
-                                  icon: Icons.list_alt_rounded,
-                                  label: 'Number of Meals',
-                                  value: '${widget.mealDates.length}',
-                                ),
-
-                                // Divider
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  child: Divider(
-                                    color: Colors.grey.shade200,
-                                    height: 1,
-                                  ),
-                                ),
-
-                                if (hasDiscount)
+                              child: Column(
+                                children: [
                                   _buildStudentInfoRow(
-                                    icon: Icons.shopping_cart_outlined,
-                                    label: 'Subtotal',
+                                    icon: Icons.lunch_dining_rounded,
+                                    label: 'Meal Price',
                                     value:
-                                        '₹${(widget.totalAmount * 1.25).toStringAsFixed(0)}',
-                                    valueStyle: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      decoration: TextDecoration.lineThrough,
-                                      color: AppTheme.textMedium,
+                                        '₹${(widget.totalAmount / widget.mealDates.length).toStringAsFixed(0)} per meal',
+                                  ),
+                                  _buildStudentInfoRow(
+                                    icon: Icons.list_alt_rounded,
+                                    label: 'Number of Meals',
+                                    value: '${widget.mealDates.length}',
+                                  ),
+
+                                  // Divider
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    child: Divider(
+                                      color: Colors.grey.shade200,
+                                      height: 1,
                                     ),
                                   ),
-                                if (hasDiscount)
-                                  _buildStudentInfoRow(
-                                    icon: Icons.discount_rounded,
-                                    label:
-                                        'Discount (${(0.25 * 100).toInt()}%)',
-                                    value:
-                                        '-₹${((widget.totalAmount * 1.25) - widget.totalAmount).toStringAsFixed(0)}',
-                                    valueStyle: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.success,
+
+                                  if (hasDiscount)
+                                    _buildStudentInfoRow(
+                                      icon: Icons.shopping_cart_outlined,
+                                      label: 'Subtotal',
+                                      value:
+                                          '₹${(widget.totalAmount * 1.25).toStringAsFixed(0)}',
+                                      valueStyle: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        decoration: TextDecoration.lineThrough,
+                                        color: AppTheme.textMedium,
+                                      ),
                                     ),
-                                    isAlert: false,
-                                    iconColor: AppTheme.success,
+                                  if (hasDiscount)
+                                    _buildStudentInfoRow(
+                                      icon: Icons.discount_rounded,
+                                      label:
+                                          'Discount (${(0.25 * 100).toInt()}%)',
+                                      value:
+                                          '-₹${((widget.totalAmount * 1.25) - widget.totalAmount).toStringAsFixed(0)}',
+                                      valueStyle: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppTheme.success,
+                                      ),
+                                      isAlert: false,
+                                      iconColor: AppTheme.success,
+                                      backgroundColor:
+                                          AppTheme.success.withOpacity(0.1),
+                                    ),
+                                  _buildStudentInfoRow(
+                                    icon: Icons.payments_rounded,
+                                    label: 'Total Amount',
+                                    value:
+                                        '₹${widget.totalAmount.toStringAsFixed(0)}',
+                                    valueStyle: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      foreground: Paint()
+                                        ..shader = LinearGradient(
+                                          colors: [
+                                            AppTheme.purple,
+                                            AppTheme.deepPurple,
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ).createShader(const Rect.fromLTWH(
+                                            0.0, 0.0, 200.0, 70.0)),
+                                    ),
+                                    isLast: true,
                                     backgroundColor:
-                                        AppTheme.success.withOpacity(0.1),
+                                        AppTheme.purple.withOpacity(0.05),
+                                    iconColor: AppTheme.purple,
                                   ),
-                                _buildStudentInfoRow(
-                                  icon: Icons.payments_rounded,
-                                  label: 'Total Amount',
-                                  value:
-                                      '₹${widget.totalAmount.toStringAsFixed(0)}',
-                                  valueStyle: GoogleFonts.poppins(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    foreground: Paint()
-                                      ..shader = LinearGradient(
-                                        colors: [
-                                          AppTheme.purple,
-                                          AppTheme.deepPurple,
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ).createShader(const Rect.fromLTWH(
-                                          0.0, 0.0, 200.0, 70.0)),
-                                  ),
-                                  isLast: true,
-                                  backgroundColor:
-                                      AppTheme.purple.withOpacity(0.05),
-                                  iconColor: AppTheme.purple,
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
 
                       const SizedBox(height: 32),
 
@@ -939,6 +941,475 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         Icons.restaurant_rounded,
         size: 24,
         color: AppTheme.purple.withOpacity(0.7),
+      ),
+    );
+  }
+
+  // Meal Plan implementation - added from PaymentMethodScreen
+  Widget _buildMealPlanSection() {
+    // Determine meal type - breakfast, lunch or express
+    final String mealType = widget.mealType ??
+        (widget.selectedMeals.isNotEmpty &&
+                widget.selectedMeals.first.categories
+                    .contains(MealCategory.breakfast)
+            ? 'breakfast'
+            : widget.isExpressOrder
+                ? 'express'
+                : 'lunch');
+
+    // Get meal name and image
+    final String mealName = widget.selectedMeals.isNotEmpty
+        ? widget.selectedMeals.first.name
+        : mealType == 'breakfast'
+            ? 'Breakfast of the Day'
+            : mealType == 'express'
+                ? 'Express Lunch'
+                : 'Lunch of the Day';
+
+    final String imageUrl = widget.selectedMeals.isNotEmpty &&
+            widget.selectedMeals.first.imageUrl.isNotEmpty
+        ? widget.selectedMeals.first.imageUrl
+        : mealType == 'breakfast'
+            ? 'assets/images/breakfast/breakfast of the day (most recommended).png'
+            : 'assets/images/lunch/lunch of the day (most recommended).png';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.purple.withOpacity(0.15),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.07),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header text
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16.0),
+            child: Text(
+              "Selected meal type",
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ),
+
+          // Meal plan tabs
+          Container(
+            height: 54,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(color: Colors.purple.shade50),
+            ),
+            child: Row(
+              children: [
+                _buildMealPlanTab(
+                  'Breakfast',
+                  mealType == 'breakfast',
+                  Icons.ramen_dining,
+                  Colors.pink,
+                ),
+                _buildMealPlanTab(
+                  'Lunch',
+                  mealType == 'lunch',
+                  Icons.lunch_dining_rounded,
+                  AppTheme.success,
+                ),
+                _buildMealPlanTab(
+                  'Express',
+                  mealType == 'express',
+                  Icons.local_shipping_rounded,
+                  Colors.orange,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Brief explanation text based on meal type
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _getMealTypeColor(mealType).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _getMealTypeColor(mealType).withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _getMealTypeIcon(mealType),
+                  color: _getMealTypeColor(mealType),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _getMealTypeDescription(mealType),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: AppTheme.textMedium,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Meal card
+          _buildSelectedMealCard(mealName, imageUrl, mealType),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMealPlanTab(
+      String title, bool isSelected, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          vertical: 12,
+        ),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    color.withOpacity(0.1),
+                    color.withOpacity(0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.transparent,
+          borderRadius: BorderRadius.circular(50),
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? color : AppTheme.textMedium,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? color : AppTheme.textMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getMealTypeColor(String mealType) {
+    switch (mealType) {
+      case 'breakfast':
+        return Colors.pink;
+      case 'express':
+        return Colors.orange;
+      case 'lunch':
+      default:
+        return AppTheme.success;
+    }
+  }
+
+  IconData _getMealTypeIcon(String mealType) {
+    switch (mealType) {
+      case 'breakfast':
+        return Icons.ramen_dining;
+      case 'express':
+        return Icons.local_shipping_rounded;
+      case 'lunch':
+      default:
+        return Icons.lunch_dining_rounded;
+    }
+  }
+
+  String _getMealTypeDescription(String mealType) {
+    switch (mealType) {
+      case 'breakfast':
+        return 'Healthy breakfast options delivered to your child at school.';
+      case 'express':
+        return 'Same-day lunch delivery with express service (additional fee applies).';
+      case 'lunch':
+      default:
+        return 'Nutritious lunch delivered to your child during school lunch hours.';
+    }
+  }
+
+  Widget _buildSelectedMealCard(String name, String imageUrl, String mealType) {
+    // Determine if we should show express fee
+    final bool isExpress = mealType == 'express';
+    final double mealPrice = widget.totalAmount / widget.mealDates.length;
+    final Color typeColor = _getMealTypeColor(mealType);
+
+    return Card(
+      color: Colors.white,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: typeColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      elevation: 4,
+      shadowColor: typeColor.withOpacity(0.1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Meal image with gradient overlay for better text visibility
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Stack(
+                  children: [
+                    Image.asset(
+                      imageUrl,
+                      width: double.infinity,
+                      height: 160,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 160,
+                          width: double.infinity,
+                          color: typeColor.withOpacity(0.1),
+                          child: Icon(
+                            _getMealTypeIcon(mealType),
+                            size: 60,
+                            color: typeColor.withOpacity(0.3),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Selected badge
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Colors.orange,
+                        Colors.deepPurple,
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.star,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Top Pick',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Meal details
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Meal name with veg icon
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(1.0),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Colors.green,
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.circle,
+                        size: 10,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // Price and details row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          mealType == 'breakfast'
+                              ? Icons.ramen_dining
+                              : Icons.lunch_dining,
+                          size: 16,
+                          color: mealType == 'breakfast'
+                              ? Colors.pink
+                              : AppTheme.success,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          mealType == 'breakfast'
+                              ? 'Breakfast Meal'
+                              : mealType == 'express'
+                                  ? 'Express Lunch Meal'
+                                  : 'Lunch Meal',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: AppTheme.textMedium,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.purple.withOpacity(0.2),
+                            Colors.purple.withOpacity(0.2),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '₹${mealPrice.toStringAsFixed(0)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.purple,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (isExpress) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.orange.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_filled_rounded,
+                          size: 16,
+                          color: Colors.orange.shade800,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Express delivery includes priority handling for same-day orders',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.orange.shade800,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

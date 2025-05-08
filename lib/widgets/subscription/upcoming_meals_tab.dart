@@ -459,7 +459,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   String _getFormattedPlanType(Subscription subscription) {
     bool isCustomPlan = subscription.selectedWeekdays.isNotEmpty &&
         subscription.selectedWeekdays.length < 5;
-    String customBadge = isCustomPlan ? " (Custom)" : " (Regular)";
+    String customBadge = isCustomPlan ? " (Custom)" : " (Mon to Fri)";
 
     if (subscription.planType == 'express') {
       return "Express 1-Day Lunch Plan";

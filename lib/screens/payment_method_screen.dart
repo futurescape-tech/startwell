@@ -50,10 +50,74 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   int _selectedPaymentMethod =
       0; // 0: PhonePe, 1: Razorpay, 2: Startwell Wallet
 
+  // Add state variables for promo code functionality
+  final TextEditingController _promoController = TextEditingController();
+  String? _appliedPromoCode;
+  double _discountPercentage = 0.0;
+  String? _promoMessage;
+  bool _isPromoValid = false;
+
+  // Define valid promo codes
+  final Map<String, double> _validPromoCodes = {
+    "STARTWELL10": 0.10, // 10% discount
+    "LUNCH20": 0.20, // 20% discount
+    "WELCOME25": 0.25, // 25% discount
+  };
+
   @override
   void initState() {
     super.initState();
     _storeOrderSummary();
+  }
+
+  @override
+  void dispose() {
+    _promoController.dispose();
+    super.dispose();
+  }
+
+  // Apply promo code and calculate discount
+  void _applyPromoCode() {
+    final code = _promoController.text.trim().toUpperCase();
+
+    if (code.isEmpty) {
+      setState(() {
+        _promoMessage = "Please enter a promo code";
+        _isPromoValid = false;
+        _appliedPromoCode = null;
+        _discountPercentage = 0.0;
+      });
+      return;
+    }
+
+    if (_validPromoCodes.containsKey(code)) {
+      setState(() {
+        _appliedPromoCode = code;
+        _discountPercentage = _validPromoCodes[code]!;
+        _promoMessage = "Promo applied successfully!";
+        _isPromoValid = true;
+      });
+    } else {
+      setState(() {
+        _promoMessage = "Invalid promo code";
+        _isPromoValid = false;
+        _appliedPromoCode = null;
+        _discountPercentage = 0.0;
+      });
+    }
+  }
+
+  // Calculate final price after promo code
+  double _calculateFinalPrice() {
+    // Start with the original total amount
+    double finalPrice = widget.totalAmount;
+
+    // Apply promo discount if valid
+    if (_appliedPromoCode != null && _discountPercentage > 0) {
+      finalPrice = finalPrice * (1 - _discountPercentage);
+    }
+
+    return finalPrice;
   }
 
   // Store order summary in SharedPreferences for use in Plan Details page
@@ -353,53 +417,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Meal Plan Selection Section
+            // Payment Details Section - repositioned to appear after the delivery address
             _buildCardSection(
-              title: 'Meal Plan',
-              icon: Icons.restaurant_menu_rounded,
-              children: [
-                _buildMealPlanOptions(),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Payment Method Section
-            _buildCardSection(
-              title: 'Select Payment Mode',
-              icon: Icons.payments_rounded,
-              children: [
-                // PhonePe
-                _buildPaymentMethodTile(
-                  0,
-                  'PhonePe',
-                  'Pay using UPI with PhonePe',
-                  'assets/images/payment/phonepe.png',
-                ),
-
-                // Razorpay
-                _buildPaymentMethodTile(
-                  1,
-                  'Razorpay',
-                  'Pay using Credit/Debit Card, UPI, Netbanking',
-                  'assets/images/payment/razorpay.png',
-                ),
-
-                // Startwell Wallet
-                _buildPaymentMethodTile(
-                  2,
-                  'Startwell Wallet',
-                  'Use your Startwell wallet balance',
-                  'assets/images/payment/wallet.png',
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Order Summary Section
-            _buildCardSection(
-              title: 'Order Summary',
+              title: 'Payment Details',
               icon: Icons.receipt_long_rounded,
               children: [
                 Container(
@@ -446,6 +466,172 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                         ),
                       ),
 
+                      // Promo Code Section
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 6, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0, vertical: 4),
+                              child: Text(
+                                "Have a promo code?",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textDark,
+                                ),
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    margin: const EdgeInsets.only(
+                                        left: 8, right: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: _isPromoValid
+                                            ? AppTheme.success
+                                            : (_promoMessage != null &&
+                                                    !_isPromoValid
+                                                ? Colors.red.shade300
+                                                : Colors.grey.shade300),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: TextField(
+                                      controller: _promoController,
+                                      textCapitalization:
+                                          TextCapitalization.characters,
+                                      decoration: InputDecoration(
+                                        hintText: "Enter Promo Code",
+                                        hintStyle: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                        border: InputBorder.none,
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12),
+                                        prefixIcon: const Icon(
+                                          Icons.discount_outlined,
+                                          size: 18,
+                                        ),
+                                        suffixIcon: _promoController
+                                                .text.isNotEmpty
+                                            ? IconButton(
+                                                icon: const Icon(Icons.clear,
+                                                    size: 16),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    _promoController.clear();
+                                                    _promoMessage = null;
+                                                    _isPromoValid = false;
+                                                    _appliedPromoCode = null;
+                                                    _discountPercentage = 0.0;
+                                                  });
+                                                },
+                                              )
+                                            : null,
+                                      ),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      onChanged: (value) {
+                                        setState(() {
+                                          // Clear message when typing
+                                          if (_promoMessage != null) {
+                                            _promoMessage = null;
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  margin: const EdgeInsets.only(right: 8),
+                                  child: ElevatedButton(
+                                    onPressed: _applyPromoCode,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.purple,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12, horizontal: 14),
+                                      elevation: 0,
+                                    ),
+                                    child: Text(
+                                      "Apply",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_promoMessage != null)
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      _isPromoValid
+                                          ? Icons.check_circle
+                                          : Icons.error_outline,
+                                      size: 14,
+                                      color: _isPromoValid
+                                          ? AppTheme.success
+                                          : Colors.red.shade700,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        _promoMessage!,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: _isPromoValid
+                                              ? AppTheme.success
+                                              : Colors.red.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                    if (_isPromoValid)
+                                      Text(
+                                        "${(_discountPercentage * 100).toInt()}% OFF",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.success,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
                       if (hasDiscount)
                         _buildStudentInfoRow(
                           icon: Icons.shopping_cart_outlined,
@@ -475,10 +661,28 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                           iconColor: AppTheme.success,
                           backgroundColor: AppTheme.success.withOpacity(0.1),
                         ),
+
+                      // Add promo discount row if a valid promo is applied
+                      if (_appliedPromoCode != null && _isPromoValid)
+                        _buildStudentInfoRow(
+                          icon: Icons.local_offer_rounded,
+                          label: 'Promo Discount (${_appliedPromoCode})',
+                          value:
+                              '-₹${(widget.totalAmount * _discountPercentage).toStringAsFixed(0)}',
+                          valueStyle: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.success,
+                          ),
+                          isAlert: false,
+                          iconColor: AppTheme.success,
+                          backgroundColor: AppTheme.success.withOpacity(0.1),
+                        ),
+
                       _buildStudentInfoRow(
                         icon: Icons.payments_rounded,
                         label: 'Total Amount',
-                        value: '₹${widget.totalAmount.toStringAsFixed(0)}',
+                        value: '₹${_calculateFinalPrice().toStringAsFixed(0)}',
                         valueStyle: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -490,6 +694,51 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Meal Plan Selection Section
+            if (false) // Hide Meal Plan section as it's moved to Order Summary screen
+              _buildCardSection(
+                title: 'Meal Plan',
+                icon: Icons.restaurant_menu_rounded,
+                children: [
+                  _buildMealPlanOptions(),
+                ],
+              ),
+
+            const SizedBox(height: 24),
+
+            // Payment Method Section
+            _buildCardSection(
+              title: 'Select Payment Mode',
+              icon: Icons.payments_rounded,
+              children: [
+                // PhonePe
+                _buildPaymentMethodTile(
+                  0,
+                  'PhonePe',
+                  'Pay using UPI with PhonePe',
+                  'assets/images/payment/phonepe.png',
+                ),
+
+                // Razorpay
+                _buildPaymentMethodTile(
+                  1,
+                  'Razorpay',
+                  'Pay using Credit/Debit Card, UPI, Netbanking',
+                  'assets/images/payment/razorpay.png',
+                ),
+
+                // Startwell Wallet
+                _buildPaymentMethodTile(
+                  2,
+                  'Startwell Wallet',
+                  'Use your Startwell wallet balance',
+                  'assets/images/payment/wallet.png',
                 ),
               ],
             ),
@@ -1304,11 +1553,14 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   }
 
   void _navigateToPaymentScreen() {
+    final double finalAmount = _calculateFinalPrice();
+
     switch (_selectedPaymentMethod) {
       case 0:
         log("PhonePe");
         log("endDate: ${widget.endDate}");
         log("startDate: ${widget.startDate}");
+        log("Applied promo: ${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1319,7 +1571,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               startDate: widget.startDate,
               endDate: widget.endDate,
               mealDates: widget.mealDates,
-              totalAmount: widget.totalAmount,
+              totalAmount: finalAmount,
               selectedMeals: widget.selectedMeals,
               isExpressOrder: widget.isExpressOrder,
               selectedStudent: widget.selectedStudent,
@@ -1332,6 +1584,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         log("Razorpay");
         log("endDate: ${widget.endDate}");
         log("startDate: ${widget.startDate}");
+        log("Applied promo: ${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1342,7 +1595,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               startDate: widget.startDate,
               endDate: widget.endDate,
               mealDates: widget.mealDates,
-              totalAmount: widget.totalAmount,
+              totalAmount: finalAmount,
               selectedMeals: widget.selectedMeals,
               isExpressOrder: widget.isExpressOrder,
               selectedStudent: widget.selectedStudent,
@@ -1355,6 +1608,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         log("Startwell Wallet");
         log("endDate: ${widget.endDate}");
         log("startDate: ${widget.startDate}");
+        log("Applied promo: ${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1365,7 +1619,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               startDate: widget.startDate,
               endDate: widget.endDate,
               mealDates: widget.mealDates,
-              totalAmount: widget.totalAmount,
+              totalAmount: finalAmount,
               selectedMeals: widget.selectedMeals,
               isExpressOrder: widget.isExpressOrder,
               selectedStudent: widget.selectedStudent,

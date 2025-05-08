@@ -94,7 +94,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
 
   // Determine delivery mode based on plan's selected weekdays
   String _determineDeliveryMode(Subscription plan) {
-    return plan.selectedWeekdays.isEmpty ? 'Regular Plan' : 'Custom Plan';
+    return plan.selectedWeekdays.isEmpty ? 'Mon to Fri' : 'Custom Plan';
   }
 
   Future<void> _loadData() async {
