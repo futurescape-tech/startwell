@@ -857,6 +857,14 @@ class _SubscriptionSelectionScreenState
                                               end: Alignment.bottomRight,
                                             )
                                           : null,
+                                      border: Border.all(
+                                        color: _selectedPlanIndex == index
+                                            ? AppTheme.purple
+                                            : Colors.purple.shade100,
+                                        width: _selectedPlanIndex == index
+                                            ? 1.5
+                                            : 0,
+                                      ),
                                     ),
                                     child: Column(
                                       crossAxisAlignment:
@@ -2307,19 +2315,19 @@ class _SubscriptionSelectionScreenState
                           letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
+                      // const SizedBox(width: 10),
+                      // Container(
+                      //   padding: const EdgeInsets.all(6),
+                      //   decoration: BoxDecoration(
+                      //     color: Colors.white.withOpacity(0.2),
+                      //     shape: BoxShape.circle,
+                      //   ),
+                      //   child: const Icon(
+                      //     Icons.arrow_forward_rounded,
+                      //     color: Colors.white,
+                      //     size: 20,
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),

@@ -502,15 +502,15 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: _isPromoValid
-                                            ? AppTheme.success
-                                            : (_promoMessage != null &&
-                                                    !_isPromoValid
-                                                ? Colors.red.shade300
-                                                : Colors.grey.shade300),
-                                        width: 1,
-                                      ),
+                                      // border: Border.all(
+                                      //   color: _isPromoValid
+                                      //       ? AppTheme.success
+                                      //       : (_promoMessage != null &&
+                                      //               !_isPromoValid
+                                      //           ? Colors.red.shade300
+                                      //           : Colors.grey.shade300),
+                                      //   width: 1,
+                                      // ),
                                     ),
                                     child: TextField(
                                       controller: _promoController,
