@@ -46,13 +46,18 @@ class SubscriptionCardShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Active Plan Card Shimmer
-        _buildSubscriptionCardShimmer(),
-        const SizedBox(height: 15),
-        // Remaining Meals Card Shimmer
-        _buildRemMealsCardShimmer(),
+        // Active Plan Card Shimmer - takes half width
+        Expanded(
+          child: _buildSubscriptionCardShimmer(),
+        ),
+        const SizedBox(width: 12),
+        // Remaining Meals Card Shimmer - takes half width
+        Expanded(
+          child: _buildRemMealsCardShimmer(),
+        ),
       ],
     );
   }
@@ -62,10 +67,11 @@ class SubscriptionCardShimmer extends StatelessWidget {
       borderRadius: 12,
       padding: const EdgeInsets.all(16),
       children: [
+        // First row: Icon and text
         Row(
           children: [
             ShimmerWidgets.shimmerCircle(size: 48),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,15 +84,27 @@ class SubscriptionCardShimmer extends StatelessWidget {
                   const SizedBox(height: 8),
                   ShimmerWidgets.shimmerText(
                     height: 14,
-                    width: 180,
+                    width: 120,
                     borderRadius: 4,
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Second row: status and chevron
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
             ShimmerWidgets.shimmerBox(
               height: 24,
               width: 70,
+              borderRadius: 12,
+            ),
+            ShimmerWidgets.shimmerBox(
+              height: 24,
+              width: 24,
               borderRadius: 12,
             ),
           ],
@@ -100,10 +118,11 @@ class SubscriptionCardShimmer extends StatelessWidget {
       borderRadius: 12,
       padding: const EdgeInsets.all(16),
       children: [
+        // First row: Icon and text
         Row(
           children: [
             ShimmerWidgets.shimmerCircle(size: 48),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,17 +135,30 @@ class SubscriptionCardShimmer extends StatelessWidget {
                   const SizedBox(height: 8),
                   ShimmerWidgets.shimmerText(
                     height: 14,
-                    width: 180,
+                    width: 120,
                     borderRadius: 4,
-                  ),
-                  const SizedBox(height: 12),
-                  ShimmerWidgets.shimmerBox(
-                    height: 6,
-                    width: double.infinity,
-                    borderRadius: 3,
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Second row: progress and chevron
+        Row(
+          children: [
+            Expanded(
+              child: ShimmerWidgets.shimmerBox(
+                height: 6,
+                width: double.infinity,
+                borderRadius: 3,
+              ),
+            ),
+            const SizedBox(width: 12),
+            ShimmerWidgets.shimmerBox(
+              height: 24,
+              width: 24,
+              borderRadius: 12,
             ),
           ],
         ),

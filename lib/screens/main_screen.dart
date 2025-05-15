@@ -10,6 +10,8 @@ import 'package:startwell/utils/app_colors.dart';
 import 'package:startwell/screens/manage_student_profile_screen.dart';
 import 'package:startwell/screens/my_subscription_screen.dart';
 import 'package:startwell/utils/routes.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class MainScreen extends StatefulWidget {
   final int? initialTabIndex;
@@ -156,6 +158,44 @@ class MainScreenState extends State<MainScreen> {
     _onItemTapped(index);
   }
 
+  // Function to launch WhatsApp support
+  void _launchWhatsAppSupport() async {
+    final whatsappUrl = Uri.parse(
+        "https://wa.me/919833607011?text=Hello, I need assistance with the StartWell app.");
+
+    try {
+      if (await canLaunchUrl(whatsappUrl)) {
+        await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
+      } else {
+        // Show a snackbar or toast if WhatsApp is not installed
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Could not launch WhatsApp. Please make sure it is installed.",
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error launching WhatsApp: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error launching WhatsApp: $e',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -205,8 +245,36 @@ class MainScreenState extends State<MainScreen> {
               topRight: Radius.circular(20),
             ),
             child: BottomNavigationBar(
-              currentIndex: _selectedIndex,
-              onTap: _onItemTapped,
+              currentIndex: _selectedIndex > 3
+                  ? 3
+                  : (_selectedIndex == 0
+                      ? 0
+                      : _selectedIndex == 3
+                          ? 1
+                          : _selectedIndex == 2
+                              ? 2
+                              : 0),
+              onTap: (index) {
+                // Handle support tab separately
+                if (index == 3) {
+                  _launchWhatsAppSupport();
+                  return;
+                }
+
+                // Map navigation bar index to page index
+                int actualIndex;
+                if (index == 0) {
+                  actualIndex = 0; // Home
+                } else if (index == 1) {
+                  actualIndex = 3; // Order Meal
+                } else if (index == 2) {
+                  actualIndex = 2; // My Subscription
+                } else {
+                  actualIndex = 0; // Default to Home
+                }
+
+                _onItemTapped(actualIndex);
+              },
               selectedItemColor: AppTheme.purple,
               unselectedItemColor: Colors.grey.shade600, // Higher contrast
               showUnselectedLabels: true,
@@ -231,11 +299,11 @@ class MainScreenState extends State<MainScreen> {
                   semanticLabel: 'Home Screen',
                 ),
                 _buildNavItem(
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person,
-                  label: 'Student',
-                  isSelected: _selectedIndex == 1,
-                  semanticLabel: 'Student Profiles',
+                  icon: Icons.restaurant_menu_outlined,
+                  activeIcon: Icons.restaurant_menu,
+                  label: 'Order Meal',
+                  isSelected: _selectedIndex == 3,
+                  semanticLabel: 'Order Meal',
                 ),
                 _buildNavItem(
                   icon: Icons.subscriptions_outlined,
@@ -245,11 +313,11 @@ class MainScreenState extends State<MainScreen> {
                   semanticLabel: 'My Meal Subscriptions',
                 ),
                 _buildNavItem(
-                  icon: Icons.restaurant_menu_outlined,
-                  activeIcon: Icons.restaurant_menu,
-                  label: 'Meal Plan',
-                  isSelected: _selectedIndex == 3,
-                  semanticLabel: 'Meal Plan Options',
+                  icon: FontAwesomeIcons.whatsapp,
+                  activeIcon: FontAwesomeIcons.whatsapp,
+                  label: 'Support',
+                  isSelected: false, // Always false as it redirects to WhatsApp
+                  semanticLabel: 'WhatsApp Support',
                 ),
               ],
             ),

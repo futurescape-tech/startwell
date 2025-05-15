@@ -252,14 +252,6 @@ class StudentDetailPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // School Address
-                _buildInfoRow(
-                  Icons.location_on,
-                  'School Address',
-                  student.schoolAddress,
-                ),
-                const SizedBox(height: 16),
-
                 // Allergies
                 _buildInfoRow(
                   Icons.healing,
@@ -373,7 +365,7 @@ class StudentDetailPage extends StatelessWidget {
                 ],
                 if (hasLunch) ...[
                   _buildInfoRow(
-                    Icons.lunch_dining,
+                    Icons.flatware,
                     'Lunch Plan',
                     _formatPlanInfo('lunch'),
                     valueColor: AppTheme.purple,

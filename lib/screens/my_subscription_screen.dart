@@ -129,163 +129,178 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.white,
-      appBar: GradientAppBar(
-        titleText: 'My Subscription',
-        customGradient: AppTheme.purpleToDeepPurple,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: widget.userProfile != null
-                ? ProfileAvatar(
-                    userProfile: widget.userProfile,
-                    radius: 18,
-                    onAvatarTap: () {
-                      Navigator.pushNamed(context, Routes.profileSettings);
-                    },
-                  )
-                : Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppTheme.purpleToDeepPurple,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.deepPurple.withOpacity(0.2),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        )
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.account_circle,
-                        color: AppTheme.white,
-                      ),
-                      onPressed: () {
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil(Routes.main, (route) => false);
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.white,
+        appBar: GradientAppBar(
+          titleText: 'My Subscription',
+          customGradient: AppTheme.purpleToDeepPurple,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context)
+                .pushNamedAndRemoveUntil(Routes.main, (route) => false),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: widget.userProfile != null
+                  ? ProfileAvatar(
+                      userProfile: widget.userProfile,
+                      radius: 18,
+                      onAvatarTap: () {
                         Navigator.pushNamed(context, Routes.profileSettings);
                       },
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppTheme.purpleToDeepPurple,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.deepPurple.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.account_circle,
+                          color: AppTheme.white,
+                        ),
+                        onPressed: () {
+                          Navigator.pushNamed(context, Routes.profileSettings);
+                        },
+                      ),
+                    ),
+            ),
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppTheme.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: AppTheme.purple,
+                unselectedLabelColor: AppTheme.textMedium,
+                indicatorColor: AppTheme.purple,
+                indicatorWeight: 3,
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelStyle: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                unselectedLabelStyle: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                tabs: [
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.purple.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.restaurant,
+                            size: 18,
+                            color: AppTheme.purple,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Upcoming Meals',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppTheme.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: TabBar(
-              controller: _tabController,
-              labelColor: AppTheme.purple,
-              unselectedLabelColor: AppTheme.textMedium,
-              indicatorColor: AppTheme.purple,
-              indicatorWeight: 3,
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              labelStyle: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-              unselectedLabelStyle: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              tabs: [
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.purple.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.purple.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.cancel_outlined,
+                            size: 18,
+                            color: AppTheme.purple,
+                          ),
                         ),
-                        child: Icon(
-                          Icons.restaurant,
-                          size: 18,
-                          color: AppTheme.purple,
+                        const SizedBox(width: 8),
+                        Text(
+                          'Cancelled Meals',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Upcoming Meals',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.purple.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.cancel_outlined,
-                          size: 18,
-                          color: AppTheme.purple,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Cancelled Meals',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.deepPurple.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            // Upcoming Meals Tab
-            UpcomingMealsTab(
-              selectedStudentId: _currentlySelectedStudentId,
-              startDate: widget.startDate,
-              endDate: widget.endDate,
-            ),
+        body: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.deepPurple.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Upcoming Meals Tab
+              UpcomingMealsTab(
+                selectedStudentId: _currentlySelectedStudentId,
+                startDate: widget.startDate,
+                endDate: widget.endDate,
+              ),
 
-            // Cancelled Meals Tab
-            CancelledMealsTab(
-              key: _cancelledMealsTabKey,
-              studentId: _currentlySelectedStudentId,
-            ),
-          ],
+              // Cancelled Meals Tab
+              CancelledMealsTab(
+                key: _cancelledMealsTabKey,
+                studentId: _currentlySelectedStudentId,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -120,7 +120,7 @@ class MealCard extends StatelessWidget {
                               Icon(
                                 isBreakfast
                                     ? Icons.breakfast_dining
-                                    : Icons.lunch_dining,
+                                    : Icons.flatware,
                                 size: 16,
                                 color: isBreakfast
                                     ? AppTheme.purple
@@ -292,7 +292,7 @@ class MealCard extends StatelessWidget {
                     children: [
                       const WidgetSpan(
                         child: Icon(
-                          Icons.lunch_dining,
+                          Icons.flatware,
                           size: 18,
                           color: AppTheme.purple,
                         ),
@@ -441,7 +441,7 @@ class MealCard extends StatelessWidget {
     final IconData statusIcon = isScheduled
         ? isBreakfast
             ? Icons.breakfast_dining
-            : Icons.lunch_dining
+            : Icons.flatware
         : Icons.swap_horiz_rounded;
 
     return Container(

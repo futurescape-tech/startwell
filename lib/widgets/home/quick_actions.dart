@@ -21,120 +21,129 @@ class QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.restaurant_menu,
-                label: 'Meal Plan',
-                iconColor: AppTheme.success,
-                onPressed: onMealPlanPressed,
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.person,
-                label: 'Manage Student',
-                iconColor: AppTheme.error,
-                onPressed: onManageStudentPressed,
-              ),
-            ),
-          ],
+    // List of action items to display
+    final actionItems = [
+      _ActionItem(
+        icon: Icons.restaurant_menu,
+        label: 'Order Meal',
+        color: AppTheme.success,
+        onPressed: onMealPlanPressed,
+      ),
+      _ActionItem(
+        icon: Icons.person,
+        label: 'Student',
+        color: AppTheme.error,
+        onPressed: onManageStudentPressed,
+      ),
+      _ActionItem(
+        icon: Icons.account_balance_wallet,
+        label: 'Wallet',
+        color: AppTheme.deepPurple,
+        onPressed: onTopUpWalletPressed,
+      ),
+      _ActionItem(
+        icon: Icons.school,
+        label: 'Invite School',
+        color: AppTheme.orange,
+        onPressed: onInviteSchoolPressed,
+      ),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: Row(
+          children: actionItems
+              .map((item) => _buildCircularAction(
+                    icon: item.icon,
+                    label: item.label,
+                    color: item.color,
+                    onPressed: item.onPressed,
+                  ))
+              .toList(),
         ),
-        const SizedBox(height: 15),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.account_balance_wallet,
-                label: 'Top Up Wallet',
-                iconColor: AppTheme.deepPurple,
-                onPressed: onTopUpWalletPressed,
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.school,
-                label: 'Invite School',
-                iconColor: AppTheme.orange,
-                onPressed: onInviteSchoolPressed,
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildActionButton({
+  Widget _buildCircularAction({
     required IconData icon,
     required String label,
-    required Color iconColor,
+    required Color color,
     required VoidCallback onPressed,
   }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 1.0, end: 1.0),
-      duration: const Duration(milliseconds: 150),
-      builder: (context, scale, child) {
-        return Material(
-          color: AppTheme.white,
-          borderRadius: BorderRadius.circular(16),
-          elevation: 4,
-          shadowColor: AppTheme.deepPurple.withOpacity(0.15),
-          child: InkWell(
-            onTap: () {
-              // Trigger haptic feedback for better tactile response
-              HapticFeedback.lightImpact();
-              onPressed();
-            },
-            onHighlightChanged: (isPressed) {
-              // This would be handled by StatefulWidget in a real implementation
-              // but we'll use the simpler InkWell effect for this enhancement
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Ink(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: AppTheme.offWhite,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                    spreadRadius: 0.5,
-                  ),
-                ],
+    return Container(
+      width: 80,
+      margin: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Circular Icon Button
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(
+                color: Colors.grey.withOpacity(0.2),
+                width: 1,
               ),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      icon,
-                      color: iconColor,
-                      size: 30, // Slightly larger icon
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      label,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                  ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.hardEdge,
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onPressed();
+                },
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    icon,
+                    color: color,
+                    size: 28,
+                  ),
                 ),
               ),
             ),
           ),
-        );
-      },
+          const SizedBox(height: 8),
+          // Label text below icon
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textDark,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
+}
+
+// Helper class to organize action items
+class _ActionItem {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  _ActionItem({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
 }

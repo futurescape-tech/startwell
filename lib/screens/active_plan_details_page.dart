@@ -5,10 +5,12 @@ import 'package:intl/intl.dart';
 import 'package:startwell/services/subscription_service.dart' as services;
 import 'package:startwell/services/meal_service.dart';
 import 'package:startwell/services/student_profile_service.dart';
+import 'package:startwell/services/selected_student_service.dart';
 import 'package:startwell/models/student_model.dart';
 import 'package:startwell/models/subscription_model.dart';
 import 'package:startwell/widgets/common/gradient_app_bar.dart';
 import 'package:startwell/widgets/common/gradient_button.dart';
+import 'package:startwell/widgets/common/student_selector_dropdown.dart';
 import 'package:startwell/utils/meal_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -27,18 +29,55 @@ class ActivePlanDetailsPage extends StatefulWidget {
 
 class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
   bool _isLoading = true;
+  bool _isChangingStudent = false;
   List<Subscription> _activePlans = [];
   Student? _student;
   List<Map<String, dynamic>> _planSummaries = [];
   List<Student> _associatedStudents = [];
+  List<Student> _allStudents = [];
+  String _currentStudentId = '';
   Map<String, String> _deliveryModes = {};
   Map<String, Map<String, dynamic>> _orderSummaryData = {};
 
   @override
   void initState() {
     super.initState();
+    _currentStudentId = widget.studentId;
     _loadStoredOrderSummary();
     _loadData();
+    _loadAllStudents();
+  }
+
+  Future<void> _loadAllStudents() async {
+    try {
+      final studentProfileService = StudentProfileService();
+      final students = await studentProfileService.getStudentProfiles();
+
+      if (mounted) {
+        setState(() {
+          _allStudents = students;
+        });
+      }
+
+      // Also store the current selection in the global service
+      SelectedStudentService().setSelectedStudent(_currentStudentId);
+    } catch (e) {
+      print('Error loading all students: $e');
+    }
+  }
+
+  void _onStudentChanged(String studentId) {
+    if (studentId != _currentStudentId) {
+      setState(() {
+        _isChangingStudent = true;
+        _currentStudentId = studentId;
+        _planSummaries = [];
+        _associatedStudents = [];
+      });
+
+      _loadStoredOrderSummary();
+      _loadData();
+    }
   }
 
   // Load stored order summary data from SharedPreferences
@@ -48,7 +87,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
       // Get all keys that start with "order_summary_"
       final keys = prefs
           .getKeys()
-          .where((key) => key.startsWith('order_summary_${widget.studentId}_'))
+          .where((key) => key.startsWith('order_summary_${_currentStudentId}_'))
           .toList();
 
       for (final key in keys) {
@@ -56,7 +95,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
         if (jsonData != null) {
           final Map<String, dynamic> data = json.decode(jsonData);
           final String planId =
-              key.replaceFirst('order_summary_${widget.studentId}_', '');
+              key.replaceFirst('order_summary_${_currentStudentId}_', '');
           _orderSummaryData[planId] = data;
         }
       }
@@ -108,14 +147,14 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
       final List<Student> students =
           await studentProfileService.getStudentProfiles();
       _student = students.firstWhere(
-        (student) => student.id == widget.studentId,
+        (student) => student.id == _currentStudentId,
         orElse: () => throw Exception('Student not found'),
       );
 
       // Fetch active subscriptions for the student
       final subscriptionService = services.SubscriptionService();
       _activePlans = await subscriptionService
-          .getActiveSubscriptionsForStudent(widget.studentId);
+          .getActiveSubscriptionsForStudent(_currentStudentId);
 
       if (_activePlans.isNotEmpty) {
         // Process each active plan
@@ -125,7 +164,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
 
           // Get all cancelled meals to calculate consumed
           final cancelledMeals =
-              await subscriptionService.getCancelledMeals(widget.studentId);
+              await subscriptionService.getCancelledMeals(_currentStudentId);
           final int cancelledCount = cancelledMeals.length;
 
           // Calculate consumed meals
@@ -134,7 +173,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
 
           // Determine and store delivery mode
           final deliveryMode = _determineDeliveryMode(plan);
-          await _storeDeliveryMode(widget.studentId, plan.id, deliveryMode);
+          await _storeDeliveryMode(_currentStudentId, plan.id, deliveryMode);
           _deliveryModes[plan.id] = deliveryMode;
 
           // Look for stored order summary
@@ -172,12 +211,14 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _isChangingStudent = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _isChangingStudent = false;
         });
 
         // Show error dialog
@@ -291,80 +332,39 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: GradientAppBar(
-        titleText: 'Plan Details',
+        titleText: 'Active Plan Details',
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _activePlans.isEmpty
-              ? _buildNoPlanView()
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Enhanced Student Header with Avatar
-                      if (_student != null)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 20),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 16, horizontal: 20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: AppTheme.softShadow,
-                            border: Border.all(
-                              color: AppTheme.purple.withOpacity(0.1),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: Colors.red.shade100,
-                                child: const Icon(
-                                  Icons.person_outline,
-                                  color: Colors.red,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _student!.name,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.textDark,
-                                      ),
-                                    ),
-                                    Text(
-                                      _student!.schoolName,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: AppTheme.textMedium,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+      body: Column(
+        children: [
+          // Student selector dropdown
+          if (_allStudents.length > 1)
+            StudentSelectorDropdown(
+              students: _allStudents,
+              selectedStudentId: _currentStudentId,
+              onStudentSelected: _onStudentChanged,
+              isLoading: _isChangingStudent,
+            ),
+
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _activePlans.isEmpty
+                    ? _buildNoPlanView()
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Display each plan card
+                            for (int i = 0; i < _planSummaries.length; i++)
+                              _buildPlanCard(_planSummaries[i], i),
+                          ],
                         ),
-
-                      // Show each active plan in a separate card
-                      for (int i = 0; i < _planSummaries.length; i++)
-                        _buildPlanCard(_planSummaries[i], i),
-
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
+                      ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -834,5 +834,82 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
       // If it's a regular plan
       return '$days days';
     }
+  }
+
+  Widget _buildStudentInfoCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppTheme.softShadow,
+        border: Border.all(
+          color: AppTheme.purple.withOpacity(0.1),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.red.shade100,
+            child: const Icon(
+              Icons.person_outline,
+              color: Colors.red,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _student!.name,
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+                Text(
+                  _student!.schoolName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppTheme.textMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssociatedStudentsSection() {
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppTheme.softShadow,
+        border: Border.all(
+          color: AppTheme.purple.withOpacity(0.1),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Associated Students'),
+          const SizedBox(height: 8),
+          for (Student student in _associatedStudents)
+            _buildStatusRow(student.name, 'Active'),
+        ],
+      ),
+    );
   }
 }

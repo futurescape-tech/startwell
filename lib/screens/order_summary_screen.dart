@@ -370,12 +370,6 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                                       ),
                                       isAlert: true,
                                     ),
-                                  _buildStudentInfoRow(
-                                    icon: Icons.location_on_rounded,
-                                    label: 'School Address',
-                                    value: widget.selectedStudent.schoolAddress,
-                                    isLast: true,
-                                  ),
                                 ],
                               ),
                             ),
@@ -411,7 +405,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                               child: Column(
                                 children: [
                                   _buildStudentInfoRow(
-                                    icon: Icons.lunch_dining_rounded,
+                                    icon: Icons.flatware_rounded,
                                     label: 'Meal Price',
                                     value:
                                         '₹${(widget.totalAmount / widget.mealDates.length).toStringAsFixed(0)} per meal',
@@ -1031,7 +1025,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 _buildMealPlanTab(
                   'Lunch',
                   mealType == 'lunch',
-                  Icons.lunch_dining_rounded,
+                  Icons.flatware_rounded,
                   AppTheme.success,
                 ),
                 _buildMealPlanTab(
@@ -1154,7 +1148,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         return Icons.local_shipping_rounded;
       case 'lunch':
       default:
-        return Icons.lunch_dining_rounded;
+        return Icons.flatware_rounded;
     }
   }
 
@@ -1325,7 +1319,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                         Icon(
                           mealType == 'breakfast'
                               ? Icons.ramen_dining
-                              : Icons.lunch_dining,
+                              : Icons.flatware,
                           size: 16,
                           color: mealType == 'breakfast'
                               ? Colors.pink

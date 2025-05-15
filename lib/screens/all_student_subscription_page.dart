@@ -127,11 +127,11 @@ class AllStudentSubscriptionPage extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.green.withOpacity(0.1),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.green.withOpacity(0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -139,7 +139,7 @@ class AllStudentSubscriptionPage extends StatelessWidget {
                   ),
                   child: const Icon(
                     Icons.calendar_month,
-                    color: Colors.blue,
+                    color: Colors.green,
                     size: 24,
                   ),
                 ),
@@ -288,11 +288,11 @@ class AllStudentSubscriptionPage extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.orange.withOpacity(0.1),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.green.withOpacity(0.1),
+                        color: Colors.orange.withOpacity(0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -300,7 +300,7 @@ class AllStudentSubscriptionPage extends StatelessWidget {
                   ),
                   child: const Icon(
                     Icons.restaurant,
-                    color: Colors.green,
+                    color: Colors.orange,
                     size: 24,
                   ),
                 ),
@@ -341,7 +341,7 @@ class AllStudentSubscriptionPage extends StatelessWidget {
                         value: progress,
                         backgroundColor: Colors.grey[200],
                         valueColor:
-                            const AlwaysStoppedAnimation<Color>(Colors.green),
+                            const AlwaysStoppedAnimation<Color>(Colors.orange),
                         minHeight: 6,
                         borderRadius: BorderRadius.circular(3),
                       ),

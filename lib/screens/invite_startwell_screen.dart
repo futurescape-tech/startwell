@@ -34,14 +34,21 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Invite StartWell',
+          'Invite School To StartWell',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
         ),
-        backgroundColor: AppTheme.purple,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppTheme.purple, AppTheme.deepPurple],
+            ),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -220,7 +227,7 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
         style: ElevatedButton.styleFrom(
           padding: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(50),
           ),
         ),
         child: Ink(
@@ -230,7 +237,7 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(60),
           ),
           child: Container(
             alignment: Alignment.center,

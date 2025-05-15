@@ -6,7 +6,6 @@ class Student {
   final String division;
   final String floor;
   final String allergies;
-  final String schoolAddress;
   final String grade;
   final String section;
   final String profileImageUrl;
@@ -55,7 +54,6 @@ class Student {
     required this.division,
     required this.floor,
     required this.allergies,
-    required this.schoolAddress,
     required this.grade,
     required this.section,
     required this.profileImageUrl,
@@ -83,7 +81,6 @@ class Student {
     String? division,
     String? floor,
     String? allergies,
-    String? schoolAddress,
     bool? hasActiveBreakfast,
     bool? hasActiveLunch,
     DateTime? breakfastPlanStartDate,
@@ -109,7 +106,6 @@ class Student {
       division: division ?? this.division,
       floor: floor ?? this.floor,
       allergies: allergies ?? this.allergies,
-      schoolAddress: schoolAddress ?? this.schoolAddress,
       grade: grade ?? this.grade,
       section: section ?? this.section,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
@@ -142,7 +138,6 @@ class Student {
       'division': division,
       'floor': floor,
       'allergies': allergies,
-      'schoolAddress': schoolAddress,
       'grade': grade,
       'section': section,
       'profileImageUrl': profileImageUrl,
@@ -172,7 +167,6 @@ class Student {
       division: json['division'] as String,
       floor: json['floor'] as String,
       allergies: json['allergies'] as String,
-      schoolAddress: json['schoolAddress'] as String,
       grade: json['grade'] as String,
       section: json['section'] as String,
       profileImageUrl: json['profileImageUrl'] as String,

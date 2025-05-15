@@ -223,7 +223,7 @@ class StudentCardWidget extends StatelessWidget {
                                   student.hasActiveLunch)
                                 const SizedBox(width: 12),
                               if (student.hasActiveLunch)
-                                _buildMealTag('Lunch', Icons.lunch_dining),
+                                _buildMealTag('Lunch', Icons.flatware),
                             ],
                           ),
                         ],

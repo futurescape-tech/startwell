@@ -12,7 +12,7 @@ class MealConstants {
   static const Color lunchIconColor = Colors.green;
   static Color lunchBgColor = Colors.green.withOpacity(0.1);
   static Color lunchBorderColor = Colors.green.withOpacity(0.2);
-  static const IconData lunchIcon = Icons.lunch_dining;
+  static const IconData lunchIcon = Icons.flatware;
 
   // Express order styling
   static const Color expressIconColor = Colors.orange;

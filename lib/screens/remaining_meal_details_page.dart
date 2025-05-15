@@ -7,12 +7,14 @@ import 'package:intl/intl.dart';
 import 'package:startwell/services/subscription_service.dart' as services;
 import 'package:startwell/services/meal_service.dart';
 import 'package:startwell/services/student_profile_service.dart';
+import 'package:startwell/services/selected_student_service.dart';
 import 'package:startwell/models/student_model.dart';
 import 'package:startwell/models/subscription_model.dart';
 import 'package:startwell/models/meal_model.dart';
 import 'package:startwell/utils/meal_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/widgets/common/gradient_button.dart';
+import 'package:startwell/widgets/common/student_selector_dropdown.dart';
 
 class RemainingMealDetailsPage extends StatefulWidget {
   final String studentId;
@@ -29,24 +31,61 @@ class RemainingMealDetailsPage extends StatefulWidget {
 
 class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
   bool _isLoading = true;
+  bool _isChangingStudent = false;
   List<Subscription> _activePlans = [];
   List<Map<String, dynamic>> _planSummaries = [];
   List<Map<String, dynamic>> _recentConsumption = [];
   Student? _student;
+  String _currentStudentId = '';
   Set<String> _consumedMealDates = {};
+  List<Student> _allStudents = [];
 
   @override
   void initState() {
     super.initState();
+    _currentStudentId = widget.studentId;
     _loadStoredConsumedMeals();
     _loadData();
+    _loadAllStudents();
+  }
+
+  Future<void> _loadAllStudents() async {
+    try {
+      final studentProfileService = StudentProfileService();
+      final students = await studentProfileService.getStudentProfiles();
+
+      if (mounted) {
+        setState(() {
+          _allStudents = students;
+        });
+      }
+
+      // Also store the current selection in the global service
+      SelectedStudentService().setSelectedStudent(_currentStudentId);
+    } catch (e) {
+      dev.log('Error loading all students: $e');
+    }
+  }
+
+  void _onStudentChanged(String studentId) {
+    if (studentId != _currentStudentId) {
+      setState(() {
+        _isChangingStudent = true;
+        _currentStudentId = studentId;
+        _planSummaries = [];
+        _recentConsumption = [];
+      });
+
+      _loadStoredConsumedMeals();
+      _loadData();
+    }
   }
 
   Future<void> _loadStoredConsumedMeals() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final List<String> storedDates =
-          prefs.getStringList('consumed_meal_dates_${widget.studentId}') ?? [];
+          prefs.getStringList('consumed_meal_dates_${_currentStudentId}') ?? [];
       setState(() {
         _consumedMealDates = storedDates.toSet();
       });
@@ -73,7 +112,7 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
 
       // Store in SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('consumed_meal_dates_${widget.studentId}',
+      await prefs.setStringList('consumed_meal_dates_${_currentStudentId}',
           _consumedMealDates.toList());
       dev.log('Marked meal as consumed: $dateString');
     } catch (e) {
@@ -99,19 +138,19 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
       final List<Student> students =
           await studentProfileService.getStudentProfiles();
       _student = students.firstWhere(
-        (student) => student.id == widget.studentId,
+        (student) => student.id == _currentStudentId,
         orElse: () => throw Exception('Student not found'),
       );
 
       // Fetch active subscription for the student
       final subscriptionService = services.SubscriptionService();
       _activePlans = await subscriptionService
-          .getActiveSubscriptionsForStudent(widget.studentId);
+          .getActiveSubscriptionsForStudent(_currentStudentId);
 
       // Fetch all meals for this student
       final mealService = MealService();
       final allMeals =
-          await mealService.getUpcomingMealsForStudent(widget.studentId);
+          await mealService.getUpcomingMealsForStudent(_currentStudentId);
       final now = DateTime.now();
 
       // Auto-mark today's and past meals as consumed
@@ -126,7 +165,7 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
         for (var subscription in _activePlans) {
           // Get all cancelled meals
           final cancelledMeals =
-              await subscriptionService.getCancelledMeals(widget.studentId);
+              await subscriptionService.getCancelledMeals(_currentStudentId);
           final int cancelledCount = cancelledMeals.length;
 
           // Calculate meal summary based on the subscription
@@ -201,6 +240,7 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _isChangingStudent = false;
         });
       }
     } catch (e) {
@@ -208,6 +248,7 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _isChangingStudent = false;
         });
 
         // Show error dialog
@@ -351,79 +392,41 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
           ),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _activePlans.isEmpty
-              ? _buildNoPlanView()
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Enhanced Student Header with Avatar
-                      if (_student != null)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 20),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 16, horizontal: 20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: AppTheme.softShadow,
-                            border: Border.all(
-                              color: AppTheme.purple.withOpacity(0.1),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor: Colors.red.shade100,
-                                child: const Icon(
-                                  Icons.person_outline,
-                                  color: Colors.red,
-                                  size: 28,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _student!.name,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.textDark,
-                                      ),
-                                    ),
-                                    Text(
-                                      _student!.schoolName,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: AppTheme.textMedium,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+      body: Column(
+        children: [
+          // Student selector dropdown
+          if (_allStudents.length > 1)
+            StudentSelectorDropdown(
+              students: _allStudents,
+              selectedStudentId: _currentStudentId,
+              onStudentSelected: _onStudentChanged,
+              isLoading: _isChangingStudent,
+            ),
+
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _activePlans.isEmpty
+                    ? _buildNoPlanView()
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Display each plan summary
+                            for (int i = 0; i < _planSummaries.length; i++)
+                              _buildPlanSummaryCard(_planSummaries[i], i),
+
+                            const SizedBox(height: 24),
+
+                            // Recent Consumption History
+                            _buildRecentConsumptionSection(),
+                          ],
                         ),
-
-                      // Display each plan summary
-                      for (int i = 0; i < _planSummaries.length; i++)
-                        _buildPlanSummaryCard(_planSummaries[i], i),
-
-                      const SizedBox(height: 24),
-
-                      // Recent Consumption History
-                      _buildRecentConsumptionSection(),
-                    ],
-                  ),
-                ),
+                      ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -574,11 +577,11 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildMetric("Total", planSummary['totalMeals'],
-                          Colors.blue, Icons.calendar_month),
+                          Colors.green, Icons.calendar_month),
                       _buildMetric("Consumed", planSummary['consumed'],
                           Colors.orange, Icons.restaurant),
                       _buildMetric("Remaining", planSummary['remaining'],
-                          Colors.green, Icons.inventory),
+                          Colors.blue, Icons.inventory),
                     ],
                   ),
 
@@ -596,7 +599,9 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
                         minHeight: 10,
                         backgroundColor: Colors.grey.shade200,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          progressPercent > 0 ? Colors.green : Colors.redAccent,
+                          progressPercent > 0
+                              ? Colors.orange
+                              : Colors.redAccent,
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),

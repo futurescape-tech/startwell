@@ -95,7 +95,7 @@ class _SubscriptionSelectionScreenState
     {
       'name': 'Half-Yearly',
       'duration': '6 Months',
-      'meals': 120,
+      'meals': 90,
       'discount': 0.15,
       'weeks': 24,
     },
@@ -681,11 +681,14 @@ class _SubscriptionSelectionScreenState
       setState(() {
         _isCustomPlan = !_isCustomPlan;
 
-        // If switching to regular mode, recalculate dates
+        // If switching to regular mode (Mon to Fri), select all weekdays automatically
         if (!_isCustomPlan) {
+          // Auto-select all weekdays (Monday to Friday)
+          _selectedWeekdays.fillRange(0, 5, true);
           _startDate = _firstAvailableDate;
         } else {
-          // If switching to custom mode, update start date
+          // If switching to custom mode (Custom Days), use existing selections
+          // (No need to modify selections here - keep current user selection)
           _startDate = _findEarliestDateFromSelectedWeekdays();
         }
 
@@ -1032,7 +1035,7 @@ class _SubscriptionSelectionScreenState
                       BoxShadow(
                         color: AppTheme.deepPurple.withOpacity(0.08),
                         blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -1178,7 +1181,7 @@ class _SubscriptionSelectionScreenState
                                             if (_isCustomPlan)
                                               const SizedBox(width: 8),
                                             Text(
-                                              'Custom Plan',
+                                              'Custom Days',
                                               style: GoogleFonts.poppins(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
@@ -1220,61 +1223,62 @@ class _SubscriptionSelectionScreenState
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: AppTheme.purple.withOpacity(0.05),
-                        border: Border.all(
-                          color: AppTheme.purple.withOpacity(0.2),
-                          width: 1,
+                    if (false) // Hiding the information card for custom plan
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: AppTheme.purple.withOpacity(0.05),
+                          border: Border.all(
+                            color: AppTheme.purple.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.purple.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.calendar_today_outlined,
+                                  color: AppTheme.purple,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Custom Plan",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textDark,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Select at least one weekday for meal delivery. The start date will be calculated based on the earliest selected weekday.",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: AppTheme.textMedium,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppTheme.purple.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.calendar_today_outlined,
-                                color: AppTheme.purple,
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Custom Plan",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.textDark,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Select at least one weekday for meal delivery. The start date will be calculated based on the earliest selected weekday.",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      color: AppTheme.textMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                     const SizedBox(height: 12),
 
                     // Weekday selection chips layout
@@ -1336,91 +1340,93 @@ class _SubscriptionSelectionScreenState
 
                     const SizedBox(height: 16),
 
-                    // Start date display (custom plan version)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.deepPurple.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
+                    // Start date display (custom plan version) - Hidden
+                    if (false) // Hiding the start date display in custom plan section
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          // boxShadow: [
+                          //   BoxShadow(
+                          //     color: AppTheme.deepPurple.withOpacity(0.05),
+                          //     blurRadius: 8,
+                          //     offset: const EdgeInsets.symmetric(horizontal: 12),
+                          //   ),
+                          // ],
+                          border: Border.all(
+                            color: _selectedWeekdays.contains(true)
+                                ? AppTheme.purple.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.3),
+                            width: 1,
                           ),
-                        ],
-                        border: Border.all(
-                          color: _selectedWeekdays.contains(true)
-                              ? AppTheme.purple.withOpacity(0.3)
-                              : Colors.grey.withOpacity(0.3),
-                          width: 1,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  gradient: _selectedWeekdays.contains(true)
+                                      ? LinearGradient(
+                                          colors: [
+                                            AppTheme.purple.withOpacity(0.15),
+                                            AppTheme.deepPurple
+                                                .withOpacity(0.15),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        )
+                                      : null,
+                                  color: _selectedWeekdays.contains(true)
+                                      ? null
+                                      : Colors.grey.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.event_available,
+                                  color: _selectedWeekdays.contains(true)
+                                      ? AppTheme.purple
+                                      : Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Start Date",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: _selectedWeekdays.contains(true)
+                                            ? AppTheme.textDark
+                                            : Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _selectedWeekdays.contains(true)
+                                          ? _getFormattedStartDate()
+                                          : "Please select at least one weekday",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
+                                        color: _selectedWeekdays.contains(true)
+                                            ? AppTheme.textMedium
+                                            : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14.0),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                gradient: _selectedWeekdays.contains(true)
-                                    ? LinearGradient(
-                                        colors: [
-                                          AppTheme.purple.withOpacity(0.15),
-                                          AppTheme.deepPurple.withOpacity(0.15),
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      )
-                                    : null,
-                                color: _selectedWeekdays.contains(true)
-                                    ? null
-                                    : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.event_available,
-                                color: _selectedWeekdays.contains(true)
-                                    ? AppTheme.purple
-                                    : Colors.grey,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Start Date",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: _selectedWeekdays.contains(true)
-                                          ? AppTheme.textDark
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _selectedWeekdays.contains(true)
-                                        ? _getFormattedStartDate()
-                                        : "Please select at least one weekday",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                      color: _selectedWeekdays.contains(true)
-                                          ? AppTheme.textMedium
-                                          : Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
 
@@ -1436,7 +1442,7 @@ class _SubscriptionSelectionScreenState
                       BoxShadow(
                         color: AppTheme.deepPurple.withOpacity(0.08),
                         blurRadius: 8,
-                        offset: const Offset(0, 3),
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -1579,25 +1585,19 @@ class _SubscriptionSelectionScreenState
 
               const SizedBox(height: 12),
 
-              // Start date display
+              // New Schedule Card with fixed BoxShadow offset and vertical layout
               Card(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                elevation: 2,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Start Date',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      // Start date section - Shown for all plan modes
+                      // if (!_isCustomPlan)
                       Row(
                         children: [
                           Icon(
@@ -1607,11 +1607,20 @@ class _SubscriptionSelectionScreenState
                                 ? Colors.grey
                                 : AppTheme.purple,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Text(
+                                  'Start Date',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
                                 Text(
                                   _isCustomPlan &&
                                           _selectedWeekdays
@@ -1622,153 +1631,119 @@ class _SubscriptionSelectionScreenState
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     fontWeight: _isCustomPlan
-                                        ? FontWeight.w600
+                                        ? FontWeight.w500
                                         : FontWeight.normal,
                                     color: AppTheme.textDark,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
                                 ),
-                                if (widget.isExpressOrder)
-                                  Text(
-                                    'Start date is locked for same-day express delivery',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.orange,
-                                    ),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                  ),
-                                if (_isCustomPlan &&
-                                    !_selectedWeekdays
-                                        .where((day) => day)
-                                        .isEmpty)
-                                  Text(
-                                    'Based on earliest selected weekday',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontStyle: FontStyle.italic,
-                                      color: AppTheme.purple,
+                                if (widget.isExpressOrder ||
+                                    (_isCustomPlan &&
+                                        !_selectedWeekdays
+                                            .where((day) => day)
+                                            .isEmpty))
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      widget.isExpressOrder
+                                          ? 'Locked for express delivery'
+                                          : 'Based on earliest selected weekday',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                        color: widget.isExpressOrder
+                                            ? Colors.orange
+                                            : AppTheme.purple,
+                                      ),
                                     ),
                                   ),
                               ],
                             ),
                           ),
-                          const Spacer(),
-                          widget.isExpressOrder
-                              ? Tooltip(
-                                  message:
-                                      'Date cannot be changed for Express 1-Day orders',
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      'Locked',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : TextButton(
-                                  onPressed: () async {
-                                    final selectedDate = await showDatePicker(
-                                      context: context,
-                                      initialDate: _startDate,
-                                      firstDate: _firstAvailableDate,
-                                      lastDate: DateTime.now()
-                                          .add(const Duration(days: 90)),
-                                      selectableDayPredicate: (DateTime date) {
-                                        // Only allow weekdays (Monday to Friday)
-                                        return date.weekday <= 5;
-                                      },
-                                    );
-
-                                    if (selectedDate != null) {
-                                      setState(() {
-                                        // For custom plan, use the smart start date calculation
-                                        if (_isCustomPlan) {
-                                          _startDate =
-                                              calculateCustomPlanStartDate(
-                                            selectedStartDate: selectedDate,
-                                            selectedWeekdays:
-                                                _getSelectedWeekdayIndexes(),
-                                          );
-                                        } else {
-                                          _startDate = selectedDate;
-                                        }
-
-                                        _focusedCalendarDate = _startDate;
-
-                                        // If in custom mode, only allow selected weekdays
-                                        if (_isCustomPlan &&
-                                            !_selectedWeekdays[
-                                                selectedDate.weekday - 1]) {
-                                          // Show an error message
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Selected date doesn\'t match your weekday preferences. Adjusting selections.',
-                                                style: GoogleFonts.poppins(),
-                                              ),
-                                              backgroundColor: Colors.orange,
-                                            ),
-                                          );
-
-                                          // Enable the selected weekday
-                                          _selectedWeekdays[
-                                              selectedDate.weekday - 1] = true;
-                                        }
-
-                                        // Recalculate meal dates with new start date
-                                        _calculateMealDates();
-                                      });
-                                    }
+                          if (!widget.isExpressOrder)
+                            TextButton.icon(
+                              onPressed: () async {
+                                final selectedDate = await showDatePicker(
+                                  context: context,
+                                  initialDate: _startDate,
+                                  firstDate: _firstAvailableDate,
+                                  lastDate: DateTime.now()
+                                      .add(const Duration(days: 90)),
+                                  selectableDayPredicate: (DateTime date) {
+                                    // Only allow weekdays (Monday to Friday)
+                                    return date.weekday <= 5;
                                   },
-                                  child: Text(
-                                    'Change',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.purple,
-                                    ),
-                                  ),
+                                );
+
+                                if (selectedDate != null) {
+                                  setState(() {
+                                    // For custom plan, use the smart start date calculation
+                                    if (_isCustomPlan) {
+                                      _startDate = calculateCustomPlanStartDate(
+                                        selectedStartDate: selectedDate,
+                                        selectedWeekdays:
+                                            _getSelectedWeekdayIndexes(),
+                                      );
+                                    } else {
+                                      _startDate = selectedDate;
+                                    }
+
+                                    _focusedCalendarDate = _startDate;
+
+                                    // If in custom mode, only allow selected weekdays
+                                    if (_isCustomPlan &&
+                                        !_selectedWeekdays[
+                                            selectedDate.weekday - 1]) {
+                                      // Show an error message
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Selected date doesn\'t match your weekday preferences. Adjusting selections.',
+                                            style: GoogleFonts.poppins(),
+                                          ),
+                                          backgroundColor: Colors.orange,
+                                        ),
+                                      );
+
+                                      // Enable the selected weekday
+                                      _selectedWeekdays[
+                                          selectedDate.weekday - 1] = true;
+                                    }
+
+                                    // Recalculate meal dates with new start date
+                                    _calculateMealDates();
+                                  });
+                                }
+                              },
+                              icon: Icon(
+                                Icons.edit_calendar,
+                                color: AppTheme.purple,
+                                size: 18,
+                              ),
+                              label: Text(
+                                'Change',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.purple,
                                 ),
+                              ),
+                              style: TextButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: const Size(60, 36),
+                              ),
+                            ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
 
-              const SizedBox(height: 16),
+                      // Divider between Start Date and End Date sections
+                      Divider(
+                          thickness: 1, color: Colors.grey.withOpacity(0.1)),
 
-              // End date display
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'End Date',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      // End date section
                       Row(
                         children: [
                           Icon(
@@ -1776,24 +1751,49 @@ class _SubscriptionSelectionScreenState
                             size: 20,
                             color: AppTheme.purple,
                           ),
-                          const SizedBox(width: 8),
-                          if (_endDate != null)
-                            Text(
-                              DateFormat('EEEE, MMMM d, yyyy')
-                                  .format(_endDate!),
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: AppTheme.textDark,
-                              ),
-                            )
-                          else
-                            Text(
-                              'Please select at least one weekday',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.red,
-                              ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'End Date',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _endDate != null
+                                      ? DateFormat('EEEE, MMMM d, yyyy')
+                                          .format(_endDate!)
+                                      : 'Select at least one weekday',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: _endDate != null
+                                        ? AppTheme.textDark
+                                        : Colors.red,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                if (_endDate != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'Calculated based on plan',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                        color: AppTheme.textMedium,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
+                          ),
                         ],
                       ),
                     ],
@@ -1803,28 +1803,9 @@ class _SubscriptionSelectionScreenState
 
               const SizedBox(height: 16),
 
-              // Calendar view with meal dates
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.deepPurple.withOpacity(0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Card(
-                  margin: EdgeInsets.zero,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: _buildExpandableMealScheduleCard(),
-                ),
-              ),
+              // Calendar view with meal dates - Hidden in all scenarios
+              // Meal Schedule Card is completely removed/hidden in all scenarios
+              // No "if (false)" condition needed as we're completely removing it
 
               const SizedBox(height: 16),
 
@@ -2062,7 +2043,7 @@ class _SubscriptionSelectionScreenState
                                       color:
                                           AppTheme.deepPurple.withOpacity(0.2),
                                       blurRadius: 8,
-                                      offset: const Offset(0, 3),
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),

@@ -112,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen>
         child: SafeArea(
           child: Column(
             children: [
-              // Custom app bar with animation
+              // Custom app bar with animation - Back button removed from login screen
               AnimatedSlide(
                 offset:
                     _showHeader ? const Offset(0, 0) : const Offset(0, -0.2),
@@ -129,11 +129,8 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                     child: Row(
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new,
-                              color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
+                        // Back button removed
+                        const SizedBox(width: 48),
                         Expanded(
                           child: Center(
                             child: ShaderMask(

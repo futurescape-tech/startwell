@@ -35,7 +35,7 @@ class _StartwellLocationPageState extends State<StartwellLocationPage> {
         centerTitle: true,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
+            Icons.arrow_back,
             color: Colors.white,
           ),
           onPressed: () => Navigator.of(context).pop(),
@@ -333,28 +333,42 @@ class _StartwellLocationPageState extends State<StartwellLocationPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _openGoogleMapsDirections,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.purple,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.purpleToDeepPurple,
+                            borderRadius: BorderRadius.circular(50),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.deepPurple.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              )
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            onPressed: _openGoogleMapsDirections,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
                             ),
-                            elevation: 2,
-                          ),
-                          icon: const Icon(
-                            Icons.directions,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          label: Text(
-                            "Get Directions",
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                            icon: const Icon(
+                              Icons.directions,
                               color: Colors.white,
+                              size: 20,
+                            ),
+                            label: Text(
+                              "Get Directions",
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),

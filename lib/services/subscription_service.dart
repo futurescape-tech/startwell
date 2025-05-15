@@ -266,7 +266,7 @@ class SubscriptionService {
           division: 'Unknown Division',
           floor: 'Unknown Floor',
           allergies: 'None',
-          schoolAddress: 'Unknown Address',
+          // schoolAddress: 'Unknown Address',
           grade: 'Unknown Grade',
           section: 'Unknown Section',
           profileImageUrl: '',

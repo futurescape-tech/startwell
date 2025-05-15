@@ -4,8 +4,12 @@ import 'package:startwell/models/student_model.dart';
 class MealPlanValidator {
   /// Check if current time is within the Express order window (12:00 AM - 8:00 AM IST)
   static bool isWithinExpressWindow() {
-    final now = DateTime.now().toLocal();
-    return now.hour >= 0 && now.hour < 8;
+    // Temporarily disabled Express ordering
+    return false;
+
+    // Original implementation:
+    // final now = DateTime.now().toLocal();
+    // return now.hour >= 0 && now.hour < 8;
   }
 
   /// Get the appropriate Active Plan label for display on student profile cards

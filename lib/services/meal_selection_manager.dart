@@ -100,6 +100,11 @@ class MealSelectionManager extends ChangeNotifier {
 
   // Check if meal can be selected based on tab exclusivity rules
   bool canSelectMeal(Meal meal, MealCategory currentTab) {
+    // Temporarily disable express meal selection
+    if (currentTab == MealCategory.expressOneDay) {
+      return false;
+    }
+
     final mealId = meal.id;
 
     // If already selected in current tab, allow toggling off

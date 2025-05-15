@@ -519,7 +519,6 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
             division: 'Unknown Division',
             floor: 'Unknown Floor',
             allergies: 'None',
-            schoolAddress: 'Unknown Address',
             grade: 'Unknown Grade',
             section: 'Unknown Section',
             profileImageUrl: '',
@@ -630,7 +629,7 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
                             child: Icon(
                               meal.planType == 'breakfast'
                                   ? MealConstants.breakfastIcon
-                                  : Icons.lunch_dining,
+                                  : Icons.flatware,
                               color: meal.planType == 'breakfast'
                                   ? MealConstants.breakfastIconColor
                                   : AppTheme.error,
@@ -764,7 +763,7 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
                                 Icon(
                                   meal.planType == 'breakfast'
                                       ? Icons.wb_sunny_outlined
-                                      : Icons.lunch_dining_outlined,
+                                      : Icons.flatware,
                                   color: meal.planType == 'breakfast'
                                       ? Colors.pink
                                       : Colors.green,

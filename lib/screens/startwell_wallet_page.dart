@@ -13,8 +13,8 @@ extension WidgetAnimationExtension on Widget {
   Widget animate() {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: AppTheme.orangeToYellow,
+        borderRadius: BorderRadius.circular(50),
+        gradient: AppTheme.purpleToDeepPurple,
         boxShadow: [
           BoxShadow(
             color: AppTheme.deepPurple.withOpacity(0.2),
@@ -602,7 +602,7 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
         label: Text(
           'Add Money',
           style: GoogleFonts.poppins(
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
@@ -610,22 +610,12 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(50),
           ),
           elevation: 2,
           backgroundColor: Colors.transparent,
-          shadowColor: AppTheme.deepPurple.withOpacity(0.3),
+          shadowColor: Colors.transparent,
           foregroundColor: Colors.white,
-        ).copyWith(
-          backgroundColor: MaterialStateProperty.all(Colors.transparent),
-          overlayColor: MaterialStateProperty.resolveWith<Color?>(
-            (Set<MaterialState> states) {
-              if (states.contains(MaterialState.pressed)) {
-                return Colors.white.withOpacity(0.1);
-              }
-              return null;
-            },
-          ),
         ),
       ),
     ).animate();

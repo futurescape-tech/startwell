@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:startwell/models/meal_model.dart';
-import 'package:startwell/screens/launch_screen.dart';
 import 'package:startwell/screens/login_screen.dart';
 import 'package:startwell/screens/signup_screen.dart';
 import 'package:startwell/screens/dashboard_screen.dart';
@@ -48,9 +47,8 @@ class MyApp extends StatelessWidget {
       title: 'StartWell',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.getTheme(),
-      initialRoute: Routes.launch,
+      initialRoute: Routes.login,
       routes: {
-        Routes.launch: (context) => const LaunchScreen(),
         Routes.login: (context) => const LoginScreen(),
         Routes.signup: (context) => const SignupScreen(),
         Routes.dashboard: (context) => const DashboardScreen(),
@@ -62,9 +60,9 @@ class MyApp extends StatelessWidget {
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/') {
-          final int? tabIndex = settings.arguments as int?;
+          // Redirect root path to login screen instead of using tabIndex for MainScreen
           return MaterialPageRoute(
-            builder: (context) => MainScreen(initialTabIndex: tabIndex),
+            builder: (context) => const LoginScreen(),
           );
         }
         return null;

@@ -385,26 +385,39 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             // Save button
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _updateProfile();
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: AppTheme.purple,
-                  foregroundColor: Colors.white,
-                  elevation: 2,
-                  shadowColor: AppTheme.deepPurple.withOpacity(0.3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50),
-                  ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: AppTheme.purpleToDeepPurple,
+                  borderRadius: BorderRadius.circular(50),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.deepPurple.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    )
+                  ],
                 ),
-                child: Text(
-                  'Save Changes',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _updateProfile();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                  ),
+                  child: Text(
+                    'Save Changes',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -561,30 +574,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.notifications_outlined,
-              color: Colors.white,
-              size: 24,
-            ),
-            onPressed: () {
-              // Show a snackbar for demo purposes
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Notifications feature coming soon',
-                      style: GoogleFonts.poppins()),
-                  backgroundColor: AppTheme.purple,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-          SizedBox(width: 8),
-        ],
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
+            Icons.arrow_back,
             color: Colors.white,
           ),
           onPressed: () => Navigator.of(context).pop(),
@@ -1113,19 +1105,19 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   decoration: BoxDecoration(
                     color: AppTheme.error.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.error.withOpacity(0.2),
-                        blurRadius: 10,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    // boxShadow: [
+                    //   BoxShadow(
+                    //     color: AppTheme.error.withOpacity(0.2),
+                    //     blurRadius: 10,
+                    //     spreadRadius: 0,
+                    //     offset: const Offset(0, 2),
+                    //   ),
+                    // ],
                   ),
                   child: const Icon(
                     Icons.logout_rounded,
                     color: AppTheme.error,
-                    size: 20,
+                    size: 14,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1134,7 +1126,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     'Logout',
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      fontSize: 16,
                       color: AppTheme.error,
                     ),
                   ),

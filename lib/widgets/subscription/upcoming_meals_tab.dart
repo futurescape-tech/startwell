@@ -77,7 +77,7 @@ class MealData {
 }
 
 class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
-  bool _isCalendarView = false;
+  bool _isCalendarView = true;
   bool _isLoading = true;
   final MealService _mealService = MealService();
   final StudentProfileService _studentProfileService = StudentProfileService();
@@ -558,16 +558,16 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             ),
           ],
         ),
-        if (_isCalendarView)
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              backgroundColor: AppTheme.deepPurple,
-              onPressed: _scrollToUpcomingMeal,
-              child: const Icon(Icons.calendar_today, color: Colors.white),
-            ),
-          ),
+        // if (_isCalendarView)
+        //   Positioned(
+        //     bottom: 16,
+        //     right: 16,
+        //     child: FloatingActionButton(
+        //       backgroundColor: AppTheme.deepPurple,
+        //       onPressed: _scrollToUpcomingMeal,
+        //       child: const Icon(Icons.calendar_today, color: Colors.white),
+        //     ),
+        //   ),
       ],
     );
   }
@@ -600,55 +600,6 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             ),
             child: Row(
               children: [
-                // List view toggle
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isCalendarView = false;
-                    });
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient:
-                          !_isCalendarView ? AppTheme.purpleToDeepPurple : null,
-                      color: !_isCalendarView ? null : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: !_isCalendarView
-                          ? [
-                              BoxShadow(
-                                color: AppTheme.purple.withOpacity(0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.list_rounded,
-                          color: !_isCalendarView
-                              ? Colors.white
-                              : AppTheme.textMedium,
-                          size: 20,
-                        ),
-                        if (!_isCalendarView) ...[
-                          const SizedBox(width: 4),
-                          Text(
-                            "List",
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
                 // Calendar view toggle
                 GestureDetector(
                   onTap: () {
@@ -687,6 +638,55 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           const SizedBox(width: 4),
                           Text(
                             "Calendar",
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                // List view toggle
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isCalendarView = false;
+                    });
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient:
+                          !_isCalendarView ? AppTheme.purpleToDeepPurple : null,
+                      color: !_isCalendarView ? null : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: !_isCalendarView
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.purple.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.list_rounded,
+                          color: !_isCalendarView
+                              ? Colors.white
+                              : AppTheme.textMedium,
+                          size: 20,
+                        ),
+                        if (!_isCalendarView) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            "List",
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1111,7 +1111,6 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                   children: [
                     _buildLegendItem('Breakfast', AppTheme.purple),
                     _buildLegendItem('Lunch', AppTheme.success),
-                    _buildLegendItem('Express', Colors.blue),
                     _buildLegendItem('Swapped', AppTheme.orange),
                     _buildLegendItem('Cancelled', AppTheme.error),
                   ],
@@ -2426,7 +2425,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         Icon(
                           meal.planType == 'breakfast'
                               ? Icons.ramen_dining
-                              : Icons.lunch_dining,
+                              : Icons.flatware,
                           color: meal.planType == 'breakfast'
                               ? Colors.pink
                               : Colors.green,
