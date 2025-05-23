@@ -266,13 +266,6 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                         builder: (_) => MainScreen(
                           initialTabIndex: 2,
                         ),
-
-                        //  MySubscriptionScreen(
-                        //   defaultTabIndex: 0,
-                        //   selectedStudentId: widget.selectedStudent.id,
-                        //   startDate: actualStartDate,
-                        //   endDate: widget.endDate,
-                        // ),
                       ),
                       (route) => false, // Remove all previous routes
                     );
@@ -425,6 +418,11 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
   }
 
   void _processPayment(BuildContext context) async {
+    // Determine if we have both meal types selected
+    final bool hasBothMealTypes = (widget.mealType == 'both') ||
+        (widget.selectedStudent.breakfastPlanEndDate != null &&
+            widget.selectedStudent.lunchPlanEndDate != null);
+
     // Determine the meal plan type from the mealType parameter or from the selected meals
     final String planType = widget.mealType ??
         (widget.selectedMeals.first.categories.first == MealCategory.breakfast
@@ -488,30 +486,76 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
 
       // If this is a breakfast or lunch plan (not express), use April 14, 2025 as start date
       DateTime actualStartDate = widget.startDate;
-      // No longer override the start date - use the date selected by the user
-      // if (planType == 'breakfast' || planType == 'lunch') {
-      //   // Set standardized plan start date to April 14, 2025
-      //   actualStartDate = DateTime(2025, 4, 14);
-      // }
 
       log('[DEBUG] Using actual start date in payment screen: ${DateFormat('yyyy-MM-dd').format(actualStartDate)}');
       log('[DEBUG] Meal plan type: $planType');
 
-      final success = await profileService.assignMealPlan(
-        actualStartDate,
-        widget.selectedStudent.id,
-        planType,
-        widget.endDate,
-        mealPreference: mealPreference,
-        selectedWeekdays: widget.isCustomPlan
-            ? widget.selectedWeekdays
-                .asMap()
-                .entries
-                .where((entry) => entry.value)
-                .map((entry) => entry.key + 1) // Convert to 1-7 for Mon-Sun
-                .toList()
-            : null,
-      );
+      // If both meal types are selected, handle differently
+      bool success = false;
+
+      if (hasBothMealTypes || widget.mealType == 'both') {
+        // For both meal types, we need to create/update both breakfast and lunch plans
+        log('[DEBUG] Processing BOTH breakfast and lunch plans');
+
+        // First assign breakfast plan
+        success = await profileService.assignMealPlan(
+          actualStartDate,
+          widget.selectedStudent.id,
+          'breakfast',
+          widget.endDate,
+          mealPreference: mealPreference,
+          selectedWeekdays: widget.isCustomPlan
+              ? widget.selectedWeekdays
+                  .asMap()
+                  .entries
+                  .where((entry) => entry.value)
+                  .map((entry) => entry.key + 1) // Convert to 1-7 for Mon-Sun
+                  .toList()
+              : null,
+        );
+
+        // Then assign lunch plan
+        if (success) {
+          success = await profileService.assignMealPlan(
+            actualStartDate,
+            widget.selectedStudent.id,
+            'lunch',
+            widget.endDate,
+            mealPreference: mealPreference,
+            selectedWeekdays: widget.isCustomPlan
+                ? widget.selectedWeekdays
+                    .asMap()
+                    .entries
+                    .where((entry) => entry.value)
+                    .map((entry) => entry.key + 1) // Convert to 1-7 for Mon-Sun
+                    .toList()
+                : null,
+          );
+        }
+
+        // Store the combined plan information in shared preferences for my subscription page
+        if (success) {
+          await _storeCombinedPlanInfo(widget.selectedStudent.id, 'breakfast',
+              'lunch', actualStartDate, widget.endDate, mealPreference);
+        }
+      } else {
+        // Standard single plan type
+        success = await profileService.assignMealPlan(
+          actualStartDate,
+          widget.selectedStudent.id,
+          planType,
+          widget.endDate,
+          mealPreference: mealPreference,
+          selectedWeekdays: widget.isCustomPlan
+              ? widget.selectedWeekdays
+                  .asMap()
+                  .entries
+                  .where((entry) => entry.value)
+                  .map((entry) => entry.key + 1) // Convert to 1-7 for Mon-Sun
+                  .toList()
+              : null,
+        );
+      }
 
       // Close loading dialog
       Navigator.pop(context);
@@ -542,7 +586,9 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
                 Text(
                   widget.isExpressOrder
                       ? 'Your express order has been placed successfully! Your meal will be delivered to ${widget.selectedStudent.name} today.'
-                      : 'Your subscription has been activated! Meals will be delivered to ${widget.selectedStudent.name} according to the schedule.',
+                      : (hasBothMealTypes || widget.mealType == 'both')
+                          ? 'Your breakfast and lunch subscriptions have been activated! Meals will be delivered to ${widget.selectedStudent.name} according to the schedule.'
+                          : 'Your subscription has been activated! Meals will be delivered to ${widget.selectedStudent.name} according to the schedule.',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                   ),
@@ -555,7 +601,26 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
                 child: GradientButton(
                   text: 'Manage Subscription',
                   isFullWidth: true,
-                  onPressed: () => _onSuccessfulPayment(),
+                  onPressed: () {
+                    // Close dialog
+                    Navigator.pop(context);
+                    log("PhonePeDummyScreen startDate: ${widget.startDate}");
+                    log("PhonePeDummyScreen endDate: ${widget.endDate}");
+
+                    // Store student profile before navigation
+                    _storeStudentProfile(widget.selectedStudent);
+
+                    // Navigate directly to MainScreen with My Subscriptions tab (index 2)
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MainScreen(
+                          initialTabIndex: 2,
+                        ),
+                      ),
+                      (route) => false, // Remove all previous routes
+                    );
+                  },
                 ),
               ),
             ],
@@ -590,61 +655,88 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
     }
   }
 
-  void _onSuccessfulPayment() async {
-    // Generate a unique subscription ID
-    final String subscriptionId =
-        'sub_${DateTime.now().millisecondsSinceEpoch}';
-    final String planId = 'plan_${DateTime.now().millisecondsSinceEpoch}';
-
-    // Save order summary with planId
-    await _saveOrderSummary(planId);
-
-    // Save the link between the subscription and plan
-    await RazorpayDummyScreen.saveSubscriptionLink(
-        widget.selectedStudent.id, subscriptionId, planId);
-
-    log("Payment successful. Subscription ID: $subscriptionId, Plan ID: $planId");
-
-    // Continue with existing navigation
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DummyPaymentSuccessScreen(
-          // ... existing parameters
-          subscriptionId: subscriptionId,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _saveOrderSummary(String planId) async {
+  // Helper method to store combined breakfast and lunch plan info
+  Future<void> _storeCombinedPlanInfo(
+      String studentId,
+      String breakfastPlanType,
+      String lunchPlanType,
+      DateTime startDate,
+      DateTime endDate,
+      String? mealPreference) async {
     try {
-      final Map<String, dynamic> orderSummary = {
-        'planType': widget.planType,
-        'isCustomPlan': widget.isCustomPlan,
-        'startDate': widget.startDate.toIso8601String(),
-        'endDate': widget.endDate.toIso8601String(),
-        'totalMeals': widget.mealDates.length,
-        'totalAmount': widget.totalAmount,
-        'pricePerMeal': widget.totalAmount / widget.mealDates.length,
-        'mealType': widget.mealType ??
-            (widget.selectedMeals.isNotEmpty
-                ? (widget.selectedMeals.first.categories
-                        .contains(MealCategory.breakfast)
-                    ? 'breakfast'
-                    : 'lunch')
-                : 'lunch'),
+      final prefs = await SharedPreferences.getInstance();
+
+      // Create a unique ID for this combined subscription
+      final String planId =
+          'combined_plan_${DateTime.now().millisecondsSinceEpoch}';
+
+      // Create a combined plan object with both breakfast and lunch info
+      final Map<String, dynamic> combinedPlan = {
+        'studentId': studentId,
+        'planId': planId,
+        'hasBreakfast': true,
+        'hasLunch': true,
+        'startDate': startDate.toIso8601String(),
+        'endDate': endDate.toIso8601String(),
+        'breakfastPlanType': breakfastPlanType,
+        'lunchPlanType': lunchPlanType,
+        'mealPreference': mealPreference,
         'timestamp': DateTime.now().toIso8601String(),
       };
 
-      // Store in SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final key = 'order_summary_${widget.selectedStudent.id}_$planId';
-      await prefs.setString(key, jsonEncode(orderSummary));
+      // Store combined plan info
+      final key = 'combined_subscription_${studentId}_$planId';
+      await prefs.setString(key, jsonEncode(combinedPlan));
 
-      log('Order summary stored with plan ID: $planId');
+      // Also store references to this combined plan
+      await RazorpayDummyScreen.saveSubscriptionLink(
+          studentId, 'breakfast', planId);
+      await RazorpayDummyScreen.saveSubscriptionLink(
+          studentId, 'lunch', planId);
+
+      // Store the student profile for easy access in the upcoming meals tab
+      await _storeStudentProfile(widget.selectedStudent);
+
+      log('Stored combined plan info with key: $key');
     } catch (e) {
-      log('Error storing order summary: $e');
+      log('Error storing combined plan info: $e');
+    }
+  }
+
+  // Helper method to store student profile in SharedPreferences
+  Future<void> _storeStudentProfile(Student student) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Store the student profile as JSON
+      final key = 'student_profile_${student.id}';
+      await prefs.setString(key, jsonEncode(student.toJson()));
+
+      // Add student ID to the list of recently active students
+      final activeStudentsKey = 'recently_active_students';
+      List<String> activeStudents = [];
+
+      if (prefs.containsKey(activeStudentsKey)) {
+        final activeStudentsJson = prefs.getString(activeStudentsKey) ?? '[]';
+        activeStudents = List<String>.from(jsonDecode(activeStudentsJson));
+      }
+
+      // Ensure this student is at the beginning of the list (most recent)
+      activeStudents.remove(student.id); // Remove if exists
+      activeStudents.insert(0, student.id); // Add to beginning
+
+      // Keep only the 5 most recent students
+      if (activeStudents.length > 5) {
+        activeStudents = activeStudents.sublist(0, 5);
+      }
+
+      // Save the updated list
+      await prefs.setString(activeStudentsKey, jsonEncode(activeStudents));
+
+      log('Stored student profile with key: $key');
+      log('Updated recently active students: $activeStudents');
+    } catch (e) {
+      log('Error storing student profile: $e');
     }
   }
 }
@@ -885,6 +977,9 @@ class _StartwellWalletDummyScreenState
                     // Close dialog
                     Navigator.pop(context);
 
+                    // Store student profile before navigation
+                    _storeStudentProfile(widget.selectedStudent);
+
                     // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
                     DateTime actualStartDate = widget.startDate;
                     // No longer override start date - use what was selected by the user
@@ -938,6 +1033,43 @@ class _StartwellWalletDummyScreenState
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  // Helper method to store student profile in SharedPreferences
+  Future<void> _storeStudentProfile(Student student) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Store the student profile as JSON
+      final key = 'student_profile_${student.id}';
+      await prefs.setString(key, jsonEncode(student.toJson()));
+
+      // Add student ID to the list of recently active students
+      final activeStudentsKey = 'recently_active_students';
+      List<String> activeStudents = [];
+
+      if (prefs.containsKey(activeStudentsKey)) {
+        final activeStudentsJson = prefs.getString(activeStudentsKey) ?? '[]';
+        activeStudents = List<String>.from(jsonDecode(activeStudentsJson));
+      }
+
+      // Ensure this student is at the beginning of the list (most recent)
+      activeStudents.remove(student.id); // Remove if exists
+      activeStudents.insert(0, student.id); // Add to beginning
+
+      // Keep only the 5 most recent students
+      if (activeStudents.length > 5) {
+        activeStudents = activeStudents.sublist(0, 5);
+      }
+
+      // Save the updated list
+      await prefs.setString(activeStudentsKey, jsonEncode(activeStudents));
+
+      log('Stored student profile with key: $key');
+      log('Updated recently active students: $activeStudents');
+    } catch (e) {
+      log('Error storing student profile: $e');
     }
   }
 }

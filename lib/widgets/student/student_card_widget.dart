@@ -387,20 +387,38 @@ class StudentCardWidget extends StatelessWidget {
 
   // Helper method to build meal plan tag
   Widget _buildMealTag(String title, IconData icon) {
+    Color badgeColor;
+    List<Color> gradientColors;
+    if (title == 'Breakfast') {
+      badgeColor = Colors.pink;
+      gradientColors = [
+        Colors.pink.withOpacity(0.15),
+        Colors.pink.withOpacity(0.15)
+      ];
+    } else if (title == 'Lunch') {
+      badgeColor = Colors.green;
+      gradientColors = [
+        Colors.green.withOpacity(0.15),
+        Colors.green.withOpacity(0.15)
+      ];
+    } else {
+      badgeColor = AppTheme.purple;
+      gradientColors = [
+        AppTheme.purple.withOpacity(0.2),
+        AppTheme.deepPurple.withOpacity(0.1)
+      ];
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            AppTheme.purple.withOpacity(0.2),
-            AppTheme.deepPurple.withOpacity(0.1),
-          ],
+          colors: gradientColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.purple.withOpacity(0.3),
+          color: badgeColor.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -410,7 +428,7 @@ class StudentCardWidget extends StatelessWidget {
           Icon(
             icon,
             size: 14,
-            color: AppTheme.purple,
+            color: badgeColor,
           ),
           const SizedBox(width: 4),
           Text(
@@ -418,7 +436,7 @@ class StudentCardWidget extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: AppTheme.purple,
+              color: badgeColor,
             ),
           ),
         ],
@@ -445,29 +463,29 @@ class StudentCardWidget extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber_rounded,
-                      color: Colors.red[700], size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'This action cannot be undone. All data associated with this student will be permanently removed.',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.red[700],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Container(
+            //   padding: const EdgeInsets.all(16),
+            //   decoration: BoxDecoration(
+            //     color: Colors.red[50],
+            //     borderRadius: BorderRadius.circular(16),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       Icon(Icons.warning_amber_rounded,
+            //           color: Colors.red[700], size: 24),
+            //       const SizedBox(width: 12),
+            //       Expanded(
+            //         child: Text(
+            //           'This action cannot be undone. All data associated with this student will be permanently removed.',
+            //           style: GoogleFonts.poppins(
+            //             fontSize: 14,
+            //             color: Colors.red[700],
+            //           ),
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
             const SizedBox(height: 16),
             Text(
               'Are you sure you want to delete the profile for ${student.name}?',
@@ -500,7 +518,7 @@ class StudentCardWidget extends StatelessWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(50),
               ),
             ),
             child: Text(

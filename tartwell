@@ -1,0 +1,59 @@
+[33mcommit f511c05719985ccacddec87e575f155c543dd693[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m
+Author: neeraj.sharma <neeraj.sharma@futurescapetech.com>
+Date:   Thu May 15 14:05:35 2025 +0530
+
+    changes before subscription logic
+
+[1mdiff --git a/lib/screens/order_summary_screen.dart b/lib/screens/order_summary_screen.dart[m
+[1mindex 217e2a5..cb6e682 100644[m
+[1m--- a/lib/screens/order_summary_screen.dart[m
+[1m+++ b/lib/screens/order_summary_screen.dart[m
+[36m@@ -370,12 +370,6 @@[m [mclass _OrderSummaryScreenState extends State<OrderSummaryScreen>[m
+                                       ),[m
+                                       isAlert: true,[m
+                                     ),[m
+[31m-                                  _buildStudentInfoRow([m
+[31m-                                    icon: Icons.location_on_rounded,[m
+[31m-                                    label: 'School Address',[m
+[31m-                                    value: widget.selectedStudent.schoolAddress,[m
+[31m-                                    isLast: true,[m
+[31m-                                  ),[m
+                                 ],[m
+                               ),[m
+                             ),[m
+[36m@@ -411,7 +405,7 @@[m [mclass _OrderSummaryScreenState extends State<OrderSummaryScreen>[m
+                               child: Column([m
+                                 children: [[m
+                                   _buildStudentInfoRow([m
+[31m-                                    icon: Icons.lunch_dining_rounded,[m
+[32m+[m[32m                                    icon: Icons.flatware_rounded,[m
+                                     label: 'Meal Price',[m
+                                     value:[m
+                                         '₹${(widget.totalAmount / widget.mealDates.length).toStringAsFixed(0)} per meal',[m
+[36m@@ -1031,7 +1025,7 @@[m [mclass _OrderSummaryScreenState extends State<OrderSummaryScreen>[m
+                 _buildMealPlanTab([m
+                   'Lunch',[m
+                   mealType == 'lunch',[m
+[31m-                  Icons.lunch_dining_rounded,[m
+[32m+[m[32m                  Icons.flatware_rounded,[m
+                   AppTheme.success,[m
+                 ),[m
+                 _buildMealPlanTab([m
+[36m@@ -1154,7 +1148,7 @@[m [mclass _OrderSummaryScreenState extends State<OrderSummaryScreen>[m
+         return Icons.local_shipping_rounded;[m
+       case 'lunch':[m
+       default:[m
+[31m-        return Icons.lunch_dining_rounded;[m
+[32m+[m[32m        return Icons.flatware_rounded;[m
+     }[m
+   }[m
+ [m
+[36m@@ -1325,7 +1319,7 @@[m [mclass _OrderSummaryScreenState extends State<OrderSummaryScreen>[m
+                         Icon([m
+                           mealType == 'breakfast'[m
+                               ? Icons.ramen_dining[m
+[31m-                              : Icons.lunch_dining,[m
+[32m+[m[32m                              : Icons.flatware,[m
+                           size: 16,[m
+                           color: mealType == 'breakfast'[m
+                               ? Colors.pink[m

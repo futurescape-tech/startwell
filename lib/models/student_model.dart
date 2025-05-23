@@ -20,6 +20,10 @@ class Student {
   final DateTime? breakfastPlanEndDate;
   final DateTime? lunchPlanEndDate;
 
+  // Pre-order dates for active plans
+  final DateTime? breakfastPreOrderDate;
+  final DateTime? lunchPreOrderDate;
+
   // Meal preferences
   final String? breakfastPreference; // 'Indian', 'Jain', 'International', etc.
   final String? lunchPreference; // 'Indian', 'Jain', 'International', etc.
@@ -36,6 +40,22 @@ class Student {
   // Getter to check if student has any active plan
   bool get hasActivePlan => hasActiveBreakfast || hasActiveLunch;
 
+  // Create an empty student for fallback situations
+  factory Student.empty() {
+    return Student(
+      id: '',
+      name: '',
+      schoolName: '',
+      className: '',
+      division: '',
+      floor: '',
+      allergies: '',
+      grade: '',
+      section: '',
+      profileImageUrl: '',
+    );
+  }
+
   // Getter to get the appropriate selected weekdays based on meal type
   List<int>? getSelectedWeekdaysForMealType(String mealType) {
     if (mealType == 'breakfast') {
@@ -44,6 +64,32 @@ class Student {
       return lunchSelectedWeekdays;
     }
     return null;
+  }
+
+  // Convert weekday indexes to a boolean list (Mon-Fri)
+  // Returns a list of 5 booleans where true indicates the weekday is selected
+  List<bool> getWeekdaysBoolList(String mealType) {
+    // Get the appropriate weekday indices
+    final List<int>? weekdayIndices = getSelectedWeekdaysForMealType(mealType);
+
+    // Create a boolean list initialized with false
+    List<bool> weekdayBoolList = List.generate(5, (_) => false);
+
+    // If we have weekday indices, mark them as true
+    if (weekdayIndices != null && weekdayIndices.isNotEmpty) {
+      for (int index in weekdayIndices) {
+        // Convert 1-based index (1=Monday) to 0-based index for array
+        int arrayIndex = index - 1;
+        if (arrayIndex >= 0 && arrayIndex < 5) {
+          weekdayBoolList[arrayIndex] = true;
+        }
+      }
+    } else {
+      // If no weekday selection is found, default to all weekdays (Mon-Fri)
+      weekdayBoolList = List.generate(5, (_) => true);
+    }
+
+    return weekdayBoolList;
   }
 
   Student({
@@ -65,6 +111,8 @@ class Student {
     this.breakfastPlanEndDate,
     this.lunchPlanStartDate,
     this.lunchPlanEndDate,
+    this.breakfastPreOrderDate,
+    this.lunchPreOrderDate,
     this.breakfastPreference,
     this.lunchPreference,
     this.selectedWeekdays,
@@ -97,6 +145,8 @@ class Student {
     List<int>? selectedWeekdays,
     List<int>? breakfastSelectedWeekdays,
     List<int>? lunchSelectedWeekdays,
+    DateTime? breakfastPreOrderDate,
+    DateTime? lunchPreOrderDate,
   }) {
     return Student(
       id: id ?? this.id,
@@ -118,6 +168,9 @@ class Student {
       breakfastPlanEndDate: breakfastPlanEndDate ?? this.breakfastPlanEndDate,
       lunchPlanStartDate: lunchPlanStartDate ?? this.lunchPlanStartDate,
       lunchPlanEndDate: lunchPlanEndDate ?? this.lunchPlanEndDate,
+      breakfastPreOrderDate:
+          breakfastPreOrderDate ?? this.breakfastPreOrderDate,
+      lunchPreOrderDate: lunchPreOrderDate ?? this.lunchPreOrderDate,
       breakfastPreference: breakfastPreference ?? this.breakfastPreference,
       lunchPreference: lunchPreference ?? this.lunchPreference,
       selectedWeekdays: selectedWeekdays ?? this.selectedWeekdays,
@@ -149,6 +202,8 @@ class Student {
       'breakfastPlanEndDate': breakfastPlanEndDate?.toIso8601String(),
       'lunchPlanStartDate': lunchPlanStartDate?.toIso8601String(),
       'lunchPlanEndDate': lunchPlanEndDate?.toIso8601String(),
+      'breakfastPreOrderDate': breakfastPreOrderDate?.toIso8601String(),
+      'lunchPreOrderDate': lunchPreOrderDate?.toIso8601String(),
       'breakfastPreference': breakfastPreference,
       'lunchPreference': lunchPreference,
       'selectedWeekdays': selectedWeekdays,
@@ -187,6 +242,12 @@ class Student {
           : null,
       lunchPlanEndDate: json['lunchPlanEndDate'] != null
           ? DateTime.parse(json['lunchPlanEndDate'] as String)
+          : null,
+      breakfastPreOrderDate: json['breakfastPreOrderDate'] != null
+          ? DateTime.parse(json['breakfastPreOrderDate'] as String)
+          : null,
+      lunchPreOrderDate: json['lunchPreOrderDate'] != null
+          ? DateTime.parse(json['lunchPreOrderDate'] as String)
           : null,
       breakfastPreference: json['breakfastPreference'] as String?,
       lunchPreference: json['lunchPreference'] as String?,

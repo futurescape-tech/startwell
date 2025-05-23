@@ -359,27 +359,27 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              Icons.cancel_outlined,
-              color: AppTheme.error,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            "Cancelled Meals",
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textDark,
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.all(10),
+          //   decoration: BoxDecoration(
+          //     color: AppTheme.error.withOpacity(0.1),
+          //     borderRadius: BorderRadius.circular(10),
+          //   ),
+          //   child: Icon(
+          //     Icons.cancel_outlined,
+          //     color: AppTheme.error,
+          //     size: 20,
+          //   ),
+          // ),
+          // const SizedBox(width: 12),
+          // Text(
+          //   "Cancelled Meals",
+          //   style: GoogleFonts.poppins(
+          //     fontSize: 18,
+          //     fontWeight: FontWeight.w600,
+          //     color: AppTheme.textDark,
+          //   ),
+          // ),
         ],
       ),
     );
@@ -466,13 +466,13 @@ class CancelledMealsTabState extends State<CancelledMealsTab> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.purple.withOpacity(0.1),
+                color: AppTheme.error.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.check_circle_outline,
+                Icons.cancel_outlined,
                 size: 64,
-                color: AppTheme.purple,
+                color: AppTheme.error,
               ),
             ),
             const SizedBox(height: 24),

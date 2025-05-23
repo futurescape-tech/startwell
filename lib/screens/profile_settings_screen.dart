@@ -21,6 +21,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:startwell/widgets/profile_avatar.dart';
 import 'package:startwell/utils/routes.dart';
 import 'package:flutter/rendering.dart';
+import 'package:startwell/screens/startwell_wallet_page.dart';
+import 'package:startwell/screens/invite_startwell_screen.dart';
+import 'package:startwell/screens/manage_student_profile_screen.dart';
 
 class ProfileSettingsScreen extends StatefulWidget {
   const ProfileSettingsScreen({Key? key}) : super(key: key);
@@ -548,7 +551,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               color: Colors.white,
             ),
           ),
-          centerTitle: true,
+          centerTitle: false,
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: AppTheme.purpleToDeepPurple,
@@ -573,7 +576,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             color: Colors.white,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
@@ -611,7 +614,51 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                   _buildSectionHeader('Settings'),
                   const SizedBox(height: 16),
 
-                  // Settings List
+                  // Student Management
+                  _buildSettingsItem(
+                    icon: Icons.person,
+                    title: 'Student Management',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ManageStudentProfileScreen(
+                          isManagementMode: true,
+                        ),
+                      ),
+                    ),
+                    iconColor: AppTheme.error,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Wallet
+                  _buildSettingsItem(
+                    icon: Icons.account_balance_wallet,
+                    title: 'StartWell Wallet',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StartwellWalletPage(),
+                      ),
+                    ),
+                    iconColor: AppTheme.deepPurple,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Invite School
+                  _buildSettingsItem(
+                    icon: Icons.school,
+                    title: 'Invite School',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const InviteStartWellScreen(),
+                      ),
+                    ),
+                    iconColor: AppTheme.orange,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Existing settings items
                   _buildSettingsItem(
                     icon: Icons.description_outlined,
                     title: 'Terms & Conditions',
@@ -904,14 +951,14 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                 decoration: BoxDecoration(
                   color: (iconColor ?? AppTheme.purple).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (iconColor ?? AppTheme.purple).withOpacity(0.1),
-                      blurRadius: 5,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  // boxShadow: [
+                  //   BoxShadow(
+                  //     color: (iconColor ?? AppTheme.purple).withOpacity(0.1),
+                  //     blurRadius: 5,
+                  //     spreadRadius: 0,
+                  //     offset: const Offset(0, 2),
+                  //   ),
+                  // ],
                 ),
                 child: Icon(
                   icon,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/themes/app_theme.dart';
+import 'package:startwell/screens/menu_page.dart';
 
 class HomeBannerCard extends StatefulWidget {
   final VoidCallback onExplorePressed;
@@ -61,65 +62,142 @@ class _HomeBannerCardState extends State<HomeBannerCard>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF8B008B), // Darker lavender (from B39DDB → 9575CD)
-            Color(0xFF8A2BE2), // Deeper purple (from 8C52FF → 6A1B9A)
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            spreadRadius: 1,
-            offset: const Offset(0, 6),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 350;
+    final titleFontSize = isSmall ? 16.0 : 22.0;
+    final subtitleFontSize = isSmall ? 12.0 : 14.0;
+    final padding = isSmall ? 12.0 : 20.0;
+    final buttonFontSize = isSmall ? 13.0 : 16.0;
+    final buttonHeight = isSmall ? 38.0 : 50.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        return Container(
+          width: double.infinity,
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF8B008B),
+                Color(0xFF8A2BE2),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                spreadRadius: 1,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'School meals done right!',
                 style: GoogleFonts.poppins(
-                  fontSize: 22,
+                  fontSize: titleFontSize,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Fresh, nutritious meals delivered daily to your child\'s school',
+                style: GoogleFonts.poppins(
+                  fontSize: subtitleFontSize,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white.withOpacity(0.9),
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 15),
+              LayoutBuilder(
+                builder: (context, buttonConstraints) {
+                  final isVerySmall = buttonConstraints.maxWidth < 300;
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const MenuPage()),
+                            );
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isVerySmall ? 12 : 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.menu_book_rounded,
+                                  color: Colors.white,
+                                  size: subtitleFontSize * 1.2,
+                                ),
+                                SizedBox(width: isVerySmall ? 6 : 8),
+                                Text(
+                                  'Weekly Menu',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: subtitleFontSize,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                SizedBox(width: isVerySmall ? 2 : 4),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  color: Colors.white,
+                                  size: subtitleFontSize,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      _buildExploreButton(
+                        fontSize: buttonFontSize,
+                        height: buttonHeight,
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            'Fresh, nutritious meals delivered daily to your child\'s school',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withOpacity(0.9),
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Align(
-            alignment: Alignment.centerRight,
-            child: _buildExploreButton(),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildExploreButton() {
-    // Bounce-in animation with glow effect
+  Widget _buildExploreButton({double fontSize = 16, double height = 50}) {
     return AnimatedScale(
       scale: _isVisible ? 1.0 : 0.8,
       duration: const Duration(milliseconds: 100),
@@ -148,22 +226,27 @@ class _HomeBannerCardState extends State<HomeBannerCard>
           onTap: widget.onExplorePressed,
           borderRadius: BorderRadius.circular(20),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: EdgeInsets.symmetric(
+              horizontal: height * 0.32,
+              vertical: height * 0.2,
+            ),
             decoration: BoxDecoration(
               gradient: AppTheme.orangeToYellow,
               borderRadius: BorderRadius.circular(50),
             ),
-            height: 50,
+            height: height,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Explore Meal Plans',
+                  'View Meals',
                   style: GoogleFonts.poppins(
-                    fontSize: 16,
+                    fontSize: fontSize,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textDark,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(width: 6),
                 const Icon(

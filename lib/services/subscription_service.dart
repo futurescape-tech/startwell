@@ -47,7 +47,8 @@ class SubscriptionService {
       final String? storedMeals = prefs.getString(_storageKey);
 
       if (storedMeals != null && storedMeals.isNotEmpty) {
-        final List<dynamic> mealsJson = jsonDecode(storedMeals);
+        final List<dynamic> mealsJson =
+            jsonDecode(storedMeals) as List<dynamic>;
 
         // Convert dates stored as strings back to DateTime objects
         for (var mealJson in mealsJson) {

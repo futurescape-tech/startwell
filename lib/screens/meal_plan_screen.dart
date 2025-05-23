@@ -15,14 +15,47 @@ import 'package:startwell/utils/routes.dart';
 
 class MealPlanScreen extends StatefulWidget {
   final UserProfile? userProfile;
+  final String? initialTab;
 
-  const MealPlanScreen({super.key, this.userProfile});
+  const MealPlanScreen({super.key, this.userProfile, this.initialTab});
 
   @override
   State<MealPlanScreen> createState() => _MealPlanScreenState();
 }
 
-class _MealPlanScreenState extends State<MealPlanScreen> {
+class _MealPlanScreenState extends State<MealPlanScreen>
+    with TickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Debug print to check initialTab
+    print('DEBUG: MealPlanScreen initialTab=${widget.initialTab}');
+
+    // Initialize tab controller with 2 tabs and correct initial index
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTab == 'lunch'
+          ? 1
+          : 0, // Set initial index based on initialTab
+    );
+
+    // Add listener to rebuild when tab changes
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   // Simple list of test meals for each category
   final List<Map<String, dynamic>> _breakfastMeals = [
     {
@@ -87,6 +120,26 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     },
   ];
 
+  // Check if breakfast tab should be disabled
+  bool get isBreakfastDisabled => MealSelectionManager.hasBreakfastInCart;
+
+  // Check if lunch tab should be disabled
+  bool get isLunchDisabled => MealSelectionManager.hasLunchInCart;
+
+  // Show message when disabled tab is tapped
+  void _showDisabledTabMessage(BuildContext context, String mealType) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$mealType is already in your cart. Remove it from cart to select a different $mealType.',
+          style: GoogleFonts.poppins(),
+        ),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
   // Check if current time is within Express window (12:00 AM to 8:00 AM IST)
   bool isWithinExpressWindow() {
     // Convert to IST time (UTC + 5:30)
@@ -108,11 +161,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
           ),
           title: Row(
             children: [
-              Icon(
-                Icons.access_time_rounded,
-                color: Colors.orange,
-                size: 24,
-              ),
+              Icon(Icons.access_time_rounded, color: Colors.orange, size: 24),
               const SizedBox(width: 8),
               Text(
                 'Express Order Timing',
@@ -158,174 +207,235 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Builder(
-        builder: (BuildContext context) {
-          final TabController tabController = DefaultTabController.of(context);
-
-          // Add listener to rebuild when tab changes
-          tabController.addListener(() {
-            if (!tabController.indexIsChanging) {
-              setState(() {});
-            }
-          });
-
-          return WillPopScope(
-            onWillPop: () async {
-              Navigator.of(context)
-                  .pushNamedAndRemoveUntil(Routes.main, (route) => false);
-              return false;
-            },
-            child: Scaffold(
-              backgroundColor: Colors.white,
-              appBar: AppBar(
-                title: Text(
-                  'Order Meal',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+    // Debug the current tab controller index
+    print('DEBUG: Current tab index: ${_tabController.index}');
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(Routes.main, (route) => false);
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: Text(
+            'Order Meal',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: Colors.transparent,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(gradient: AppTheme.purpleToDeepPurple),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil(Routes.main, (route) => false),
+          ),
+          actions: [
+            // Cart icon
+            IconButton(
+              icon: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(
+                    Icons.shopping_cart_outlined,
                     color: Colors.white,
+                    size: 26,
                   ),
-                ),
-                backgroundColor: Colors.transparent,
-                flexibleSpace: Container(
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.purpleToDeepPurple,
-                  ),
-                ),
-                leading: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                  ),
-                  onPressed: () => Navigator.of(context)
-                      .pushNamedAndRemoveUntil(Routes.main, (route) => false),
-                ),
-                actions: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16.0),
-                    child: widget.userProfile != null
-                        ? ProfileAvatar(
-                            userProfile: widget.userProfile,
-                            radius: 18,
-                            onAvatarTap: () {
-                              Navigator.pushNamed(
-                                  context, Routes.profileSettings);
-                            },
-                          )
-                        : IconButton(
-                            icon: const Icon(
-                              Icons.account_circle,
-                              color: AppTheme.white,
-                            ),
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                  context, Routes.profileSettings);
-                            },
+                  if (MealSelectionManager.hasBreakfastInCart ||
+                      MealSelectionManager.hasLunchInCart)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 14,
+                          minHeight: 14,
+                        ),
+                        child: Text(
+                          '${(MealSelectionManager.hasBreakfastInCart ? 1 : 0) + (MealSelectionManager.hasLunchInCart ? 1 : 0)}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
                           ),
-                  ),
-                ],
-              ),
-              body: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title section
-                    Text(
-                      'Choose your meal type',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-
-                    // Custom segmented control
-                    Container(
-                      decoration: BoxDecoration(
-                        // color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: Colors.purple.shade50),
+                ],
+              ),
+              onPressed: () {
+                Navigator.pushNamed(context, Routes.cart);
+              },
+            ),
+            // Profile avatar
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: widget.userProfile != null
+                  ? ProfileAvatar(
+                      userProfile: widget.userProfile,
+                      radius: 18,
+                      onAvatarTap: () {
+                        Navigator.pushNamed(context, Routes.profileSettings);
+                      },
+                    )
+                  : IconButton(
+                      icon: const Icon(
+                        Icons.account_circle,
+                        color: AppTheme.white,
                       ),
-                      child: TabBar(
-                        splashFactory: NoSplash.splashFactory,
-                        overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                            (Set<MaterialState> states) {
-                          // Use the default focused overlay color
-                          return states.contains(MaterialState.focused)
-                              ? null
-                              : Colors.transparent;
-                        }),
-                        indicator: BoxDecoration(
-                          color: _getSelectedTabColor(tabController.index)
-                              .withOpacity(0.1),
-                          //color: Colors.gre.withOpacity(0.8),
-                          borderRadius: BorderRadius.circular(30),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     color: Colors.black.withOpacity(0.1),
-                          //     blurRadius: 4,
-                          //     offset: const Offset(0, 2),
-                          //   ),
-                          // ],
-                        ),
-                        labelColor: _getSelectedTabColor(tabController.index),
-                        unselectedLabelColor: AppTheme.textMedium,
-                        dividerColor: Colors.transparent,
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        labelStyle: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                        unselectedLabelStyle: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                        tabs: const [
-                          Tab(
-                            icon: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.ramen_dining, size: 16),
-                                SizedBox(width: 6),
-                                Text('Breakfast'),
-                              ],
-                            ),
+                      onPressed: () {
+                        Navigator.pushNamed(context, Routes.profileSettings);
+                      },
+                    ),
+            ),
+          ],
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title section
+              Text(
+                'Choose your meal type',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Custom segmented control
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.purple.shade50),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  splashFactory: NoSplash.splashFactory,
+                  overlayColor: MaterialStateProperty.resolveWith<Color?>((
+                    Set<MaterialState> states,
+                  ) {
+                    return states.contains(MaterialState.focused)
+                        ? null
+                        : Colors.transparent;
+                  }),
+                  onTap: (index) {
+                    // Check if tab is disabled (in cart)
+                    if ((index == 0 && isBreakfastDisabled) ||
+                        (index == 1 && isLunchDisabled)) {
+                      // Show message and prevent tab change
+                      _showDisabledTabMessage(
+                        context,
+                        index == 0 ? 'Breakfast' : 'Lunch',
+                      );
+                      // Keep current tab selected
+                      _tabController.animateTo(_tabController.index);
+                    }
+                  },
+                  indicator: BoxDecoration(
+                    color: _getSelectedTabColor(
+                      _tabController.index,
+                    ).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  labelColor: _getSelectedTabColor(_tabController.index),
+                  unselectedLabelColor: AppTheme.textMedium,
+                  dividerColor: Colors.transparent,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelStyle: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                  unselectedLabelStyle: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                  tabs: [
+                    Tab(
+                      icon: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.ramen_dining,
+                            size: 16,
+                            color: isBreakfastDisabled
+                                ? Colors.grey.withOpacity(0.5)
+                                : null,
                           ),
-                          Tab(
-                            icon: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.flatware, size: 16),
-                                SizedBox(width: 6),
-                                Text('Lunch'),
-                              ],
+                          SizedBox(width: 6),
+                          Text(
+                            'Breakfast',
+                            style: TextStyle(
+                              color: isBreakfastDisabled
+                                  ? Colors.grey.withOpacity(0.5)
+                                  : null,
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    const SizedBox(height: 24),
-
-                    // Meal description card
-                    Expanded(
-                      child: TabBarView(
+                    Tab(
+                      icon: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildBreakfastTab(),
-                          _buildLunchTab(),
+                          Icon(
+                            Icons.flatware,
+                            size: 16,
+                            color: isLunchDisabled
+                                ? Colors.grey.withOpacity(0.5)
+                                : null,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Lunch',
+                            style: TextStyle(
+                              color: isLunchDisabled
+                                  ? Colors.grey.withOpacity(0.5)
+                                  : null,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          );
-        },
+
+              const SizedBox(height: 24),
+
+              // Meal description card
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    isBreakfastDisabled
+                        ? _buildDisabledTabContent('Breakfast')
+                        : _buildBreakfastTab(),
+                    isLunchDisabled
+                        ? _buildDisabledTabContent('Lunch')
+                        : _buildLunchTab(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -401,11 +511,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.ramen_dining,
-                  color: Colors.pink,
-                  size: 24,
-                ),
+                Icon(Icons.ramen_dining, color: Colors.pink, size: 24),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -483,11 +589,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.flatware,
-                  color: Colors.green,
-                  size: 24,
-                ),
+                Icon(Icons.flatware, color: Colors.green, size: 24),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -583,16 +685,17 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             }
 
             // Navigate to meal detail page
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => MealDetailPage(
-                  meal: mealData,
-                  sourceTab: mealType,
-                  isExpressTab: isExpressTab,
-                ),
-              ),
-            );
+            // Temporarily commented out to hide meal details page
+            // Navigator.push(
+            //   context,
+            //   MaterialPageRoute(
+            //     builder: (_) => MealDetailPage(
+            //       meal: mealData,
+            //       sourceTab: mealType,
+            //       isExpressTab: isExpressTab,
+            //     ),
+            //   ),
+            // );
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -635,7 +738,9 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                       right: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [AppTheme.orange, Colors.purple],
@@ -711,7 +816,9 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.purple.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(9),
@@ -729,29 +836,28 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                       ],
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 0),
 
                     // Price and meal info row
                     Row(
-                      children: [
-                        Icon(
-                          isVeg ? Icons.restaurant_menu : Icons.food_bank,
-                          color: Colors.green,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            mealDescription,
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ),
+                        // children: [
+                        //   Icon(
+                        //     isVeg ? Icons.restaurant_menu : Icons.food_bank,
+                        //     color: Colors.green,
+                        //     size: 20,
+                        //   ),
+                        // const SizedBox(width: 8),
+                        // Expanded(
+                        //   child: Text(
+                        //     mealDescription,
+                        //     style: GoogleFonts.poppins(
+                        //       fontSize: 16,
+                        //       color: Colors.grey.shade700,
+                        //     ),
+                        //   ),// ),
                         // Price with tab color
-                      ],
-                    ),
+                        // ],
+                        ),
 
                     // Annual offer section - for all tabs except Express
                     if (!isExpressTab)
@@ -784,7 +890,10 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                               child: ShaderMask(
                                 shaderCallback: (bounds) =>
                                     const LinearGradient(
-                                  colors: [Colors.purple, Colors.deepOrange],
+                                  colors: [
+                                    Colors.purple,
+                                    Colors.deepOrange,
+                                  ],
                                   begin: Alignment.centerLeft,
                                   end: Alignment.centerRight,
                                 ).createShader(bounds),
@@ -805,7 +914,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                       ),
 
                     // Add some space before the button
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 0),
 
                     // Choose plan button - for all cards
                     Padding(
@@ -816,43 +925,53 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                           decoration: BoxDecoration(
                             gradient: AppTheme.purpleToDeepPurple,
                             borderRadius: BorderRadius.circular(50),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.shade400.withOpacity(0.3),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
                           child: ElevatedButton(
-                            onPressed: isExpressTab
-                                ? (expressOrderEnabled
-                                    ? () => _handleChoosePlanTap(
-                                          name,
-                                          price,
-                                          imageUrl,
-                                          mealType,
-                                          true,
-                                        )
-                                    : () => _showExpressTimeMessage(context))
-                                : () => _handleChoosePlanTap(
-                                      name,
-                                      price,
-                                      imageUrl,
-                                      mealType,
-                                      false,
-                                    ),
+                            onPressed: () {
+                              // Create a meal with proper name and image
+                              final mealCategory = mealType == 'breakfast'
+                                  ? MealCategory.breakfast
+                                  : MealCategory.lunch;
+                              final dummyMeal = Meal(
+                                id: 'dummy',
+                                name: name,
+                                description: 'Your selected meal',
+                                price: price.toDouble(),
+                                type: MealType.veg,
+                                categories: [mealCategory],
+                                imageUrl: imageUrl,
+                                ingredients: [],
+                                nutritionalInfo: {},
+                                allergyInfo: [],
+                              );
+
+                              // Create an empty selection manager
+                              final selectionManager = MealSelectionManager();
+
+                              // Navigate to subscription selection screen
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SubscriptionSelectionScreen(
+                                    selectionManager: selectionManager,
+                                    selectedMeals: [dummyMeal],
+                                    totalMealCost: price.toDouble(),
+                                    mealType: mealType,
+                                  ),
+                                ),
+                              );
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
+                              shadowColor: Colors.transparent,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(50),
                               ),
                             ),
                             child: Text(
-                              isExpressTab ? 'Order Express' : 'Choose Plan',
+                              'Choose Plan',
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -991,5 +1110,72 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
     // Default case - don't show tag
     return false;
+  }
+
+  Widget _buildDisabledTabContent(String mealType) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            mealType == 'Breakfast'
+                ? Icons.ramen_dining
+                : Icons.flatware_rounded,
+            size: 64,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '$mealType is already in your cart',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Go to your cart to remove it if you want to select a different $mealType.',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: 200,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: AppTheme.purpleToDeepPurple,
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, Routes.cart);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                ),
+                child: Text(
+                  'Go to Cart',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

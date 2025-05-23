@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/utils/meal_constants.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'dart:math' as math;
+import 'package:startwell/services/meal_data_service.dart';
 
 // Extension to add capitalize method to String
 extension StringExtension on String {
@@ -90,6 +91,10 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   List<Student> _studentsWithMealPlans = [];
   List<Map<String, dynamic>> _allScheduledMeals = [];
 
+  // Map to cache meal data by student ID for faster switching between students
+  final Map<String, List<Subscription>> _cachedSubscriptionsByStudent = {};
+  final Map<String, Map<DateTime, List<MealData>>> _cachedMealMapByStudent = {};
+
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
   Map<DateTime, List<MealData>> _mealsMap = {};
@@ -107,8 +112,277 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
 
   Future<void> _loadData() async {
     await _loadStudentsWithMealPlans();
+    await _loadCombinedSubscriptions();
     // We're now applying local swaps in _generateMealMap after the meal map is fully populated
-    // so we don't need to call it here
+  }
+
+  // Save the currently selected student ID to SharedPreferences
+  Future<void> _saveSelectedStudentId(String studentId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_selected_student_id', studentId);
+      log('[upcoming_meals] Saved selected student ID: $studentId');
+    } catch (e) {
+      log('[upcoming_meals] Error saving selected student ID: $e');
+    }
+  }
+
+  // New method to load combined breakfast and lunch subscriptions
+  Future<void> _loadCombinedSubscriptions() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Get all keys that contain combined plans
+      final combinedPlanKeys = prefs
+          .getKeys()
+          .where((key) => key.startsWith('combined_subscription_'))
+          .toList();
+
+      log('[upcoming_meals] Found ${combinedPlanKeys.length} combined subscription plans');
+
+      for (final key in combinedPlanKeys) {
+        final combinedJson = prefs.getString(key);
+        if (combinedJson != null) {
+          final combinedData = jsonDecode(combinedJson);
+
+          // Extract student ID to check if this combined plan belongs to the selected student
+          final String studentId = combinedData['studentId'];
+
+          // Only process if this is for the currently selected student
+          if (_selectedStudentId == null || _selectedStudentId == studentId) {
+            log('[upcoming_meals] Processing combined plan for student $studentId');
+
+            // Extract plan details
+            final DateTime startDate =
+                DateTime.parse(combinedData['startDate']);
+            final DateTime endDate = DateTime.parse(combinedData['endDate']);
+            final String breakfastPlanType = combinedData['breakfastPlanType'];
+            final String lunchPlanType = combinedData['lunchPlanType'];
+            final String planId = combinedData['planId'];
+            final String? mealPreference = combinedData['mealPreference'];
+
+            // Find the student object
+            final student = _studentsWithMealPlans.firstWhere(
+              (s) => s.id == studentId,
+              orElse: () =>
+                  Student.empty(), // Use an empty student as a fallback
+            );
+
+            if (student.id.isNotEmpty) {
+              // Create breakfast subscription
+              final breakfastSubscription = Subscription(
+                id: 'breakfast_$planId',
+                studentId: studentId,
+                planType: breakfastPlanType,
+                startDate: startDate,
+                endDate: endDate,
+                status: SubscriptionStatus.active,
+                mealName: _getMealServiceNameFromPreference(
+                    'breakfast', mealPreference),
+                isBreakfastPlan: true,
+                isLunchPlan: false,
+              );
+
+              // Create lunch subscription
+              final lunchSubscription = Subscription(
+                id: 'lunch_$planId',
+                studentId: studentId,
+                planType: lunchPlanType,
+                startDate: startDate,
+                endDate: endDate,
+                status: SubscriptionStatus.active,
+                mealName:
+                    _getMealServiceNameFromPreference('lunch', mealPreference),
+                isBreakfastPlan: false,
+                isLunchPlan: true,
+              );
+
+              // Add both subscriptions to active subscriptions list if not already present
+              bool breakfastExists = _activeSubscriptions.any((s) =>
+                  s.id == breakfastSubscription.id ||
+                  (s.studentId == studentId && s.isBreakfastPlan));
+
+              bool lunchExists = _activeSubscriptions.any((s) =>
+                  s.id == lunchSubscription.id ||
+                  (s.studentId == studentId && s.isLunchPlan));
+
+              if (!breakfastExists) {
+                _activeSubscriptions.add(breakfastSubscription);
+                log('[upcoming_meals] Added breakfast subscription for student $studentId');
+              }
+
+              if (!lunchExists) {
+                _activeSubscriptions.add(lunchSubscription);
+                log('[upcoming_meals] Added lunch subscription for student $studentId');
+              }
+
+              // Subscriptions are now in _activeSubscriptions and will be processed by _loadData
+            }
+          }
+        }
+      }
+
+      // Update UI
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      log('[upcoming_meals] Error loading combined subscriptions: $e');
+    }
+  }
+
+  // Helper method to get meal name from preference
+  String _getMealServiceNameFromPreference(
+      String mealType, String? preference) {
+    if (preference == null) {
+      return mealType == 'breakfast'
+          ? 'Breakfast of the Day'
+          : 'Lunch of the Day';
+    }
+
+    return '$preference ${mealType.substring(0, 1).toUpperCase()}${mealType.substring(1)}';
+  }
+
+  // Enhance meal card to show subscription type more clearly
+  Widget _buildMealCard(MealData meal) {
+    // Determine if this is a breakfast or lunch meal
+    final bool isBreakfast =
+        meal.planType == 'breakfast' || meal.subscription.isBreakfastPlan;
+
+    final Color mealColor = isBreakfast ? Colors.amber : AppTheme.purple;
+    final String mealTypeLabel = isBreakfast ? 'Breakfast' : 'Lunch';
+
+    // Get meal image URL by meal name
+    final allMeals = MealDataService.getAllMeals();
+    final mealObj = allMeals.firstWhere(
+      (m) => m.name.toLowerCase() == meal.name.toLowerCase(),
+      orElse: () => allMeals.first,
+    );
+    final String mealImageUrl = mealObj.imageUrl.isNotEmpty
+        ? mealObj.imageUrl
+        : 'https://i.imgur.com/vYGZVGz.jpg'; // fallback image
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: mealColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Meal image instead of icon
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 70,
+                    height: 70,
+                    color: Colors.grey[200],
+                    child: _getMealImage(mealImageUrl, meal.planType,
+                        mealName: meal.name),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        meal.studentName,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: mealColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Remove meal icon here
+                                // Icon(
+                                //   mealIcon,
+                                //   size: 14,
+                                //   color: mealColor,
+                                // ),
+                                // const SizedBox(width: 4),
+                                Text(
+                                  mealTypeLabel,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: mealColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            meal.displayPlanType,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: AppTheme.textMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Status indicator (e.g., Delivered, Pending)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(meal.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getStatusColor(meal.status).withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    meal.status,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _getStatusColor(meal.status),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Rest of the existing meal card content
+            // ... existing meal card content ...
+          ],
+        ),
+      ),
+    );
   }
 
   // Method to apply locally swapped meals
@@ -263,21 +537,85 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     });
 
     try {
+      // First, check for recently active students in SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      List<String> recentStudentIds = [];
+
+      // Get the list of recently active student IDs
+      final recentStudentsKey = 'recently_active_students';
+      if (prefs.containsKey(recentStudentsKey)) {
+        final recentStudentsJson = prefs.getString(recentStudentsKey) ?? '[]';
+        recentStudentIds = List<String>.from(jsonDecode(recentStudentsJson));
+        log('[upcoming_meals] Found ${recentStudentIds.length} recently active students');
+      }
+
+      // Check for the last selected student ID
+      String? lastSelectedStudentId =
+          prefs.getString('last_selected_student_id');
+      if (lastSelectedStudentId != null) {
+        log('[upcoming_meals] Found last selected student ID: $lastSelectedStudentId');
+      }
+
+      // Get student profiles from prefs for recently active students first
+      List<Student> recentStudents = [];
+      for (var studentId in recentStudentIds) {
+        final key = 'student_profile_$studentId';
+        if (prefs.containsKey(key)) {
+          try {
+            final studentJson = prefs.getString(key);
+            if (studentJson != null) {
+              final Map<String, dynamic> studentData = jsonDecode(studentJson);
+              final student = Student.fromJson(studentData);
+              recentStudents.add(student);
+              log('[upcoming_meals] Loaded student ${student.name} from SharedPreferences');
+            }
+          } catch (e) {
+            log('[upcoming_meals] Error parsing student profile from SharedPreferences: $e');
+          }
+        }
+      }
+
+      // Then get the rest of the students from the service
       final List<String> studentIds =
           await _mealService.getStudentsWithMealPlans();
-      final List<Student> students =
+      final List<Student> otherStudents =
           await _studentProfileService.getStudentProfiles();
 
-      _studentsWithMealPlans =
-          students.where((student) => studentIds.contains(student.id)).toList();
+      // Filter out students that are already in recentStudents
+      final existingStudentIds = recentStudents.map((s) => s.id).toList();
+      otherStudents
+          .removeWhere((student) => existingStudentIds.contains(student.id));
+
+      // Merge the lists, putting recent students first
+      _studentsWithMealPlans = [...recentStudents];
+
+      // Add any other students with meal plans that aren't in recent list
+      _studentsWithMealPlans.addAll(otherStudents
+          .where((student) => studentIds.contains(student.id))
+          .toList());
 
       if (_studentsWithMealPlans.isNotEmpty) {
+        // Priority for student selection:
+        // 1. Explicitly provided selectedStudentId from widget
+        // 2. Last selected student ID from SharedPreferences
+        // 3. Most recent student from recents list
+        // 4. First student in the list
+
         if (widget.selectedStudentId != null &&
             _studentsWithMealPlans
                 .any((s) => s.id == widget.selectedStudentId)) {
           _selectedStudentId = widget.selectedStudentId;
+          log('[upcoming_meals] Using provided student ID: $_selectedStudentId');
+        } else if (lastSelectedStudentId != null &&
+            _studentsWithMealPlans.any((s) => s.id == lastSelectedStudentId)) {
+          _selectedStudentId = lastSelectedStudentId;
+          log('[upcoming_meals] Using last selected student ID: $_selectedStudentId');
+        } else if (recentStudents.isNotEmpty) {
+          _selectedStudentId = recentStudents.first.id;
+          log('[upcoming_meals] Using most recent student ID: $_selectedStudentId');
         } else {
           _selectedStudentId = _studentsWithMealPlans.first.id;
+          log('[upcoming_meals] Using first available student ID: $_selectedStudentId');
         }
 
         await _loadSubscriptionsForStudent(_selectedStudentId!,
@@ -286,7 +624,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         _activeSubscriptions = [];
       }
     } catch (e) {
-      log('Error loading students with meal plans: $e');
+      log('[upcoming_meals] Error loading students with meal plans: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -297,16 +635,48 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   Future<void> _loadSubscriptionsForStudent(String studentId,
       {bool skipCancelled = false}) async {
     try {
-      // Create a temporary SubscriptionService from the model
-      final modelService = SubscriptionService();
+      setState(() {
+        _isLoading = true;
+      });
 
-      _activeSubscriptions =
-          await modelService.getActiveSubscriptionsForStudent(studentId);
+      // Check if we have cached subscription data for this student
+      if (_cachedSubscriptionsByStudent.containsKey(studentId)) {
+        log('[upcoming_meals] Using cached subscriptions for student $studentId');
+        _activeSubscriptions = _cachedSubscriptionsByStudent[studentId]!;
 
+        // Check if we also have cached meal map data
+        if (_cachedMealMapByStudent.containsKey(studentId)) {
+          log('[upcoming_meals] Using cached meal map for student $studentId');
+          _mealsMap = _cachedMealMapByStudent[studentId]!;
+          _updateSelectedDayMeals();
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+      } else {
+        // Create a temporary SubscriptionService from the model
+        final modelService = SubscriptionService();
+
+        _activeSubscriptions =
+            await modelService.getActiveSubscriptionsForStudent(studentId);
+
+        // Cache the subscriptions for this student
+        _cachedSubscriptionsByStudent[studentId] =
+            List.from(_activeSubscriptions);
+        log('[upcoming_meals] Cached subscriptions for student $studentId');
+      }
+
+      // Generate meal map if we don't have it cached
       _generateMealMap();
+
+      // Cache the generated meal map for faster future access
+      _cachedMealMapByStudent[studentId] = Map.from(_mealsMap);
+      log('[upcoming_meals] Cached meal map for student $studentId');
+
       _updateSelectedDayMeals();
     } catch (e) {
-      log('Error loading subscriptions: $e');
+      log('[upcoming_meals] Error loading subscriptions: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -451,43 +821,100 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   }
 
   void _updateSelectedDayMeals() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final normalizedSelectedDay =
         DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
-    _selectedDateMeals = _mealsMap[normalizedSelectedDay] ?? [];
+    final meals = _mealsMap[normalizedSelectedDay] ?? [];
+    _selectedDateMeals = meals.where((meal) {
+      if (meal.status == "Cancelled") return false;
+      if (meal.date.year == today.year &&
+          meal.date.month == today.month &&
+          meal.date.day == today.day) {
+        if (meal.planType == 'breakfast') {
+          final nineAM = DateTime(today.year, today.month, today.day, 9, 0);
+          if (now.isBefore(nineAM)) return true;
+        } else if (meal.planType == 'lunch') {
+          final onePM = DateTime(today.year, today.month, today.day, 13, 0);
+          if (now.isBefore(onePM)) return true;
+        }
+      }
+      return meal.date.isAfter(today) ||
+          (meal.date.year == today.year &&
+              meal.date.month == today.month &&
+              meal.date.day == today.day);
+    }).toList();
+
+    // Store upcoming meals for first two students for home page
+    _storeUpcomingMealsForHome();
+  }
+
+  Future<void> _storeUpcomingMealsForHome() async {
+    // Gather all upcoming meals, grouped by student and date
+    final List<MealData> allMeals =
+        _mealsMap.values.expand((meals) => meals).toList();
+    // Group by studentId, then by date
+    final Map<String, Map<DateTime, List<MealData>>> mealsByStudentDate = {};
+    for (final meal in allMeals) {
+      mealsByStudentDate.putIfAbsent(meal.studentId, () => {});
+      final dateKey = DateTime(meal.date.year, meal.date.month, meal.date.day);
+      mealsByStudentDate[meal.studentId]!.putIfAbsent(dateKey, () => []);
+      mealsByStudentDate[meal.studentId]![dateKey]!.add(meal);
+    }
+    // Take first two students
+    final List<Map<DateTime, List<MealData>>> firstTwo =
+        mealsByStudentDate.values.take(2).toList();
+    // Collect up to two upcoming meals (breakfast and lunch) per student for the earliest date(s)
+    final List<MealData> homeMeals = [];
+    for (final studentMealsByDate in firstTwo) {
+      // Sort dates
+      final sortedDates = studentMealsByDate.keys.toList()..sort();
+      for (final date in sortedDates) {
+        final mealsOnDate = studentMealsByDate[date]!;
+        // Add all meals (breakfast and lunch) for this date
+        for (final meal in mealsOnDate) {
+          homeMeals.add(meal);
+          if (homeMeals.length >= 2) break;
+        }
+        if (homeMeals.length >= 2) break;
+      }
+      if (homeMeals.length >= 2) break;
+    }
+    // Store minimal data as JSON
+    final List<Map<String, dynamic>> jsonMeals = homeMeals
+        .map((meal) => {
+              'studentName': meal.studentName,
+              'name': meal.name,
+              'planType': meal.planType,
+              'displayPlanType': meal.displayPlanType,
+              'date': meal.date.toIso8601String(),
+              'status': meal.status,
+              'studentId': meal.studentId,
+              'subscriptionId': meal.subscriptionId,
+            })
+        .toList();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('home_upcoming_meals', jsonEncode(jsonMeals));
   }
 
   String _getFormattedPlanType(Subscription subscription) {
-    bool isCustomPlan = subscription.selectedWeekdays.isNotEmpty &&
-        subscription.selectedWeekdays.length < 5;
-    String customBadge = isCustomPlan ? " (Custom)" : " (Mon to Fri)";
-
-    if (subscription.planType == 'express') {
-      return "Express 1-Day Lunch Plan";
-    }
-
-    if (subscription.endDate.difference(subscription.startDate).inDays <= 1) {
-      return "Single Day ${subscription.planType == 'breakfast' ? 'Breakfast' : 'Lunch'} Plan";
-    }
-
-    String mealType =
-        subscription.planType == 'breakfast' ? 'Breakfast' : 'Lunch';
-
     int days = subscription.endDate.difference(subscription.startDate).inDays;
-
-    String planPeriod;
-    if (days <= 7) {
-      planPeriod = "Weekly";
-    } else if (days <= 31) {
-      planPeriod = "Monthly";
-    } else if (days <= 90) {
-      planPeriod = "Quarterly";
-    } else if (days <= 180) {
-      planPeriod = "Half-Yearly";
-    } else {
-      planPeriod = "Annual";
+    if (subscription.planType == 'express') {
+      return "Express 1-Day Plan";
     }
-
-    return "$planPeriod $mealType Plan$customBadge";
+    if (days <= 1) {
+      return "Single Day";
+    } else if (days <= 7) {
+      return "Weekly";
+    } else if (days <= 31) {
+      return "Monthly";
+    } else if (days <= 90) {
+      return "Quarterly";
+    } else if (days <= 180) {
+      return "Half-Yearly";
+    } else {
+      return "Annual";
+    }
   }
 
   bool _isSwapAllowed(DateTime date, String planType) {
@@ -547,27 +974,36 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       );
     }
 
-    return Stack(
-      children: [
-        Column(
-          children: [
-            _buildScreenHeader(),
-            _buildStudentSelector(),
-            Expanded(
-              child: _isCalendarView ? _buildCalendarView() : _buildListView(),
-            ),
-          ],
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      controller: _calendarScrollController,
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              _buildScreenHeader(),
+              _buildStudentSelector(),
+            ],
+          ),
         ),
-        // if (_isCalendarView)
-        //   Positioned(
-        //     bottom: 16,
-        //     right: 16,
-        //     child: FloatingActionButton(
-        //       backgroundColor: AppTheme.deepPurple,
-        //       onPressed: _scrollToUpcomingMeal,
-        //       child: const Icon(Icons.calendar_today, color: Colors.white),
-        //     ),
-        //   ),
+        if (_isCalendarView)
+          SliverToBoxAdapter(
+            child: _buildCalendarView(),
+          )
+        else
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final allMeals = _mealsMap.values
+                    .expand((meals) => meals)
+                    .where((meal) => meal.status != "Cancelled")
+                    .toList()
+                  ..sort((a, b) => a.date.compareTo(b.date));
+                if (index >= allMeals.length) return null;
+                return _buildCalendarMealCard(allMeals[index]);
+              },
+            ),
+          ),
       ],
     );
   }
@@ -788,6 +1224,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                 setState(() {
                   _selectedStudentId = newValue;
                 });
+                // Save the selected student ID to SharedPreferences
+                _saveSelectedStudentId(newValue);
                 _loadSubscriptionsForStudent(newValue, skipCancelled: true);
               }
             },
@@ -838,296 +1276,297 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   Widget _buildCalendarView() {
     _ensureValidFocusedDay();
 
-    // Wrap everything in a SingleChildScrollView for full scrollability
-    return SingleChildScrollView(
-      controller: _calendarScrollController,
-      physics: const ClampingScrollPhysics(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Calendar component with event markers
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppTheme.softShadow,
-              border: Border.all(
-                color: AppTheme.deepPurple.withOpacity(0.1),
-                width: 1,
-              ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Calendar component with event markers
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppTheme.softShadow,
+            border: Border.all(
+              color: AppTheme.deepPurple.withOpacity(0.1),
+              width: 1,
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
-              child: Column(
-                children: [
-                  // Calendar header with month/year and gradient accent
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.grey.shade200,
-                          width: 1,
-                        ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
+            child: Column(
+              children: [
+                // Calendar header with month/year and gradient accent
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey.shade200,
+                        width: 1,
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _focusedDay = DateTime(
-                                  _focusedDay.year, _focusedDay.month - 1, 1);
-                              _selectedDay = _focusedDay;
-                              _updateSelectedDayMeals();
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.purple.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.chevron_left,
-                              color: AppTheme.purple,
-                            ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _focusedDay = DateTime(
+                                _focusedDay.year, _focusedDay.month - 1, 1);
+                            _selectedDay = _focusedDay;
+                            _updateSelectedDayMeals();
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.purple.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.chevron_left,
+                            color: AppTheme.purple,
                           ),
                         ),
-                        Text(
-                          DateFormat('MMMM yyyy').format(_focusedDay),
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textDark,
+                      ),
+                      Text(
+                        DateFormat('MMMM yyyy').format(_focusedDay),
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _focusedDay = DateTime(
+                                _focusedDay.year, _focusedDay.month + 1, 1);
+                            _selectedDay = _focusedDay;
+                            _updateSelectedDayMeals();
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.purple.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.chevron_right,
+                            color: AppTheme.purple,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _focusedDay = DateTime(
-                                  _focusedDay.year, _focusedDay.month + 1, 1);
-                              _selectedDay = _focusedDay;
-                              _updateSelectedDayMeals();
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.purple.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.chevron_right,
-                              color: AppTheme.purple,
-                            ),
-                          ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // TableCalendar widget with existing properties
+                TableCalendar(
+                  firstDay: _getEarliestSubscriptionStartDate(),
+                  lastDay: _getLatestSubscriptionEndDate(),
+                  focusedDay: _focusedDay,
+                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay;
+                      _selectedDateMeals = _mealsMap[DateTime(selectedDay.year,
+                              selectedDay.month, selectedDay.day)] ??
+                          [];
+                    });
+                  },
+                  calendarFormat: CalendarFormat.month,
+                  startingDayOfWeek: StartingDayOfWeek.monday,
+                  headerVisible: false,
+                  availableGestures: AvailableGestures.none,
+                  enabledDayPredicate: (day) {
+                    return true;
+                  },
+                  calendarStyle: CalendarStyle(
+                    outsideDaysVisible: false,
+                    markerSize: 8,
+                    markerDecoration: BoxDecoration(
+                      color: AppTheme.purple,
+                      shape: BoxShape.circle,
+                    ),
+                    todayDecoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.purple.withOpacity(0.7),
+                          AppTheme.deepPurple.withOpacity(0.7),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      gradient: AppTheme.purpleToDeepPurple,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.deepPurple.withOpacity(0.2),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.deepPurple.withOpacity(0.2),
+                          blurRadius: 8,
+                          spreadRadius: 3,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // TableCalendar widget with existing properties
-                  TableCalendar(
-                    firstDay: _getEarliestSubscriptionStartDate(),
-                    lastDay: _getLatestSubscriptionEndDate(),
-                    focusedDay: _focusedDay,
-                    selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                    onDaySelected: (selectedDay, focusedDay) {
-                      setState(() {
-                        _selectedDay = selectedDay;
-                        _focusedDay = focusedDay;
-                        _selectedDateMeals = _mealsMap[DateTime(
-                                selectedDay.year,
-                                selectedDay.month,
-                                selectedDay.day)] ??
-                            [];
-                      });
-                    },
-                    calendarFormat: CalendarFormat.month,
-                    startingDayOfWeek: StartingDayOfWeek.monday,
-                    headerVisible: false, // We have our custom header above
-                    calendarStyle: CalendarStyle(
-                      outsideDaysVisible: false,
-                      markerSize: 8,
-                      markerDecoration: BoxDecoration(
-                        color: AppTheme.purple,
-                        shape: BoxShape.circle,
-                      ),
-                      todayDecoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.purple.withOpacity(0.7),
-                            AppTheme.deepPurple.withOpacity(0.7),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      selectedDecoration: BoxDecoration(
-                        gradient: AppTheme.purpleToDeepPurple,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.deepPurple.withOpacity(0.2),
-                            blurRadius: 6,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      selectedTextStyle: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      todayTextStyle: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      weekendTextStyle: GoogleFonts.poppins(
-                        color: AppTheme.error.withOpacity(0.7),
-                      ),
-                      holidayTextStyle: GoogleFonts.poppins(
-                        color: AppTheme.error.withOpacity(0.7),
-                      ),
-                      defaultTextStyle: GoogleFonts.poppins(
-                        color: AppTheme.textDark,
-                      ),
+                    selectedTextStyle: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
                     ),
-                    daysOfWeekStyle: DaysOfWeekStyle(
-                      weekdayStyle: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textDark,
-                      ),
-                      weekendStyle: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.error.withOpacity(0.7),
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey.shade200,
-                            width: 1,
-                          ),
-                        ),
-                      ),
+                    todayTextStyle: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
                     ),
-                    // Event loader to display dots for meals
-                    eventLoader: (day) {
-                      final normalizedDay =
-                          DateTime(day.year, day.month, day.day);
-                      final events = _mealsMap[normalizedDay] ?? [];
-                      return events;
-                    },
-                    // Custom marker builder for colored dots
-                    calendarBuilders: CalendarBuilders(
-                      markerBuilder: (context, date, events) {
-                        if (events.isEmpty) return null;
-
-                        return Container(
-                          margin: const EdgeInsets.only(top: 6),
-                          child: _buildCalendarMarker(events, date),
-                        );
-                      },
-                      dowBuilder: (context, day) {
-                        final text = DateFormat.E().format(day);
-                        return Center(
-                          child: Text(
-                            text
-                                .substring(0, math.min(text.length, 3))
-                                .toUpperCase(),
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: day.weekday == DateTime.saturday ||
-                                      day.weekday == DateTime.sunday
-                                  ? AppTheme.error.withOpacity(0.7)
-                                  : AppTheme.purple,
-                            ),
-                          ),
-                        );
-                      },
+                    weekendTextStyle: GoogleFonts.poppins(
+                      color: AppTheme.error.withOpacity(0.7),
+                    ),
+                    holidayTextStyle: GoogleFonts.poppins(
+                      color: AppTheme.error.withOpacity(0.7),
+                    ),
+                    defaultTextStyle: GoogleFonts.poppins(
+                      color: AppTheme.textDark,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
+                  daysOfWeekStyle: DaysOfWeekStyle(
+                    weekdayStyle: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textDark,
+                    ),
+                    weekendStyle: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.error.withOpacity(0.7),
+                    ),
+                    // decoration: BoxDecoration(
+                    //   border: Border(
+                    //     bottom: BorderSide(
+                    //       color: Colors.grey.shade200,
+                    //       width: 1,
+                    //     ),
+                    //   ),
+                    // ),
+                  ),
+                  // Event loader to display dots for meals
+                  eventLoader: (day) {
+                    final normalizedDay =
+                        DateTime(day.year, day.month, day.day);
+                    final events = _mealsMap[normalizedDay] ?? [];
+                    return events;
+                  },
+                  // Custom marker builder for colored dots
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (context, date, events) {
+                      if (events.isEmpty) return null;
 
-          // Legend for dot indicators with updated styling
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppTheme.softShadow,
-              border: Border.all(
-                color: AppTheme.deepPurple.withOpacity(0.1),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.purple.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.info_outline,
-                        color: AppTheme.purple,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Calendar Legend',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(
-                  height: 24,
-                  thickness: 1,
-                  color: Color(0x33EEEEEE), // 0.2 opacity
-                ),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _buildLegendItem('Breakfast', AppTheme.purple),
-                    _buildLegendItem('Lunch', AppTheme.success),
-                    _buildLegendItem('Swapped', AppTheme.orange),
-                    _buildLegendItem('Cancelled', AppTheme.error),
-                  ],
+                      return Container(
+                        margin: const EdgeInsets.only(top: 6),
+                        child: _buildCalendarMarker(events, date),
+                      );
+                    },
+                    dowBuilder: (context, day) {
+                      final text = DateFormat.E().format(day);
+                      return Center(
+                        child: Text(
+                          text
+                              .substring(0, math.min(text.length, 3))
+                              .toUpperCase(),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: day.weekday == DateTime.saturday ||
+                                    day.weekday == DateTime.sunday
+                                ? AppTheme.error.withOpacity(0.7)
+                                : AppTheme.purple,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
           ),
+        ),
 
-          // Selected day header when there are meals
-          if (_selectedDateMeals.isNotEmpty) _buildSelectedDayHeader(),
+        // Legend for dot indicators with updated styling
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppTheme.softShadow,
+            border: Border.all(
+              color: AppTheme.deepPurple.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.purple.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.info_outline,
+                      color: AppTheme.purple,
+                      size: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Calendar Legend',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(
+                height: 24,
+                thickness: 1,
+                color: Color(0x33EEEEEE), // 0.2 opacity
+              ),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _buildLegendItem('Breakfast', Colors.pink),
+                  _buildLegendItem('Lunch', AppTheme.success),
+                  _buildLegendItem('Swapped', AppTheme.orange),
+                  _buildLegendItem('Cancelled', AppTheme.error),
+                ],
+              ),
+            ],
+          ),
+        ),
 
-          // Meal cards for selected date
-          _selectedDateMeals.isEmpty
-              ? _buildNoMealsForSelectedDay()
-              : _buildScrollableMealList(),
-        ],
-      ),
+        // Selected day header when there are meals
+        if (_selectedDateMeals.isNotEmpty) _buildSelectedDayHeader(),
+
+        // Meal cards for selected date
+        _selectedDateMeals.isEmpty
+            ? _buildNoMealsForSelectedDay()
+            : _buildScrollableMealList(),
+      ],
     );
   }
 
@@ -1329,15 +1768,15 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             shape: BoxShape.circle,
             gradient: LinearGradient(
               colors: [
-                Colors.purple.shade300,
-                Colors.purple.shade700,
+                Colors.pink.shade300,
+                Colors.pink.shade700,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.purple.withOpacity(0.3),
+                color: Colors.pink.withOpacity(0.3),
                 blurRadius: 2,
                 spreadRadius: 0,
               ),
@@ -1608,11 +2047,30 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
 
   Widget _buildListView() {
     // Get all meals and sort by date, but filter out cancelled meals
-    final allMeals = _mealsMap.values
-        .expand((meals) => meals)
-        .where(
-            (meal) => meal.status != "Cancelled") // Filter out cancelled meals
-        .toList()
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final allMeals = _mealsMap.values.expand((meals) => meals).where((meal) {
+      if (meal.status == "Cancelled") return false;
+      // If meal is today, apply breakfast/lunch time logic
+      if (meal.date.year == today.year &&
+          meal.date.month == today.month &&
+          meal.date.day == today.day) {
+        if (meal.planType == 'breakfast') {
+          // Show breakfast until 9:00am
+          final nineAM = DateTime(today.year, today.month, today.day, 9, 0);
+          if (now.isBefore(nineAM)) return true;
+        } else if (meal.planType == 'lunch') {
+          // Show lunch until 1:00pm
+          final onePM = DateTime(today.year, today.month, today.day, 13, 0);
+          if (now.isBefore(onePM)) return true;
+        }
+      }
+      // Otherwise, show if meal is today (after cutoff) or in the future
+      return meal.date.isAfter(today) ||
+          (meal.date.year == today.year &&
+              meal.date.month == today.month &&
+              meal.date.day == today.day);
+    }).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
 
     return _buildMealsList(allMeals);
@@ -1797,7 +2255,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       case 'Cancelled':
         return AppTheme.error;
       case 'Swapped':
-        return AppTheme.yellow;
+        return AppTheme.orange;
       default:
         return AppTheme.purple;
     }
@@ -1832,6 +2290,15 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     String statusDisplay = meal.status;
     Color statusColor = _getStatusColor(meal.status);
 
+    // Get meal image URL by meal name (same as _buildMealCard)
+    final allMeals = MealDataService.getAllMeals();
+    final mealObj = allMeals.firstWhere(
+      (m) => m.name.toLowerCase() == meal.name.toLowerCase(),
+      orElse: () => allMeals.first,
+    );
+    final String mealImageUrl =
+        mealObj.imageUrl.isNotEmpty ? mealObj.imageUrl : '';
+
     return Card(
       elevation: 4,
       shadowColor: AppTheme.deepPurple.withOpacity(0.15),
@@ -1847,7 +2314,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             color: isCancelled
                 ? AppTheme.error.withOpacity(0.5)
                 : isSwapped
-                    ? AppTheme.yellow.withOpacity(0.5)
+                    ? AppTheme.orange.withOpacity(0.5)
                     : planBorderColor,
             width: 1.5,
           ),
@@ -1862,7 +2329,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                 color: isCancelled
                     ? AppTheme.error.withOpacity(0.1)
                     : isSwapped
-                        ? AppTheme.yellow.withOpacity(0.1)
+                        ? AppTheme.orange.withOpacity(0.1)
                         : planBgColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(15),
@@ -1871,24 +2338,14 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: planIconColor.withOpacity(
-                              0.15), // Always use plan icon color for shadow
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      planIcon, // Always use plan icon
-                      color: planIconColor, // Always use plan icon color
-                      size: 24,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 70,
+                      height: 70,
+                      color: Colors.grey[200],
+                      child: _getMealImage(mealImageUrl, meal.planType,
+                          mealName: meal.name),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1905,8 +2362,9 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                             color: AppTheme.textDark,
                           ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          meal.name,
+                          _getDisplayMealName(meal.name),
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             color: AppTheme.textMedium,
@@ -1914,6 +2372,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                                 ? TextDecoration.lineThrough
                                 : TextDecoration.none,
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ],
                     ),
@@ -2004,10 +2464,10 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppTheme.yellow.withOpacity(0.05),
+                        color: AppTheme.orange.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppTheme.yellow.withOpacity(0.2),
+                          color: AppTheme.orange.withOpacity(0.2),
                           width: 1,
                         ),
                       ),
@@ -2015,7 +2475,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         children: [
                           Icon(
                             Icons.swap_horiz_rounded,
-                            color: AppTheme.yellow,
+                            color: AppTheme.orange,
                             size: 20,
                           ),
                           const SizedBox(width: 12),
@@ -2047,20 +2507,18 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                               Icons.restaurant_menu_rounded,
                               "Plan Type",
                               meal.displayPlanType,
-                              // Keep the plan type icon color consistent with meal type, not status
                               planIconColor,
                             ),
-                            const SizedBox(height: 12),
-                            if (meal.items.isNotEmpty)
-                              _buildInfoRow(
-                                Icons.restaurant_rounded,
-                                "Items",
-                                meal.items.length > 0
-                                    ? "${meal.items.length} items"
-                                    : "No items",
-                                // Keep items icon color consistent with meal type, not status
-                                AppTheme.textMedium,
-                              ),
+                            // HIDE items row
+                            // if (meal.items.isNotEmpty)
+                            //   _buildInfoRow(
+                            //     Icons.restaurant_rounded,
+                            //     "Items",
+                            //     meal.items.length > 0
+                            //         ? "${meal.items.length} items"
+                            //         : "No items",
+                            //     AppTheme.textMedium,
+                            //   ),
                           ],
                         ),
                       ),
@@ -2074,17 +2532,16 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                               Icons.event_rounded,
                               "Date",
                               DateFormat('EEE, MMM d').format(meal.date),
-                              // Keep date icon color consistent with app theme, not status
                               AppTheme.purple,
                             ),
-                            const SizedBox(height: 12),
-                            _buildInfoRow(
-                              Icons.access_time_rounded,
-                              "Meal Time",
-                              isBreakfast ? "Morning" : "Lunch Hour",
-                              // Keep meal time icon color consistent with app theme, not status
-                              AppTheme.purple,
-                            ),
+                            // HIDE meal time row
+                            // const SizedBox(height: 12),
+                            // _buildInfoRow(
+                            //   Icons.access_time_rounded,
+                            //   "Meal Time",
+                            //   isBreakfast ? "Morning" : "Lunch Hour",
+                            //   AppTheme.purple,
+                            // ),
                           ],
                         ),
                       ),
@@ -2121,10 +2578,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                   ],
 
                   // Action buttons
-                  if (!isCancelled &&
-                      (meal.canSwap ||
-                          _isCancellationAllowed(
-                              meal.date, meal.planType))) ...[
+                  if (!isCancelled && (meal.canSwap || true)) ...[
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
                       child: Divider(
@@ -2135,34 +2589,32 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        if (_isCancellationAllowed(meal.date, meal.planType))
-                          OutlinedButton.icon(
-                            icon: Icon(
-                              Icons.cancel_outlined,
-                              color: AppTheme.error,
-                              size: 18,
-                            ),
-                            label: Text(
-                              'Cancel',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.error,
-                              side:
-                                  BorderSide(color: AppTheme.error, width: 1.5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              elevation: 0,
-                              shadowColor: AppTheme.error.withOpacity(0.5),
-                            ),
-                            onPressed: () => _showCancelMealDialog(meal),
+                        OutlinedButton.icon(
+                          icon: Icon(
+                            Icons.cancel_outlined,
+                            color: AppTheme.error,
+                            size: 18,
                           ),
+                          label: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.error,
+                            side: BorderSide(color: AppTheme.error, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            elevation: 0,
+                            shadowColor: AppTheme.error.withOpacity(0.5),
+                          ),
+                          onPressed: () => _showCancelMealDialog(meal),
+                        ),
                         if (meal.canSwap && !isExpress) ...[
                           const SizedBox(width: 12),
                           ElevatedButton.icon(
@@ -2179,11 +2631,11 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.yellow,
+                              backgroundColor: AppTheme.orange,
                               foregroundColor: Colors
                                   .black87, // Dark text for better contrast with yellow
                               elevation: 2,
-                              shadowColor: AppTheme.yellow.withOpacity(0.3),
+                              shadowColor: AppTheme.orange.withOpacity(0.3),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 10),
                               shape: RoundedRectangleBorder(
@@ -2253,11 +2705,11 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.yellow,
+                backgroundColor: AppTheme.orange,
                 foregroundColor:
                     Colors.black87, // Dark text for better contrast with yellow
                 elevation: 2,
-                shadowColor: AppTheme.yellow.withOpacity(0.3),
+                shadowColor: AppTheme.orange.withOpacity(0.3),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 shape: RoundedRectangleBorder(
@@ -2329,8 +2781,11 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       ]);
     }
 
-    // Remove the current meal from the available options
-    availableMeals.removeWhere((mealName) => mealName == meal.name);
+    // Remove the current meal from the available options (case-insensitive, trimmed)
+    availableMeals.removeWhere((mealNameOption) =>
+        mealNameOption.trim().toLowerCase() == meal.name.trim().toLowerCase() ||
+        _getDisplayMealName(mealNameOption).trim().toLowerCase() ==
+            _getDisplayMealName(meal.name).trim().toLowerCase());
 
     showModalBottomSheet(
       context: context,
@@ -2367,12 +2822,12 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.yellow.withOpacity(0.1),
+                          color: AppTheme.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.swap_horiz_rounded,
-                          color: AppTheme.yellow,
+                          color: AppTheme.orange,
                           size: 20,
                         ),
                       ),
@@ -2388,7 +2843,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, color: Colors.red),
                     onPressed: () => Navigator.pop(context),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.grey.withOpacity(0.1),
@@ -2422,18 +2877,25 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(
-                          meal.planType == 'breakfast'
-                              ? Icons.ramen_dining
-                              : Icons.flatware,
-                          color: meal.planType == 'breakfast'
-                              ? Colors.pink
-                              : Colors.green,
-                          size: 18,
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: meal.planType == 'breakfast'
+                                ? MealConstants.breakfastIconColor
+                                    .withOpacity(0.1)
+                                : MealConstants.lunchIconColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: _getMealImage('', meal.planType,
+                                mealName: meal.name),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          meal.name,
+                          _getDisplayMealName(meal.name),
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
@@ -2508,17 +2970,17 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
 
                     return ListTile(
                       leading: Container(
-                        padding: const EdgeInsets.all(8),
+                        width: 40,
+                        height: 40,
+                        padding: const EdgeInsets.all(0),
                         decoration: BoxDecoration(
                           color: mealColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(
-                          meal.planType == 'breakfast'
-                              ? MealConstants.breakfastIcon
-                              : MealConstants.lunchIcon,
-                          color: mealColor,
-                          size: 20,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: _getMealImage('', meal.planType,
+                              mealName: mealName),
                         ),
                       ),
                       title: Text(
@@ -2532,11 +2994,11 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       trailing: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppTheme.yellow.withOpacity(0.1),
+                          color: AppTheme.orange.withOpacity(0.1),
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.yellow.withOpacity(0.1),
+                              color: AppTheme.orange.withOpacity(0.1),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -2545,7 +3007,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         child: Icon(
                           Icons.arrow_forward,
                           size: 16,
-                          color: AppTheme.yellow,
+                          color: AppTheme.orange,
                         ),
                       ),
                       onTap: () {
@@ -2577,7 +3039,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       icon: Icon(
                         Icons.close,
                         size: 16,
-                        color: AppTheme.textMedium,
+                        color: AppTheme.error,
                       ),
                       label: Text(
                         'Cancel',
@@ -2588,7 +3050,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       ),
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.textMedium,
+                        foregroundColor: AppTheme.error,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -2609,10 +3071,10 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       padding: const EdgeInsets.symmetric(
                           vertical: 10, horizontal: 12),
                       decoration: BoxDecoration(
-                        color: AppTheme.yellow.withOpacity(0.1),
+                        color: AppTheme.orange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppTheme.yellow.withOpacity(0.3),
+                          color: AppTheme.orange.withOpacity(0.3),
                           width: 1,
                         ),
                       ),
@@ -2681,10 +3143,13 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       // Update the meal in the UI
       _updateMealInUI(meal, newMealName);
 
+      // Clear cached data for this student to ensure fresh data on next load
+      _clearCachedDataForStudent(meal.studentId);
+
       // Show success message
       _showSnackBar('Meal swapped successfully!');
     } catch (e) {
-      log('Error swapping meal: $e');
+      log('[upcoming_meals] Error swapping meal: $e');
       _showSnackBar('An error occurred while swapping the meal.');
     } finally {
       setState(() {
@@ -2753,6 +3218,37 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     final String mealTypeString = isBreakfast ? 'Breakfast' : 'Lunch';
     final IconData mealIcon =
         isBreakfast ? MealConstants.breakfastIcon : MealConstants.lunchIcon;
+
+    // Refund logic
+    final now = DateTime.now();
+    final deliveryDay =
+        DateTime(meal.date.year, meal.date.month, meal.date.day);
+    final midnight =
+        DateTime(deliveryDay.year, deliveryDay.month, deliveryDay.day, 0, 0);
+    final eightAM =
+        DateTime(deliveryDay.year, deliveryDay.month, deliveryDay.day, 8, 0);
+    String refundMessage = '';
+    String after8amMessage = '';
+    if (isBreakfast) {
+      if (now.isBefore(midnight)) {
+        refundMessage = '100% refund will be credited to your wallet.';
+      } else {
+        refundMessage = 'No refund will be credited to your wallet.';
+      }
+    } else {
+      // Lunch logic
+      if (now.isBefore(midnight)) {
+        refundMessage = '100% refund will be credited to your wallet.';
+      } else if (now.isAfter(midnight) && now.isBefore(eightAM)) {
+        refundMessage = '50% refund will be credited to your wallet.';
+      } else {
+        refundMessage = 'No refund will be credited to your wallet.';
+      }
+    }
+    if (now.isAfter(eightAM)) {
+      after8amMessage =
+          'No refund for any meal of the day cancelled after 8 am.';
+    }
 
     showDialog(
       context: context,
@@ -2826,6 +3322,70 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         color: AppTheme.textDark,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    // Refund message
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.success.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppTheme.success.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.account_balance_wallet_outlined,
+                                color: AppTheme.success,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  refundMessage,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: AppTheme.success,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (after8amMessage.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: Colors.red,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    after8amMessage,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    // ... existing meal details and warning message ...
                     const SizedBox(height: 20),
 
                     // Meal Details Card
@@ -3087,7 +3647,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             'cancelledMeal_${meal.studentId}_${meal.subscriptionId}_${DateFormat('yyyy-MM-dd').format(meal.date)}';
 
         // Log meal type information for debugging
-        log('Cancelling meal with planType: ${meal.planType}, will display as: ${meal.planType == 'breakfast' ? 'Breakfast' : 'Lunch'}');
+        log('[upcoming_meals] Cancelling meal with planType: ${meal.planType}, will display as: ${meal.planType == 'breakfast' ? 'Breakfast' : 'Lunch'}');
 
         // Create a detailed cancellation record
         final cancelData = {
@@ -3110,6 +3670,9 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         // Also set a boolean flag for quick checks
         await prefs.setBool(cancelKey, true);
 
+        // Clear cached data for this student to ensure fresh data on next load
+        _clearCachedDataForStudent(meal.studentId);
+
         // Show success message
         _showSnackBar('Meal cancelled successfully!');
 
@@ -3119,9 +3682,9 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
               GlobalObjectKey<CancelledMealsTabState>(meal.studentId);
 
           cancelledMealsTabKey?.currentState?.refreshCancelledMeals();
-          log('Notified the cancelled meals tab to refresh');
+          log('[upcoming_meals] Notified the cancelled meals tab to refresh');
         } catch (e) {
-          log('Could not notify cancelled meals tab: $e');
+          log('[upcoming_meals] Could not notify cancelled meals tab: $e');
         }
 
         // Reload data to ensure UI is up to date
@@ -3130,7 +3693,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         _showSnackBar('Failed to cancel meal. Please try again.');
       }
     } catch (e) {
-      log('Error cancelling meal: $e');
+      log('[upcoming_meals] Error cancelling meal: $e');
       _showSnackBar('An error occurred while cancelling the meal.');
     }
   }
@@ -3217,5 +3780,104 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         ),
       ],
     );
+  }
+
+  // Add method to clear cached data for a student when their data is modified
+  void _clearCachedDataForStudent(String studentId) {
+    _cachedSubscriptionsByStudent.remove(studentId);
+    _cachedMealMapByStudent.remove(studentId);
+    log('[upcoming_meals] Cleared cached data for student $studentId');
+  }
+
+  // Add helper methods for meal image display (copied and adapted from cart_screen.dart)
+  Widget _getMealImage(String imageUrl, String mealType, {String? mealName}) {
+    // Use special asset for certain meal names
+    if (mealName != null) {
+      final asset = _getSpecialMealImageAsset(mealName);
+      if (asset.isNotEmpty) {
+        return Image.asset(
+          asset,
+          //color: Colors.white,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _getDefaultMealImage(mealType);
+          },
+        );
+      }
+    }
+    if (imageUrl.isNotEmpty) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _getDefaultMealImage(mealType);
+        },
+      );
+    }
+    return _getDefaultMealImage(mealType);
+  }
+
+  Widget _getDefaultMealImage(String mealType) {
+    final String defaultImagePath = mealType == 'breakfast'
+        ? 'assets/images/breakfast/breakfast of the day (most recommended).png'
+        : 'assets/images/lunch/lunch of the day (most recommended).png';
+    return Image.asset(
+      defaultImagePath,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Center(
+          child: Icon(
+            mealType == 'breakfast'
+                ? Icons.ramen_dining
+                : Icons.flatware_rounded,
+            color: AppTheme.purple,
+            size: 32,
+          ),
+        );
+      },
+    );
+  }
+
+  // Add a helper to normalize meal name for display
+  String _getDisplayMealName(String mealName) {
+    final name = mealName.trim().toLowerCase();
+    if (name == 'breakfast of the day breakfast') {
+      return 'Breakfast of the Day';
+    }
+    if (name == 'lunch of the day lunch') {
+      return 'Lunch of the Day';
+    }
+    return mealName;
+  }
+
+  // Add a helper to get the correct asset image for special meal names
+  String _getSpecialMealImageAsset(String mealName) {
+    final name = mealName.trim().toLowerCase();
+    if (name == 'breakfast of the day' ||
+        name == 'breakfast of the day breakfast') {
+      return 'assets/images/breakfast/breakfast of the day (most recommended).png';
+    }
+    if (name == 'indian breakfast') {
+      return 'assets/images/breakfast/Indian Breakfast.png';
+    }
+    if (name == 'international breakfast') {
+      return 'assets/images/breakfast/International Breakfast.png';
+    }
+    if (name == 'jain breakfast') {
+      return 'assets/images/breakfast/Jain Breakfast.png';
+    }
+    if (name == 'lunch of the day' || name == 'lunch of the day lunch') {
+      return 'assets/images/lunch/lunch of the day (most recommended).png';
+    }
+    if (name == 'indian lunch') {
+      return 'assets/images/lunch/Indian Lunch.png';
+    }
+    if (name == 'international lunch') {
+      return 'assets/images/lunch/International Lunch.png';
+    }
+    if (name == 'jain lunch') {
+      return 'assets/images/lunch/Jain Lunch.png';
+    }
+    return '';
   }
 }

@@ -596,29 +596,47 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
   Widget _buildAddMoneyButton() {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _showAddMoneyModal,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(
-          'Add Money',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.orange,
+              Colors.deepOrangeAccent,
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
+          borderRadius: BorderRadius.circular(50),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.deepOrange.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(50),
+        child: ElevatedButton.icon(
+          onPressed: _showAddMoneyModal,
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: Text(
+            'Add Money',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
-          elevation: 2,
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          foregroundColor: Colors.white,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+          ),
         ),
       ),
-    ).animate();
+    );
   }
 
   Widget _buildTransactionHistorySection(double maxWidth) {

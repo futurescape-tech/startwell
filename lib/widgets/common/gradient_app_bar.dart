@@ -17,7 +17,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.titleText,
     this.titleWidget,
     this.actions,
-    this.centerTitle = true,
+    this.centerTitle = false,
     this.leading,
     this.automaticallyImplyLeading = true,
     this.elevation = 2,

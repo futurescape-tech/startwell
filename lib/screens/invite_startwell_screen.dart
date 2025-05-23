@@ -60,8 +60,8 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
               Text(
                 "Can't find your school at StartWell?",
                 style: GoogleFonts.poppins(
-                  color: AppTheme.purple,
-                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                  fontWeight: FontWeight.w600,
                   fontSize: 18,
                 ),
               ),
@@ -189,7 +189,8 @@ class _InviteStartWellScreenState extends State<InviteStartWellScreen> {
         Text(
           "I am:",
           style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
             color: AppTheme.textDark,
           ),
         ),

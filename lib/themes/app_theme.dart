@@ -76,10 +76,10 @@ class AppTheme {
 
       // App Bar Theme
       appBarTheme: const AppBarTheme(
-        backgroundColor: purple,
+        backgroundColor: deepPurple,
         foregroundColor: white,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         titleTextStyle: TextStyle(
           fontFamily: 'Poppins',
           fontSize: 20,
@@ -313,7 +313,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: purple,
         elevation: 2,
-        centerTitle: true,
+        centerTitle: false,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         iconTheme: const IconThemeData(color: white),
         actionsIconTheme: const IconThemeData(color: white),

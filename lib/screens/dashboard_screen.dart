@@ -23,6 +23,9 @@ import 'package:startwell/services/user_profile_service.dart';
 import 'package:startwell/models/user_profile.dart';
 import 'package:startwell/widgets/profile_avatar.dart';
 import 'package:startwell/screens/all_student_subscription_page.dart';
+import 'package:startwell/services/meal_selection_manager.dart';
+import 'package:startwell/screens/meal_plan_screen.dart';
+import 'package:startwell/screens/menu_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   final UserProfile? userProfile;
@@ -324,20 +327,33 @@ class _DashboardScreenState extends State<DashboardScreen>
     } else {
       // Fallback to direct navigation
       if (index == 3) {
-        // Meal Plan
-        Navigator.pushNamed(context, Routes.mealPlan);
+        // Use direct navigation to MealPlanScreen with initialTab set to 'breakfast'
+        print(
+          'DEBUG: Directly navigating to MealPlanScreen with initialTab=breakfast',
+        );
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => MealPlanScreen(initialTab: 'breakfast'),
+          ),
+          (route) => false,
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 350;
+    final sectionPadding = isSmall ? 10.0 : 20.0;
+    final cardPadding = isSmall ? 10.0 : 18.0;
+    final cardSpacing = isSmall ? 8.0 : 16.0;
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'Home',
           style: GoogleFonts.poppins(
-            fontSize: 20,
+            fontSize: isSmall ? 16 : 20,
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
@@ -350,11 +366,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         leading: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(width: 10),
+            SizedBox(width: isSmall ? 4 : 10),
             Image.asset(
               'assets/images/start_well.png',
               fit: BoxFit.cover,
-              width: 30,
+              width: isSmall ? 22 : 30,
               errorBuilder: (context, error, stackTrace) {
                 return const Icon(Icons.home, color: Colors.white, size: 28);
               },
@@ -362,11 +378,54 @@ class _DashboardScreenState extends State<DashboardScreen>
           ],
         ),
         actions: [
+          // Cart icon
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: Colors.white,
+                  size: 26,
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, Routes.cart);
+                },
+              ),
+              if (MealSelectionManager.hasBreakfastInCart ||
+                  MealSelectionManager.hasLunchInCart)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Text(
+                      '${(MealSelectionManager.hasBreakfastInCart ? 1 : 0) + (MealSelectionManager.hasLunchInCart ? 1 : 0)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          // Profile avatar
           Padding(
-            padding: const EdgeInsets.only(right: 16.0),
+            padding: EdgeInsets.only(right: isSmall ? 8.0 : 16.0),
             child: ProfileAvatar(
               userProfile: widget.userProfile,
-              radius: 18,
+              radius: isSmall ? 14 : 18,
               onAvatarTap: () {
                 Navigator.pushNamed(context, Routes.profileSettings);
               },
@@ -375,437 +434,422 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              controller: _scrollController,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Top Banner
-                        _buildAnimatedSection(
-                          animation: _fadeAnimation,
-                          slideAnimation: _slideAnimation,
-                          delay: 0.1,
-                          child: HomeBannerCard(
-                            onExplorePressed: () =>
-                                _navigateToTab(3), // Meal Plan tab
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                controller: _scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top Banner
+                          _buildAnimatedSection(
+                            animation: _fadeAnimation,
+                            slideAnimation: _slideAnimation,
+                            delay: 0.1,
+                            child: HomeBannerCard(
+                              onExplorePressed: () {
+                                _navigateToTab(3); // Meal Plan tab
+                              },
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
+                          SizedBox(height: isSmall ? 6 : 10),
 
-                        // Quick Actions Section - Moved up as requested
-                        _buildAnimatedSection(
-                          animation: _fadeAnimation,
-                          slideAnimation: _slideAnimation,
-                          delay: 0.2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SectionTitle(title: 'Quick Actions'),
-                              const SizedBox(height: 15),
-                              // Add extra horizontal padding to quick actions section
-                              Container(
-                                height:
-                                    110, // Fixed height for the horizontal scrolling area
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 4.0),
-                                child: QuickActions(
-                                  onInviteSchoolPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const InviteStartWellScreen(),
-                                      ),
-                                    );
-                                  },
-                                  onWalletPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const StartwellWalletPage(),
-                                      ),
-                                    );
-                                  },
-                                  onMealPlanPressed: () =>
-                                      _navigateToTab(3), // Meal Plan tab
-                                  onManageStudentPressed: () =>
-                                      _navigateToTab(1), // Student Profiles tab
-                                  onTopUpWalletPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const StartwellWalletPage(),
-                                      ),
-                                    );
-                                  },
+                          // Upcoming Meals Section
+                          _buildAnimatedSection(
+                            animation: _fadeAnimation,
+                            slideAnimation: _slideAnimation,
+                            delay: 0.3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SectionTitle(
+                                  title: 'Upcoming Meals',
+                                  actionText: 'See All',
+                                  onActionPressed: () => _navigateToTab(2),
                                 ),
-                              ),
-                            ],
+                                SizedBox(height: isSmall ? 8 : 15),
+                                const UpcomingMealCardList(),
+                              ],
+                            ),
                           ),
-                        ),
 
-                        // Upcoming Meals Section - Moved to be after Quick Actions
-                        _buildAnimatedSection(
-                          animation: _fadeAnimation,
-                          slideAnimation: _slideAnimation,
-                          delay: 0.3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SectionTitle(
-                                title: 'Upcoming Meals',
-                                actionText: 'See All',
-                                onActionPressed: () =>
-                                    _navigateToTab(2), // My Subscription tab
-                              ),
-                              const SizedBox(height: 15),
-                              const UpcomingMealCardList(),
-                            ],
-                          ),
-                        ),
-
-                        // Subscription Overview Section - Moved down after Upcoming Meals
-                        _buildAnimatedSection(
-                          animation: _fadeAnimation,
-                          slideAnimation: _slideAnimation,
-                          delay: 0.35,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SectionTitle(
-                                title: 'Your Subscriptions',
-                                actionText: _hasActivePlans ? 'See All' : null,
-                                onActionPressed: _hasActivePlans
-                                    ? () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                AllStudentSubscriptionPage(
-                                              students: _students,
-                                              studentPlans: _studentPlans,
+                          // Subscription Overview Section
+                          _buildAnimatedSection(
+                            animation: _fadeAnimation,
+                            slideAnimation: _slideAnimation,
+                            delay: 0.35,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SectionTitle(
+                                  title: 'Your Subscriptions',
+                                  actionText:
+                                      _hasActivePlans ? 'See All' : null,
+                                  onActionPressed: _hasActivePlans
+                                      ? () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  AllStudentSubscriptionPage(
+                                                students: _students,
+                                                studentPlans: _studentPlans,
+                                              ),
                                             ),
-                                          ),
-                                        );
-                                      }
-                                    : null,
-                              ),
-                              const SizedBox(height: 15),
+                                          );
+                                        }
+                                      : null,
+                                ),
+                                SizedBox(height: isSmall ? 8 : 15),
 
-                              // No active plans message
-                              if (!_hasActivePlans)
-                                Card(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 2,
-                                  shadowColor:
-                                      AppTheme.deepPurple.withOpacity(0.15),
-                                  child: Ink(
-                                    decoration: BoxDecoration(
+                                // No active plans message
+                                if (!_hasActivePlans)
+                                  Card(
+                                    shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      color: AppTheme.offWhite,
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 48,
-                                            height: 48,
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  Colors.grey.withOpacity(0.1),
-                                              shape: BoxShape.circle,
+                                    elevation: 2,
+                                    shadowColor:
+                                        AppTheme.deepPurple.withOpacity(0.15),
+                                    child: Ink(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        color: AppTheme.offWhite,
+                                      ),
+                                      child: Padding(
+                                        padding: EdgeInsets.all(cardPadding),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: isSmall ? 32 : 48,
+                                              height: isSmall ? 32 : 48,
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey
+                                                    .withOpacity(0.1),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.calendar_month,
+                                                color: Colors.grey,
+                                                size: 24,
+                                              ),
                                             ),
-                                            child: const Icon(
-                                              Icons.calendar_month,
-                                              color: Colors.grey,
-                                              size: 24,
+                                            SizedBox(width: isSmall ? 8 : 16),
+                                            Expanded(
+                                              child: Text(
+                                                'No active subscription plans found',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: isSmall ? 13 : 16,
+                                                  color: AppTheme.textMedium,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                // Active plans - Show aggregated data for all students
+                                if (_hasActivePlans)
+                                  Builder(
+                                    builder: (context) {
+                                      // Get all students with active plans
+                                      final studentsWithPlans = _students
+                                          .where(
+                                            (student) => _studentPlans
+                                                .containsKey(student.id),
+                                          )
+                                          .toList();
+
+                                      if (studentsWithPlans.isEmpty)
+                                        return const SizedBox.shrink();
+
+                                      // Calculate total plans and meals across all students
+                                      int totalActivePlans = 0;
+                                      int totalRemainingMeals = 0;
+                                      int totalMeals = 0;
+                                      Map<String, int> mealTypeCount = {};
+
+                                      for (var student in studentsWithPlans) {
+                                        final plans =
+                                            _studentPlans[student.id] ?? [];
+                                        totalActivePlans += plans.length;
+
+                                        for (var plan in plans) {
+                                          totalRemainingMeals +=
+                                              plan.remainingMeals;
+                                          totalMeals += plan.totalMeals;
+
+                                          // Track by meal type
+                                          final mealType =
+                                              plan.subscription.planType;
+                                          final formattedType =
+                                              mealType == 'breakfast'
+                                                  ? 'Breakfast'
+                                                  : 'Lunch';
+                                          mealTypeCount[formattedType] =
+                                              (mealTypeCount[formattedType] ??
+                                                      0) +
+                                                  plan.remainingMeals;
+                                        }
+                                      }
+
+                                      // Calculate progress value
+                                      final double progress = totalMeals > 0
+                                          ? (totalMeals - totalRemainingMeals) /
+                                              totalMeals
+                                          : 0.0;
+
+                                      // First student for navigation (we keep the navigation to individual student pages)
+                                      final firstStudent =
+                                          studentsWithPlans.first;
+
+                                      return Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Active Plan Card
+                                          Expanded(
+                                            child: Card(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              elevation: 3,
+                                              shadowColor: AppTheme.deepPurple
+                                                  .withOpacity(0.1),
+                                              color: Color(0xFFF9F9F9),
+                                              child: InkWell(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          ActivePlanDetailsPage(
+                                                        studentId:
+                                                            firstStudent.id,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                child: Padding(
+                                                  padding: EdgeInsets.all(
+                                                      cardPadding),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.max,
+                                                        children: [
+                                                          const Icon(
+                                                            Icons
+                                                                .calendar_month,
+                                                            color: Colors.green,
+                                                            size: 20,
+                                                          ),
+                                                          SizedBox(
+                                                              width: isSmall
+                                                                  ? 8
+                                                                  : 15),
+                                                          Flexible(
+                                                            child: Text(
+                                                              'Active Plan',
+                                                              style: GoogleFonts
+                                                                  .poppins(
+                                                                fontSize:
+                                                                    isSmall
+                                                                        ? 10
+                                                                        : 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color: Colors
+                                                                    .grey
+                                                                    .shade700,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      Text(
+                                                        '$totalActivePlans',
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                          fontSize:
+                                                              isSmall ? 18 : 24,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color:
+                                                              AppTheme.textDark,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                          const SizedBox(width: 16),
+
+                                          SizedBox(width: cardSpacing),
+
+                                          // Remaining Meals Card
                                           Expanded(
-                                            child: Text(
-                                              'No active subscription plans found',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 16,
-                                                color: AppTheme.textMedium,
+                                            child: Card(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              elevation: 3,
+                                              shadowColor: AppTheme.orange
+                                                  .withOpacity(0.1),
+                                              color: Color(0xFFF9F9F9),
+                                              child: InkWell(
+                                                onTap: () {
+                                                  HapticFeedback.lightImpact();
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          RemainingMealDetailsPage(
+                                                        studentId:
+                                                            firstStudent.id,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                child: Padding(
+                                                  padding: EdgeInsets.all(
+                                                      cardPadding),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Row(
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.restaurant,
+                                                            color:
+                                                                AppTheme.orange,
+                                                            size: 20,
+                                                          ),
+                                                          SizedBox(
+                                                              width: isSmall
+                                                                  ? 8
+                                                                  : 15),
+                                                          Flexible(
+                                                            child: Text(
+                                                              'Remaining Meals',
+                                                              style: GoogleFonts
+                                                                  .poppins(
+                                                                fontSize:
+                                                                    isSmall
+                                                                        ? 10
+                                                                        : 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color: Colors
+                                                                    .grey
+                                                                    .shade700,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      Text(
+                                                        '$totalRemainingMeals',
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                          fontSize:
+                                                              isSmall ? 18 : 24,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color:
+                                                              AppTheme.textDark,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ],
-                                      ),
-                                    ),
+                                      );
+                                    },
                                   ),
-                                ),
-
-                              // Active plans - Show aggregated data for all students
-                              if (_hasActivePlans)
-                                Builder(
-                                  builder: (context) {
-                                    // Get all students with active plans
-                                    final studentsWithPlans = _students
-                                        .where(
-                                          (student) =>
-                                              _studentPlans.containsKey(
-                                            student.id,
-                                          ),
-                                        )
-                                        .toList();
-
-                                    if (studentsWithPlans.isEmpty)
-                                      return const SizedBox.shrink();
-
-                                    // Calculate total plans and meals across all students
-                                    int totalActivePlans = 0;
-                                    int totalRemainingMeals = 0;
-                                    int totalMeals = 0;
-                                    Map<String, int> mealTypeCount = {};
-
-                                    for (var student in studentsWithPlans) {
-                                      final plans =
-                                          _studentPlans[student.id] ?? [];
-                                      totalActivePlans += plans.length;
-
-                                      for (var plan in plans) {
-                                        totalRemainingMeals +=
-                                            plan.remainingMeals;
-                                        totalMeals += plan.totalMeals;
-
-                                        // Track by meal type
-                                        final mealType =
-                                            plan.subscription.planType;
-                                        final formattedType =
-                                            mealType == 'breakfast'
-                                                ? 'Breakfast'
-                                                : 'Lunch';
-                                        mealTypeCount[formattedType] =
-                                            (mealTypeCount[formattedType] ??
-                                                    0) +
-                                                plan.remainingMeals;
-                                      }
-                                    }
-
-                                    // Calculate progress value
-                                    final double progress = totalMeals > 0
-                                        ? (totalMeals - totalRemainingMeals) /
-                                            totalMeals
-                                        : 0.0;
-
-                                    // First student for navigation (we keep the navigation to individual student pages)
-                                    final firstStudent =
-                                        studentsWithPlans.first;
-
-                                    return Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Active Plan Card
-                                        Expanded(
-                                          child: Card(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            elevation: 3,
-                                            shadowColor: AppTheme.deepPurple
-                                                .withOpacity(0.1),
-                                            color: Color(0xFFF9F9F9),
-                                            child: InkWell(
-                                              onTap: () {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        ActivePlanDetailsPage(
-                                                      studentId:
-                                                          firstStudent.id,
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(18),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.max,
-                                                      children: [
-                                                        const Icon(
-                                                          Icons.calendar_month,
-                                                          color: Colors.green,
-                                                          size: 20,
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 15),
-                                                        Text(
-                                                          'Active Plan',
-                                                          style: GoogleFonts
-                                                              .poppins(
-                                                            fontSize: 12,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: Colors
-                                                                .grey.shade700,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    Text(
-                                                      '$totalActivePlans',
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                        fontSize: 24,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color:
-                                                            AppTheme.textDark,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        const SizedBox(width: 16),
-
-                                        // Remaining Meals Card
-                                        Expanded(
-                                          child: Card(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            elevation: 3,
-                                            shadowColor: AppTheme.orange
-                                                .withOpacity(0.1),
-                                            color: Color(0xFFF9F9F9),
-                                            child: InkWell(
-                                              onTap: () {
-                                                HapticFeedback.lightImpact();
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        RemainingMealDetailsPage(
-                                                      studentId:
-                                                          firstStudent.id,
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(18),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Row(
-                                                      children: [
-                                                        const Icon(
-                                                          Icons.restaurant,
-                                                          color:
-                                                              AppTheme.orange,
-                                                          size: 20,
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 15),
-                                                        Text(
-                                                          'Remaining Meals',
-                                                          style: GoogleFonts
-                                                              .poppins(
-                                                            fontSize: 12,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: Colors
-                                                                .grey.shade700,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    Text(
-                                                      '$totalRemainingMeals',
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                        fontSize: 24,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color:
-                                                            AppTheme.textDark,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
 
-                        // Why Parents Choose Us Section (StartwellPromiseCarousel)
-                        _buildAnimatedSection(
-                          margin: 0,
-                          animation: _fadeAnimation,
-                          slideAnimation: _slideAnimation,
-                          delay: 0.4,
-                          child: const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(left: 20),
-                                child: SectionTitle(
-                                    title: 'Why Parents Choose Us'),
-                              ),
-                              const SizedBox(height: 15),
-                              ValueCarousel(),
-                            ],
-                          ),
-                        ),
-
-                        // Footer Note - only show when scrolled to the bottom
-                        if (_showFooter)
+                          // Why Parents Choose Us Section
                           _buildAnimatedSection(
                             margin: 0,
                             animation: _fadeAnimation,
                             slideAnimation: _slideAnimation,
-                            delay: 0.5,
-                            child: const FooterNote(),
+                            delay: 0.4,
+                            child: const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.only(left: 20),
+                                  child: SectionTitle(
+                                    title: 'Why Parents Choose Us',
+                                  ),
+                                ),
+                                SizedBox(height: 15),
+                                ValueCarousel(),
+                              ],
+                            ),
                           ),
-                        // Add height even if footer isn't showing yet to allow scrolling
-                        if (!_showFooter) const SizedBox(height: 100),
-                      ],
+
+                          // Footer Note - only show when scrolled to the bottom
+                          if (_showFooter)
+                            _buildAnimatedSection(
+                              margin: 0,
+                              animation: _fadeAnimation,
+                              slideAnimation: _slideAnimation,
+                              delay: 0.5,
+                              child: const FooterNote(),
+                            ),
+                          if (!_showFooter)
+                            SizedBox(height: isSmall ? 60 : 100),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
     );

@@ -1,4 +1,5 @@
 import 'package:startwell/models/student_model.dart';
+import 'package:intl/intl.dart';
 
 /// Utility class for validating meal plan selections
 class MealPlanValidator {
@@ -29,38 +30,46 @@ class MealPlanValidator {
   /// Validate if a meal plan can be assigned to a student
   /// Returns null if valid, or an error message if invalid
   static String? validateMealPlan(Student student, String selectedPlanType) {
-    // Rule: Students can't have both breakfast and lunch plans simultaneously
-    final bool hasBothPlans =
-        student.hasActiveBreakfast && student.hasActiveLunch;
+    // Get the current date
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
 
-    // If student already has both plans, don't allow a new plan
-    if (hasBothPlans) {
-      return 'Student ${student.name} already has an active breakfast and lunch meal plan. You can choose a new plan once the current one ends.';
-    }
-
-    // Rule: Students with active breakfast plans can only select lunch plans
-    // If selecting breakfast and student already has breakfast plan
+    // Check for active breakfast plan
     if (selectedPlanType == 'breakfast' && student.hasActiveBreakfast) {
-      return 'Student ${student.name} already has an active breakfast meal plan. You can choose a new breakfast plan once the current one ends. You can still select a lunch plan for this student.';
-    }
-
-    // Rule: Students with active lunch plans can only select breakfast plans
-    // If selecting lunch and student already has lunch plan
-    if (selectedPlanType == 'lunch' && student.hasActiveLunch) {
-      return 'Student ${student.name} already has an active lunch meal plan. You can choose a new lunch plan once the current one ends. You can still select a breakfast plan for this student.';
-    }
-
-    // Rule: Express 1-Day plans can only be selected between 12:00 AM and 8:00 AM
-    // Rule: Express plans can't be selected if a student already has an active lunch plan
-    if (selectedPlanType == 'express') {
-      // Check time restriction
-      if (!isWithinExpressWindow()) {
-        return 'Express 1-Day plan can only be selected between 12:00 AM and 8:00 AM IST.';
+      if (student.breakfastPlanEndDate == null) {
+        return 'Student ${student.name} has an active breakfast plan with no end date. Please contact support.';
       }
 
-      // Check active lunch plan restriction
-      if (student.hasActiveLunch) {
-        return 'Student ${student.name} already has an active lunch meal plan. You cannot select an Express 1-Day plan until the current one ends.';
+      // Format the end date for display
+      final endDateStr =
+          DateFormat('dd/MM/yyyy').format(student.breakfastPlanEndDate!);
+
+      // Check if the end date is in the future
+      if (student.breakfastPlanEndDate!.isAfter(now)) {
+        return 'Student ${student.name} has an active breakfast plan ending on $endDateStr. You can place a pre-order for dates after this end date.';
+      }
+    }
+
+    // Check for active lunch plan
+    if (selectedPlanType == 'lunch' && student.hasActiveLunch) {
+      if (student.lunchPlanEndDate == null) {
+        return 'Student ${student.name} has an active lunch plan with no end date. Please contact support.';
+      }
+
+      // Format the end date for display
+      final endDateStr =
+          DateFormat('dd/MM/yyyy').format(student.lunchPlanEndDate!);
+
+      // Check if the end date is in the future
+      if (student.lunchPlanEndDate!.isAfter(now)) {
+        return 'Student ${student.name} has an active lunch plan ending on $endDateStr. You can place a pre-order for dates after this end date.';
+      }
+    }
+
+    // Express plan validation
+    if (selectedPlanType == 'express') {
+      if (!isWithinExpressWindow()) {
+        return 'Express 1-Day plan can only be selected between 12:00 AM and 8:00 AM IST.';
       }
     }
 

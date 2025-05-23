@@ -6,6 +6,10 @@ import 'package:startwell/services/meal_data_service.dart';
 enum SelectedTab { none, breakfast, lunch, express }
 
 class MealSelectionManager extends ChangeNotifier {
+  // Static properties to track meal types in cart across screens
+  static bool hasBreakfastInCart = false;
+  static bool hasLunchInCart = false;
+
   // Map to track selected meal IDs and which tab they were selected from
   final Map<String, SelectedTab> _selectedMeals = {};
 

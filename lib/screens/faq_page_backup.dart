@@ -23,10 +23,10 @@ class _FAQPageState extends State<FAQPage> {
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: Theme.of(context).textTheme.titleLarge?.color,
+            color: Colors.white,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios,

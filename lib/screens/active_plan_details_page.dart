@@ -432,15 +432,15 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      planIcon,
-                      color: planIconColor,
-                      size: 24,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: _getMealImageForPlan(plan),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -507,60 +507,22 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
                         'End Date',
                         DateFormat('dd MMM yyyy').format(plan.endDate),
                       ),
-                      _buildDetailRow(
-                        'Auto Renew',
-                        'Enabled', // This would come from a real setting in the full app
-                      ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  // const SizedBox(height: 0),
 
                   // Section 2: Meals & Pricing
-                  _buildSectionHeader('Meals & Pricing'),
-                  const SizedBox(height: 8),
+                  // HIDE Meals & Pricing section header and spacing
                   Column(
                     children: [
-                      _buildDetailRow(
-                        'Plan Type',
-                        '${_getPlanTypeDisplay(plan)} ${plan.selectedWeekdays.isEmpty ? "(Regular)" : "(Custom)"}',
-                      ),
-                      _buildDetailRow(
-                        'Duration',
-                        planPeriod,
-                      ),
-                      _buildDetailRow(
-                        'Meals Per Day',
-                        '1 meal (${plan.planType == 'breakfast' ? 'Breakfast' : 'Lunch'})',
-                      ),
                       _buildDetailRow(
                         'Delivery Mode',
                         deliveryMode,
                       ),
-                      _buildDetailRow(
-                        'Delivery Days',
-                        _getDeliveryDaysText(plan),
-                      ),
-                      _buildDetailRow(
-                        'Total Meals',
-                        '${planSummary['totalMeals']} meals',
-                      ),
-                      _buildDetailRow(
-                        'Consumed Meals',
-                        '$consumed meals',
-                      ),
-                      _buildDetailRow(
-                        'Remaining Meals',
-                        '$remaining meals',
-                        valueStyle: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade700,
-                        ),
-                      ),
-                      _buildDetailRow(
-                        'Price Per Meal',
-                        pricePerMeal,
-                      ),
+                      // _buildDetailRow(
+                      //   'Price Per Meal',
+                      //   pricePerMeal,
+                      // ),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -910,6 +872,55 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
             _buildStatusRow(student.name, 'Active'),
         ],
       ),
+    );
+  }
+
+  Widget _getMealImageForPlan(Subscription plan) {
+    final name = plan.mealName?.trim().toLowerCase() ?? '';
+    if (name == 'breakfast of the day breakfast' ||
+        name == 'breakfast of the day') {
+      return Image.asset(
+          'assets/images/breakfast/breakfast of the day (most recommended).png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'indian breakfast') {
+      return Image.asset('assets/images/breakfast/Indian Breakfast.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'international breakfast') {
+      return Image.asset('assets/images/breakfast/International Breakfast.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'jain breakfast') {
+      return Image.asset('assets/images/breakfast/Jain Breakfast.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'lunch of the day lunch' || name == 'lunch of the day') {
+      return Image.asset(
+          'assets/images/lunch/lunch of the day (most recommended).png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'indian lunch') {
+      return Image.asset('assets/images/lunch/Indian Lunch.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'international lunch') {
+      return Image.asset('assets/images/lunch/International Lunch.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'jain lunch') {
+      return Image.asset('assets/images/lunch/Jain Lunch.png',
+          fit: BoxFit.cover);
+    }
+    // fallback to icon
+    return Icon(
+      plan.planType == 'breakfast'
+          ? MealConstants.breakfastIcon
+          : MealConstants.lunchIcon,
+      color: plan.planType == 'breakfast'
+          ? MealConstants.breakfastIconColor
+          : MealConstants.lunchIconColor,
+      size: 24,
     );
   }
 }

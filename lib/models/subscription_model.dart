@@ -45,16 +45,22 @@ class Subscription {
   // Map to track swapped meals by date
   final Map<DateTime, String> _swappedMeals = {};
 
+  // Add properties to track meal type more explicitly
+  final bool isBreakfastPlan;
+  final bool isLunchPlan;
+
   Subscription({
     required this.id,
     required this.studentId,
     required this.planType,
-    required this.mealName,
+    this.mealName = 'Meal of the Day',
     required this.startDate,
     required this.endDate,
     this.status = SubscriptionStatus.active,
     this.duration = SubscriptionDuration.monthly,
     this.selectedWeekdays = const [], // Empty means all weekdays (Mon-Fri)
+    this.isBreakfastPlan = false,
+    this.isLunchPlan = false,
   });
 
   // Add a date to the cancelled dates list
@@ -238,6 +244,8 @@ class Subscription {
     SubscriptionStatus? status,
     SubscriptionDuration? duration,
     List<int>? selectedWeekdays,
+    bool? isBreakfastPlan,
+    bool? isLunchPlan,
   }) {
     return Subscription(
       id: id ?? this.id,
@@ -249,6 +257,8 @@ class Subscription {
       status: status ?? this.status,
       duration: duration ?? this.duration,
       selectedWeekdays: selectedWeekdays ?? this.selectedWeekdays,
+      isBreakfastPlan: isBreakfastPlan ?? this.isBreakfastPlan,
+      isLunchPlan: isLunchPlan ?? this.isLunchPlan,
     );
   }
 
@@ -496,6 +506,8 @@ class SubscriptionService {
         endDate: student.breakfastPlanEndDate!,
         duration: duration,
         selectedWeekdays: breakfastWeekdays,
+        isBreakfastPlan: true,
+        isLunchPlan: false,
       );
 
       dev.log(
@@ -535,6 +547,8 @@ class SubscriptionService {
         endDate: student.lunchPlanEndDate!,
         duration: duration,
         selectedWeekdays: lunchWeekdays,
+        isBreakfastPlan: false,
+        isLunchPlan: true,
       );
 
       dev.log(
@@ -630,6 +644,8 @@ class SubscriptionService {
         endDate: oneMonthLater,
         duration:
             monthlyDuration, // Use the calculated duration instead of hardcoded
+        isBreakfastPlan: true,
+        isLunchPlan: true,
       ));
 
       subscriptions.add(Subscription(
@@ -641,6 +657,8 @@ class SubscriptionService {
         endDate: oneMonthLater,
         duration:
             monthlyDuration, // Use the calculated duration instead of hardcoded
+        isBreakfastPlan: false,
+        isLunchPlan: true,
       ));
     } else if (studentId.endsWith('2')) {
       // Scenario 2: Student has only Express plan
@@ -652,6 +670,8 @@ class SubscriptionService {
         startDate: tomorrow,
         endDate: tomorrow,
         duration: SubscriptionDuration.singleDay,
+        isBreakfastPlan: false,
+        isLunchPlan: false,
       ));
     } else {
       // Scenario 3: Student has only Breakfast plan
@@ -665,6 +685,8 @@ class SubscriptionService {
         duration:
             weeklyDuration, // Use the calculated duration instead of hardcoded
         selectedWeekdays: [1, 3, 5], // Mon, Wed, Fri only
+        isBreakfastPlan: true,
+        isLunchPlan: false,
       ));
     }
   }
@@ -847,6 +869,8 @@ class SubscriptionService {
           planType == 'breakfast' ? 'Breakfast of the Day' : 'Standard Lunch',
       startDate: DateTime.now(),
       endDate: DateTime.now().add(const Duration(days: 30)),
+      isBreakfastPlan: false,
+      isLunchPlan: false,
     );
   }
 
@@ -1041,6 +1065,8 @@ class SubscriptionService {
           mealName: 'Standard Meal',
           startDate: DateTime.now(),
           endDate: DateTime.now().add(const Duration(days: 30)),
+          isBreakfastPlan: false,
+          isLunchPlan: false,
         );
 
         return await tempSubscription.swapMeal(

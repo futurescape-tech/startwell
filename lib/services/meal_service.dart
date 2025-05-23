@@ -182,35 +182,91 @@ class MealService {
     final List<Map<String, dynamic>> mealOptions = mealTypeData['options'];
     final String planName = mealTypeData['planName'];
 
-    // Generate meals for the next 7 days or until meal plan end date, whichever is sooner
+    // Generate meals for the entire plan period instead of just 7 days
     final DateTime now = DateTime.now();
     DateTime currentDate = DateTime(now.year, now.month, now.day);
 
-    for (int i = 0; i < 7; i++) {
-      final DateTime mealDate = currentDate.add(Duration(days: i));
+    // Determine the start date for meal generation
+    // Use the plan's start date if available, otherwise use today
+    DateTime startDate = planType == 'breakfast'
+        ? (student.breakfastPlanStartDate ?? currentDate)
+        : (student.lunchPlanStartDate ?? currentDate);
 
-      // Stop if we're past the meal plan end date
-      if (mealDate.isAfter(endDate)) {
-        break;
+    // If the start date is in the past, use today instead
+    if (startDate.isBefore(currentDate)) {
+      startDate = currentDate;
+    }
+
+    // Get the maximum plan period (in days)
+    int planPeriodDays = endDate.difference(startDate).inDays + 1;
+
+    // For express plans, show only today's meal
+    if (planType == 'express') {
+      if (!currentDate.isAfter(endDate)) {
+        // Only add the express meal if today is within the plan period
+        final Map<String, dynamic> mealOption = mealOptions[0];
+        meals.add(
+          MealSchedule(
+            date: currentDate,
+            title: mealOption['title'],
+            description: mealOption['description'],
+            status: 'Scheduled',
+            studentName: student.name,
+            planName: planName,
+            mealItems: List<String>.from(mealOption['mealItems']),
+            studentId: student.id,
+            planType: planType,
+          ),
+        );
       }
+    } else {
+      // For regular plans, iterate through all days in the plan period
+      for (int i = 0; i < planPeriodDays; i++) {
+        final DateTime mealDate = startDate.add(Duration(days: i));
 
-      // For demo purposes, we'll use the first meal option (standard meal)
-      // In a real app, this might be the selected meal for this day
-      final Map<String, dynamic> mealOption = mealOptions[0];
+        // Stop if we're past the meal plan end date
+        if (mealDate.isAfter(endDate)) {
+          break;
+        }
 
-      meals.add(
-        MealSchedule(
-          date: mealDate,
-          title: mealOption['title'],
-          description: mealOption['description'],
-          status: 'Scheduled',
-          studentName: student.name,
-          planName: planName,
-          mealItems: List<String>.from(mealOption['mealItems']),
-          studentId: student.id,
-          planType: planType,
-        ),
-      );
+        // Check if this date is a weekday (Monday to Friday)
+        // Skip weekends unless it's a custom plan that includes weekends
+        bool isValidDeliveryDay = false;
+
+        // Get the weekday index (1-7, where 1 is Monday)
+        int weekday = mealDate.weekday;
+
+        // For now, assume weekday delivery (Mon-Fri) for all plans
+        // This can be expanded later to check the plan's selected weekdays
+        if (planType == 'breakfast') {
+          // For breakfast, typically delivered Tue, Thu (weekdays 2, 4)
+          isValidDeliveryDay = (weekday == 2 || weekday == 4);
+        } else {
+          // For lunch, typically delivered Wed (weekday 3)
+          isValidDeliveryDay = (weekday == 3);
+        }
+
+        // Add the meal if it's a valid delivery day
+        if (isValidDeliveryDay) {
+          // For demo purposes, we'll use the first meal option (standard meal)
+          // In a real app, this might be the selected meal for this day
+          final Map<String, dynamic> mealOption = mealOptions[0];
+
+          meals.add(
+            MealSchedule(
+              date: mealDate,
+              title: mealOption['title'],
+              description: mealOption['description'],
+              status: 'Scheduled',
+              studentName: student.name,
+              planName: planName,
+              mealItems: List<String>.from(mealOption['mealItems']),
+              studentId: student.id,
+              planType: planType,
+            ),
+          );
+        }
+      }
     }
 
     return meals;

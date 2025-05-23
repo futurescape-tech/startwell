@@ -50,7 +50,7 @@ class CancelledMeal {
         studentId: map['studentId'] as String,
         studentName: map['studentName'] as String,
         planType: map['planType'] as String,
-        mealName: map['mealName'] ?? map['name'] as String,
+        mealName: (map['mealName'] ?? map['name']) as String,
         cancellationDate: parseDate(map['date']),
         timestamp: parseDate(map['cancelledAt']),
         cancelledBy: map['cancelledBy'] as String,

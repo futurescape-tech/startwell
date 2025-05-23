@@ -331,4 +331,37 @@ class StudentProfileService {
   bool setEquals<T>(Set<T> a, Set<T> b) {
     return a.length == b.length && a.containsAll(b);
   }
+
+  // For debugging/testing purposes
+  // Creates a student with both active breakfast and lunch plans
+  Student createStudentWithActivePlans() {
+    final DateTime now = DateTime.now();
+    final DateTime breakfastStartDate = now.subtract(const Duration(days: 10));
+    final DateTime breakfastEndDate = now.add(const Duration(days: 30));
+    final DateTime lunchStartDate = now.subtract(const Duration(days: 15));
+    final DateTime lunchEndDate = now.add(const Duration(days: 35));
+
+    return Student(
+      id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+      name: 'Test Student',
+      schoolName: 'Test School',
+      className: '10',
+      division: 'A',
+      floor: '2',
+      allergies: 'None',
+      grade: '10',
+      section: 'A',
+      profileImageUrl: '',
+      hasActiveBreakfast: true,
+      hasActiveLunch: true,
+      breakfastPlanStartDate: breakfastStartDate,
+      breakfastPlanEndDate: breakfastEndDate,
+      lunchPlanStartDate: lunchStartDate,
+      lunchPlanEndDate: lunchEndDate,
+      breakfastPreference: 'Indian',
+      lunchPreference: 'Indian',
+      breakfastSelectedWeekdays: [1, 2, 3, 4, 5], // Mon-Fri
+      lunchSelectedWeekdays: [1, 2, 3, 4, 5], // Mon-Fri
+    );
+  }
 }

@@ -5,14 +5,19 @@ import 'package:startwell/models/meal_model.dart';
 import 'package:startwell/models/student_model.dart';
 import 'package:startwell/models/user_profile.dart';
 import 'package:startwell/screens/order_summary_screen.dart';
+import 'package:startwell/screens/main_screen.dart';
 import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/meal_plan_validator.dart';
+import 'package:startwell/widgets/bottom_sheets/active_subscription_bottom_sheet.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
 import 'package:startwell/utils/routes.dart';
 import 'package:intl/intl.dart';
 import 'package:startwell/widgets/profile_avatar.dart';
 import 'package:startwell/widgets/student/student_card_widget.dart';
+import 'package:startwell/services/cart_storage_service.dart';
+import 'package:startwell/services/meal_selection_manager.dart';
+import 'package:startwell/utils/pre_order_date_calculator.dart';
 
 class ManageStudentProfileScreen extends StatefulWidget {
   final String? planType;
@@ -28,6 +33,24 @@ class ManageStudentProfileScreen extends StatefulWidget {
   final String? mealType;
   final UserProfile? userProfile;
 
+  // Breakfast specific data
+  final DateTime? breakfastStartDate;
+  final DateTime? breakfastEndDate;
+  final List<DateTime>? breakfastMealDates;
+  final List<Meal>? breakfastSelectedMeals;
+  final double? breakfastAmount;
+  final String? breakfastPlanType;
+  final List<bool>? breakfastSelectedWeekdays;
+
+  // Lunch specific data
+  final DateTime? lunchStartDate;
+  final DateTime? lunchEndDate;
+  final List<DateTime>? lunchMealDates;
+  final List<Meal>? lunchSelectedMeals;
+  final double? lunchAmount;
+  final String? lunchPlanType;
+  final List<bool>? lunchSelectedWeekdays;
+
   const ManageStudentProfileScreen({
     Key? key,
     this.planType,
@@ -42,6 +65,21 @@ class ManageStudentProfileScreen extends StatefulWidget {
     this.isManagementMode = false,
     this.mealType,
     this.userProfile,
+    // New parameters for breakfast and lunch data
+    this.breakfastStartDate,
+    this.breakfastEndDate,
+    this.breakfastMealDates,
+    this.breakfastSelectedMeals,
+    this.breakfastAmount,
+    this.breakfastPlanType,
+    this.breakfastSelectedWeekdays,
+    this.lunchStartDate,
+    this.lunchEndDate,
+    this.lunchMealDates,
+    this.lunchSelectedMeals,
+    this.lunchAmount,
+    this.lunchPlanType,
+    this.lunchSelectedWeekdays,
   }) : super(key: key);
 
   @override
@@ -62,6 +100,9 @@ class _ManageStudentProfileScreenState
 
   // Loading state
   bool _isLoading = true;
+
+  // Flag for testing - set to false to stop injecting a test student
+  final bool _isTestingActiveSubscription = false;
 
   // Form controllers
   final _schoolNameController = TextEditingController();
@@ -84,7 +125,7 @@ class _ManageStudentProfileScreenState
     'Springfield Public School',
     'Maple Leaf Academy',
     'Navi Mumbai High School',
-    'Green Valley Convent'
+    'Green Valley Convent',
   ];
   String? selectedSchool; // Add this in your State
 
@@ -223,275 +264,230 @@ class _ManageStudentProfileScreenState
       _allergiesController.clear();
     }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Color(0xFFF8F8F8),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          color: Color(0xFFF8F8F8),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.deepPurple.withOpacity(0.12),
-              blurRadius: 12,
-              offset: const Offset(0, -4),
+    // Open a full-screen dialog instead of bottom sheet
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(
+              _isEditing ? 'Edit Student Profile' : 'Create Student Profile',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
-          ],
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 20,
-          right: 20,
-          top: 16,
-        ),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle bar at the top
-                Center(
-                  child: Container(
-                    height: 4,
-                    width: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.purple.withOpacity(0.2),
-                            AppTheme.deepPurple.withOpacity(0.05),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.purple.withOpacity(0.2),
-                          width: 1,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                gradient: AppTheme.purpleToDeepPurple,
+              ),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            actions: [
+              _isEditing
+                  ? TextButton(
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _saveStudentProfile();
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      child: Text(
+                        'Update',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Color(0xFFEDE5FB),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0xFF8B5CF6).withOpacity(0.1),
-                                  blurRadius: 4,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 1),
+                    )
+                  : Container(
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 2, horizontal: 2),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.orangeToYellow,
+                        borderRadius: BorderRadius.circular(50),
+                        border: Border.all(color: Colors.orange, width: 1),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(50),
+                          onTap: () {
+                            if (_formKey.currentState!.validate()) {
+                              _saveStudentProfile();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Student created successfully',
+                                      style: GoogleFonts.poppins()),
+                                  backgroundColor: Colors.green,
                                 ),
-                              ],
-                            ),
-                            child: Icon(
-                              _isEditing ? Icons.edit : Icons.person_add_alt_1,
-                              size: 16,
-                              color: AppTheme.purple,
+                              );
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 6),
+                            child: Text(
+                              'Create',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textDark,
+
+                                //color: Colors.blueGrey,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _isEditing
-                                ? 'Edit Student Profile'
-                                : 'Create Student Profile',
+                        ),
+                      ),
+                    ),
+            ],
+          ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // School Name Dropdown
+                    DropdownButtonFormField<String>(
+                      value: selectedSchool,
+                      decoration: InputDecoration(
+                        labelText: 'Select School Name',
+                        prefixIcon: Icon(
+                          Icons.school,
+                          color: AppTheme.purple,
+                          size: 20,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppTheme.purple,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                      ),
+                      items: dummySchools.map((school) {
+                        return DropdownMenuItem<String>(
+                          value: school,
+                          child: Text(
+                            school,
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                               color: AppTheme.textDark,
                             ),
                           ),
-                        ],
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedSchool = value;
+                          _schoolNameController.text = value ?? '';
+                        });
+                      },
+                      validator: (value) =>
+                          value == null ? 'Please select a school' : null,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: AppTheme.textDark,
                       ),
                     ),
-                    IconButton(
-                      icon: Container(
-                        padding: EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.close,
-                            size: 16, color: Colors.red.shade700),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
+                    const SizedBox(height: 16),
+
+                    // Student Name
+                    _buildFormField(
+                      controller: _studentNameController,
+                      labelText: 'Student Name',
+                      icon: Icons.person,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter student name';
+                        }
+                        return null;
                       },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Class
+                    _buildFormField(
+                      controller: _classController,
+                      labelText: 'Class',
+                      icon: Icons.class_,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter class';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Division
+                    _buildFormField(
+                      controller: _divisionController,
+                      labelText: 'Division',
+                      icon: Icons.dashboard_customize,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter division';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Floor
+                    _buildFormField(
+                      controller: _floorController,
+                      labelText: 'Floor',
+                      icon: Icons.apartment,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter floor';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Medical Allergies (optional)
+                    _buildFormField(
+                      controller: _allergiesController,
+                      labelText: 'Medical Allergies (Optional)',
+                      icon: Icons.healing,
+                      isOptional: true,
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-
-                // School Name Dropdown
-                DropdownButtonFormField<String>(
-                  value: selectedSchool,
-                  decoration: InputDecoration(
-                    labelText: 'Select School Name',
-                    prefixIcon: Icon(Icons.school,
-                        color: AppTheme.purple.withOpacity(0.7), size: 20),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: Colors.grey.shade200, width: 1),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: Colors.grey.shade200, width: 1),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: AppTheme.purple, width: 1.5),
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16), // Adjusted padding
-                  ),
-                  items: dummySchools.map((school) {
-                    return DropdownMenuItem<String>(
-                      value: school,
-                      child: Text(school,
-                          style: GoogleFonts.poppins(
-                              fontSize: 14, color: AppTheme.textDark)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedSchool = value;
-                      _schoolNameController.text = value ?? '';
-                    });
-                  },
-                  validator: (value) =>
-                      value == null ? 'Please select a school' : null,
-                  style: GoogleFonts.poppins(
-                    // Added style for selected item text
-                    fontSize: 14,
-                    color: AppTheme.textDark,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Student Name
-                _buildFormField(
-                  controller: _studentNameController,
-                  labelText: 'Student Name',
-                  icon: Icons.person,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter student name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Class
-                _buildFormField(
-                  controller: _classController,
-                  labelText: 'Class',
-                  icon: Icons.class_,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter class';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Division
-                _buildFormField(
-                  controller: _divisionController,
-                  labelText: 'Division',
-                  icon: Icons.dashboard_customize,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter division';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Floor
-                _buildFormField(
-                  controller: _floorController,
-                  labelText: 'Floor',
-                  icon: Icons.apartment,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter floor';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Medical Allergies (optional)
-                _buildFormField(
-                  controller: _allergiesController,
-                  labelText: 'Medical Allergies (Optional)',
-                  icon: Icons.healing,
-                  isOptional: true,
-                ),
-                const SizedBox(height: 32),
-
-                // Submit button
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _saveStudentProfile,
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      padding: EdgeInsets.zero,
-                      elevation: 2,
-                    ),
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.purpleToDeepPurple,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Container(
-                        alignment: Alignment.center,
-                        child: Text(
-                          _isEditing ? 'Update Profile' : 'Create Profile',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32.0), // Added bottom padding
-              ],
+              ),
             ),
           ),
         ),
@@ -528,8 +524,11 @@ class _ManageStudentProfileScreenState
             color: AppTheme.textMedium,
             fontSize: 14,
           ),
-          prefixIcon:
-              Icon(icon, color: AppTheme.purple.withOpacity(0.7), size: 20),
+          prefixIcon: Icon(
+            icon,
+            color: AppTheme.purple,
+            size: 20,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
@@ -561,61 +560,53 @@ class _ManageStudentProfileScreenState
         ),
         maxLines: maxLines,
         validator: validator,
-        style: GoogleFonts.poppins(
-          fontSize: 14,
-          color: AppTheme.textDark,
-        ),
+        style: GoogleFonts.poppins(fontSize: 14, color: AppTheme.textDark),
       ),
     );
   }
 
   // Save or update student profile
   void _saveStudentProfile() {
-    if (_formKey.currentState!.validate()) {
-      final newStudent = Student(
-        id: _isEditing
-            ? _studentProfiles[_editingStudentIndex].id
-            : DateTime.now().toString(),
-        name: _studentNameController.text,
-        schoolName: _schoolNameController.text,
-        className: _classController.text,
-        division: _divisionController.text,
-        floor: _floorController.text,
-        allergies: _allergiesController.text,
-        grade: _classController.text, // Using className as grade
-        section: _divisionController.text, // Using division as section
-        profileImageUrl: '', // Default empty profile image URL
-      );
+    final newStudent = Student(
+      id: _isEditing
+          ? _studentProfiles[_editingStudentIndex].id
+          : DateTime.now().toString(),
+      name: _studentNameController.text,
+      schoolName: _schoolNameController.text,
+      className: _classController.text,
+      division: _divisionController.text,
+      floor: _floorController.text,
+      allergies: _allergiesController.text,
+      grade: _classController.text, // Using className as grade
+      section: _divisionController.text, // Using division as section
+      profileImageUrl: '', // Default empty profile image URL
+    );
 
-      if (_isEditing) {
-        // Update existing student
-        setState(() {
-          _studentProfiles[_editingStudentIndex] = newStudent.copyWith(
-            hasActiveBreakfast:
-                _studentProfiles[_editingStudentIndex].hasActiveBreakfast,
-            hasActiveLunch:
-                _studentProfiles[_editingStudentIndex].hasActiveLunch,
-            breakfastPlanEndDate:
-                _studentProfiles[_editingStudentIndex].breakfastPlanEndDate,
-            lunchPlanEndDate:
-                _studentProfiles[_editingStudentIndex].lunchPlanEndDate,
-          );
-        });
-        _profileService.updateStudentProfile(
-          _studentProfiles[_editingStudentIndex],
+    if (_isEditing) {
+      // Update existing student
+      setState(() {
+        _studentProfiles[_editingStudentIndex] = newStudent.copyWith(
+          hasActiveBreakfast:
+              _studentProfiles[_editingStudentIndex].hasActiveBreakfast,
+          hasActiveLunch: _studentProfiles[_editingStudentIndex].hasActiveLunch,
+          breakfastPlanEndDate:
+              _studentProfiles[_editingStudentIndex].breakfastPlanEndDate,
+          lunchPlanEndDate:
+              _studentProfiles[_editingStudentIndex].lunchPlanEndDate,
         );
-      } else {
-        // Add new student
-        setState(() {
-          _studentProfiles.add(newStudent);
-        });
-        _profileService.addStudentProfile(newStudent);
-      }
-
-      // Close the dialog
-      Navigator.of(context).pop();
-      _clearForm();
+      });
+      _profileService.updateStudentProfile(
+        _studentProfiles[_editingStudentIndex],
+      );
+    } else {
+      // Add new student
+      setState(() {
+        _studentProfiles.add(newStudent);
+      });
+      _profileService.addStudentProfile(newStudent);
     }
+
+    _clearForm();
   }
 
   // Clear all form fields and reset state
@@ -706,10 +697,7 @@ class _ManageStudentProfileScreenState
           Container(
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(
-                  color: AppTheme.deepPurple,
-                  width: 3,
-                ),
+                left: BorderSide(color: AppTheme.deepPurple, width: 3),
               ),
             ),
             padding: const EdgeInsets.only(left: 10),
@@ -780,10 +768,7 @@ class _ManageStudentProfileScreenState
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            Color(0xFFF7F7F7),
-          ],
+          colors: [Colors.white, Color(0xFFF7F7F7)],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -855,24 +840,6 @@ class _ManageStudentProfileScreenState
           //         size: 18,
           //       ),
           //     ),
-          //     label: Ink(
-          //       decoration: BoxDecoration(
-          //         gradient: AppTheme.purpleToDeepPurple,
-          //         borderRadius: BorderRadius.circular(24),
-          //       ),
-          //       child: Container(
-          //         alignment: Alignment.center,
-          //         padding: const EdgeInsets.symmetric(horizontal: 16),
-          //         child: Text(
-          //           'Create New Profile',
-          //           style: GoogleFonts.poppins(
-          //             fontSize: 16,
-          //             fontWeight: FontWeight.w600,
-          //             color: Colors.white,
-          //           ),
-          //         ),
-          //       ),
-          //     ),
           //   ),
           // ),
         ],
@@ -880,178 +847,443 @@ class _ManageStudentProfileScreenState
     );
   }
 
-  // Transition to the order summary screen
-  void _proceedToOrderSummary() {
-    // Add a small animation before proceeding to the next screen
-    if (_selectedStudent != null) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-
-      // Apply a scale effect to the selected student card
-      setState(() {
-        // This triggers the animation in the UI
-      });
-
-      // Short delay for the animation
-      Future.delayed(const Duration(milliseconds: 150), () {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                OrderSummaryScreen(
-              planType: widget.planType ?? '',
-              isCustomPlan: widget.isCustomPlan ?? false,
-              selectedWeekdays: widget.selectedWeekdays ?? [],
-              startDate: widget.startDate ?? DateTime.now(),
-              endDate: widget.endDate ?? DateTime.now(),
-              mealDates: widget.mealDates ?? [],
-              totalAmount: widget.totalAmount ?? 0,
-              selectedMeals: widget.selectedMeals ?? [],
-              isExpressOrder: widget.isExpressOrder ?? false,
-              selectedStudent: _selectedStudent!,
-              mealType: widget.mealType,
-            ),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              var begin = const Offset(1.0, 0.0);
-              var end = Offset.zero;
-              var curve = Curves.easeInOut;
-              var tween =
-                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 300),
-          ),
-        );
-      });
-    }
-  }
-
   // Select a student
   void _selectStudent(Student student) {
-    // If in management mode, just return
     if (widget.isManagementMode) {
       return;
     }
-
-    // Check for meal plan restrictions
-    if (widget.selectedMeals != null && widget.selectedMeals!.isNotEmpty) {
-      // Use the provided mealType parameter for validation if available
-      final String planType = widget.mealType ??
-          (widget.selectedMeals!.first.categories.first ==
-                  MealCategory.breakfast
-              ? 'breakfast'
-              : widget.selectedMeals!.first.categories.first ==
-                      MealCategory.expressOneDay
-                  ? 'express'
-                  : 'lunch');
-
-      // Validate meal plan assignment
-      final String? validationError = MealPlanValidator.validateMealPlan(
-        student,
-        planType,
-      );
-
-      if (validationError != null) {
-        // Show error message
-        _showValidationErrorDialog(validationError);
-        return;
-      }
-    }
-
-    // Add haptic feedback
     HapticFeedback.lightImpact();
 
+    // Set the selected student
     setState(() {
-      if (_selectedStudent?.id == student.id) {
-        _selectedStudent = null;
-      } else {
-        _selectedStudent = student;
+      _selectedStudent = student;
+    });
+
+    print('Selected student: ${student.name}');
+    print('Has active breakfast: ${student.hasActiveBreakfast}');
+    print('Has active lunch: ${student.hasActiveLunch}');
+
+    // Check if student has active subscriptions
+    bool hasActiveBreakfast =
+        student.hasActiveBreakfast && student.breakfastPlanEndDate != null;
+    bool hasActiveLunch =
+        student.hasActiveLunch && student.lunchPlanEndDate != null;
+
+    // Determine what meal types are being selected by the parent
+    bool isSelectingBreakfast = widget.mealType == 'breakfast' ||
+        widget.mealType == 'both' ||
+        MealSelectionManager.hasBreakfastInCart;
+    bool isSelectingLunch = widget.mealType == 'lunch' ||
+        widget.mealType == 'both' ||
+        MealSelectionManager.hasLunchInCart;
+    bool isSelectingBoth = isSelectingBreakfast && isSelectingLunch;
+
+    print('DEBUG: Selecting breakfast: $isSelectingBreakfast');
+    print('DEBUG: Selecting lunch: $isSelectingLunch');
+    print('DEBUG: Selecting both: $isSelectingBoth');
+    print('DEBUG: Has active breakfast: $hasActiveBreakfast');
+    print('DEBUG: Has active lunch: $hasActiveLunch');
+
+    // Check which scenario applies
+    bool shouldShowBottomSheet = false;
+
+    // Always show the bottom sheet if there's an active subscription that matches
+    // what the parent is trying to select
+    if ((isSelectingBreakfast && hasActiveBreakfast) ||
+        (isSelectingLunch && hasActiveLunch)) {
+      shouldShowBottomSheet = true;
+    }
+
+    if (shouldShowBottomSheet) {
+      // Student has relevant active subscriptions, show bottom sheet
+      print('Student has relevant active subscriptions, showing bottom sheet');
+      _showActiveSubscriptionsBottomSheet(student);
+    } else {
+      // Student has no relevant active subscriptions, redirect to order summary
+      print(
+        'Student has no relevant active subscriptions, redirecting to order summary',
+      );
+      _proceedToOrderSummary();
+    }
+  }
+
+  // Show bottom sheet with active subscription information
+  void _showActiveSubscriptionsBottomSheet(Student student) {
+    // Determine what meal types are being selected by the parent
+    bool isSelectingBreakfast = widget.mealType == 'breakfast' ||
+        widget.mealType == 'both' ||
+        MealSelectionManager.hasBreakfastInCart;
+    bool isSelectingLunch = widget.mealType == 'lunch' ||
+        widget.mealType == 'both' ||
+        MealSelectionManager.hasLunchInCart;
+    bool isSelectingBoth = isSelectingBreakfast && isSelectingLunch;
+
+    // Check if student has active subscriptions
+    bool hasActiveBreakfast =
+        student.hasActiveBreakfast && student.breakfastPlanEndDate != null;
+    bool hasActiveLunch =
+        student.hasActiveLunch && student.lunchPlanEndDate != null;
+
+    // Variables to track bottom sheet options
+    bool showBreakfastPreorder = false;
+    bool showLunchPreorder = false;
+    String scenarioDescription = "";
+
+    // Determine whether to show pre-order options for each meal type
+    // Show breakfast pre-order if parent is selecting breakfast and student has active breakfast plan
+    if (isSelectingBreakfast && hasActiveBreakfast) {
+      showBreakfastPreorder = true;
+    }
+
+    // Show lunch pre-order if parent is selecting lunch and student has active lunch plan
+    if (isSelectingLunch && hasActiveLunch) {
+      showLunchPreorder = true;
+    }
+
+    // Set description based on what's being shown
+    if (showBreakfastPreorder && showLunchPreorder) {
+      scenarioDescription = "Pre-order available for both breakfast and lunch";
+    } else if (showBreakfastPreorder) {
+      scenarioDescription = "Pre-order available for breakfast only";
+    } else if (showLunchPreorder) {
+      scenarioDescription = "Pre-order available for lunch only";
+    }
+
+    print('DEBUG: ===== ACTIVE SUBSCRIPTION BOTTOM SHEET SETUP =====');
+    print('DEBUG: Active scenario: $scenarioDescription');
+    print('DEBUG: Show breakfast preorder: $showBreakfastPreorder');
+    print('DEBUG: Show lunch preorder: $showLunchPreorder');
+
+    // Get the proper weekday selections for each meal type
+    List<bool>? breakfastSelectedWeekdays;
+    List<bool>? lunchSelectedWeekdays;
+
+    // For breakfast, use the specific breakfast weekdays if available
+    if (widget.breakfastSelectedWeekdays != null) {
+      // Create a completely new array instead of using List.from which can still cause issues
+      breakfastSelectedWeekdays = List<bool>.filled(5, false);
+      for (int i = 0;
+          i < widget.breakfastSelectedWeekdays!.length && i < 5;
+          i++) {
+        breakfastSelectedWeekdays[i] = widget.breakfastSelectedWeekdays![i];
+      }
+      print(
+          'DEBUG: Using breakfast-specific weekdays: $breakfastSelectedWeekdays');
+    } else if (isSelectingBreakfast && widget.selectedWeekdays != null) {
+      // Fallback to general weekdays for breakfast if no specific ones
+      breakfastSelectedWeekdays = List<bool>.filled(5, false);
+      for (int i = 0; i < widget.selectedWeekdays!.length && i < 5; i++) {
+        breakfastSelectedWeekdays[i] = widget.selectedWeekdays![i];
+      }
+      print(
+          'DEBUG: Using general weekdays for breakfast: $breakfastSelectedWeekdays');
+    } else {
+      // Default to Mon-Fri if no weekdays are provided
+      breakfastSelectedWeekdays = List.generate(5, (_) => true);
+      print('DEBUG: Using default Mon-Fri for breakfast');
+    }
+
+    // For lunch, use the specific lunch weekdays if available
+    if (widget.lunchSelectedWeekdays != null) {
+      // Create a completely new array instead of using List.from which can still cause issues
+      lunchSelectedWeekdays = List<bool>.filled(5, false);
+      for (int i = 0; i < widget.lunchSelectedWeekdays!.length && i < 5; i++) {
+        lunchSelectedWeekdays[i] = widget.lunchSelectedWeekdays![i];
+      }
+      print('DEBUG: Using lunch-specific weekdays: $lunchSelectedWeekdays');
+    } else if (isSelectingLunch && widget.selectedWeekdays != null) {
+      // Fallback to general weekdays for lunch if no specific ones
+      lunchSelectedWeekdays = List<bool>.filled(5, false);
+      for (int i = 0; i < widget.selectedWeekdays!.length && i < 5; i++) {
+        lunchSelectedWeekdays[i] = widget.selectedWeekdays![i];
+      }
+      print('DEBUG: Using general weekdays for lunch: $lunchSelectedWeekdays');
+    } else {
+      // Default to Mon-Fri if no weekdays are provided
+      lunchSelectedWeekdays = List.generate(5, (_) => true);
+      print('DEBUG: Using default Mon-Fri for lunch');
+    }
+
+    // Print delivery modes for debugging
+    if (breakfastSelectedWeekdays != null) {
+      String breakfastDeliveryMode =
+          PreOrderDateCalculator.getDeliveryModeText(breakfastSelectedWeekdays);
+      print(
+          'DEBUG: Calculated breakfast delivery mode: $breakfastDeliveryMode');
+    }
+    if (lunchSelectedWeekdays != null) {
+      String lunchDeliveryMode =
+          PreOrderDateCalculator.getDeliveryModeText(lunchSelectedWeekdays);
+      print('DEBUG: Calculated lunch delivery mode: $lunchDeliveryMode');
+    }
+
+    // Get plan types for both meal types
+    String? breakfastPlanType = widget.breakfastPlanType ?? widget.planType;
+    String? lunchPlanType = widget.lunchPlanType ?? widget.planType;
+
+    print('DEBUG: ==== BEFORE LAUNCHING BOTTOM SHEET ====');
+    print('DEBUG: Breakfast selected weekdays: $breakfastSelectedWeekdays');
+    print('DEBUG: Lunch selected weekdays: $lunchSelectedWeekdays');
+    // Make sure these arrays are different objects in memory
+    print(
+        'DEBUG: Are weekday arrays the same object? ${identical(breakfastSelectedWeekdays, lunchSelectedWeekdays)}');
+    print('DEBUG: =====================================');
+
+    // Show bottom sheet and track when it's closed
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => ActiveSubscriptionBottomSheet(
+        student: student,
+        showBreakfastPreorder: showBreakfastPreorder,
+        showLunchPreorder: showLunchPreorder,
+        // Pass plan types and independent delivery day arrays to bottom sheet
+        breakfastPlanType: breakfastPlanType,
+        lunchPlanType: lunchPlanType,
+        breakfastSelectedWeekdays: breakfastSelectedWeekdays,
+        lunchSelectedWeekdays: lunchSelectedWeekdays,
+        onContinue: (
+          DateTime? breakfastPreorderDate,
+          DateTime? lunchPreorderDate,
+          String? breakfastDeliveryMode,
+          String? lunchDeliveryMode,
+        ) {
+          print('DEBUG: ===== RECEIVED FROM BOTTOM SHEET =====');
+          print(
+              'DEBUG: Selected breakfast preorder date: $breakfastPreorderDate');
+          print('DEBUG: Selected lunch preorder date: $lunchPreorderDate');
+          print('DEBUG: Final breakfast delivery mode: $breakfastDeliveryMode');
+          print('DEBUG: Final lunch delivery mode: $lunchDeliveryMode');
+          print('DEBUG: ======================================');
+
+          // Navigate to order summary with pre-order dates and separate delivery modes
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderSummaryScreen(
+                planType: widget.planType ?? 'Single Day',
+                isCustomPlan: widget.isCustomPlan ?? false,
+                selectedWeekdays:
+                    widget.selectedWeekdays ?? List.filled(5, false),
+                startDate: widget.startDate ?? DateTime.now(),
+                endDate: widget.endDate ?? DateTime.now(),
+                mealDates: widget.mealDates ?? [],
+                totalAmount: widget.totalAmount ?? 0.0,
+                selectedMeals: widget.selectedMeals ?? [],
+                isExpressOrder: widget.isExpressOrder ?? false,
+                selectedStudent: _selectedStudent,
+                mealType: widget.mealType,
+                breakfastPreOrderDate: breakfastPreorderDate,
+                lunchPreOrderDate: lunchPreorderDate,
+                isPreOrder:
+                    breakfastPreorderDate != null || lunchPreorderDate != null,
+                // Pass specific delivery modes for each meal type
+                breakfastDeliveryMode: breakfastDeliveryMode,
+                lunchDeliveryMode: lunchDeliveryMode,
+                // Pass breakfast and lunch specific data
+                breakfastStartDate: widget.breakfastStartDate,
+                breakfastEndDate: widget.breakfastEndDate,
+                breakfastMealDates: widget.breakfastMealDates,
+                breakfastSelectedMeals: widget.breakfastSelectedMeals,
+                breakfastAmount: widget.breakfastAmount,
+                breakfastPlanType: widget.breakfastPlanType,
+                breakfastSelectedWeekdays: breakfastSelectedWeekdays,
+                lunchStartDate: widget.lunchStartDate,
+                lunchEndDate: widget.lunchEndDate,
+                lunchMealDates: widget.lunchMealDates,
+                lunchSelectedMeals: widget.lunchSelectedMeals,
+                lunchAmount: widget.lunchAmount,
+                lunchPlanType: widget.lunchPlanType,
+                lunchSelectedWeekdays: lunchSelectedWeekdays,
+              ),
+            ),
+          );
+        },
+      ),
+    ).then((_) {
+      // This runs when the bottom sheet is dismissed without pressing continue
+      // Check if the user is still on this screen
+      if (mounted) {
+        // If the user navigated away (like to OrderSummaryScreen), they continued
+        // If they didn't, then they dismissed the sheet without continuing
+        // We can check for active routes, but a simpler approach:
+        // If they're still on this screen and selected a student but didn't proceed,
+        // then unselect the student
+        if (_selectedStudent?.id == student.id) {
+          print(
+              'DEBUG: Bottom sheet dismissed without continuing - unselecting student');
+          setState(() {
+            _selectedStudent = null;
+          });
+        }
       }
     });
   }
 
-  // Show validation error dialog with improved styling
-  void _showValidationErrorDialog(String errorMessage) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.error_outline,
-                color: Colors.red[700],
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Cannot Select This Student',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textDark,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Container(
-          decoration: BoxDecoration(
-            color: Colors.red[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.red[100]!,
-              width: 1,
-            ),
+  // Helper method to format dates
+  String _formatDate(DateTime date) {
+    return DateFormat('d MMM yyyy').format(date);
+  }
+
+  // Navigate to order summary screen with selected student
+  void _proceedToOrderSummary() {
+    // Check if a student is selected
+    if (_selectedStudent == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select a student to continue',
+            style: GoogleFonts.poppins(),
           ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                errorMessage,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Colors.red[800],
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
+          backgroundColor: Colors.red,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.purple,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              'Got it',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      );
+      return;
+    }
+
+    // Set meal selections based on mealType parameter
+    if (widget.mealType == 'breakfast') {
+      MealSelectionManager.hasBreakfastInCart = true;
+      MealSelectionManager.hasLunchInCart = false;
+    } else if (widget.mealType == 'lunch') {
+      MealSelectionManager.hasBreakfastInCart = false;
+      MealSelectionManager.hasLunchInCart = true;
+    } else if (widget.mealType == 'both') {
+      MealSelectionManager.hasBreakfastInCart = true;
+      MealSelectionManager.hasLunchInCart = true;
+    }
+
+    // Check if student has active subscriptions
+    bool hasActiveBreakfast = _selectedStudent!.hasActiveBreakfast &&
+        _selectedStudent!.breakfastPlanEndDate != null;
+    bool hasActiveLunch = _selectedStudent!.hasActiveLunch &&
+        _selectedStudent!.lunchPlanEndDate != null;
+
+    // Determine what meal types are being selected by the parent
+    bool isSelectingBreakfast = widget.mealType == 'breakfast' ||
+        widget.mealType == 'both' ||
+        MealSelectionManager.hasBreakfastInCart;
+    bool isSelectingLunch = widget.mealType == 'lunch' ||
+        widget.mealType == 'both' ||
+        MealSelectionManager.hasLunchInCart;
+
+    // Debug info
+    print('DEBUG: _proceedToOrderSummary - mealType: ${widget.mealType}');
+    print(
+        'DEBUG: _proceedToOrderSummary - isSelectingBreakfast: $isSelectingBreakfast');
+    print(
+        'DEBUG: _proceedToOrderSummary - isSelectingLunch: $isSelectingLunch');
+    print(
+        'DEBUG: _proceedToOrderSummary - hasActiveBreakfast: $hasActiveBreakfast');
+    print('DEBUG: _proceedToOrderSummary - hasActiveLunch: $hasActiveLunch');
+
+    // Log weekday selections for debugging
+    if (widget.selectedWeekdays != null) {
+      print(
+          'DEBUG: _proceedToOrderSummary - selectedWeekdays: ${widget.selectedWeekdays}');
+    }
+    if (widget.breakfastSelectedWeekdays != null) {
+      print(
+          'DEBUG: _proceedToOrderSummary - breakfastSelectedWeekdays: ${widget.breakfastSelectedWeekdays}');
+    }
+    if (widget.lunchSelectedWeekdays != null) {
+      print(
+          'DEBUG: _proceedToOrderSummary - lunchSelectedWeekdays: ${widget.lunchSelectedWeekdays}');
+    }
+
+    if (widget.breakfastStartDate != null || widget.lunchStartDate != null) {
+      print('DEBUG: Using separate date information for breakfast and lunch');
+      print('DEBUG: breakfastStartDate: ${widget.breakfastStartDate}');
+      print('DEBUG: breakfastEndDate: ${widget.breakfastEndDate}');
+      print('DEBUG: lunchStartDate: ${widget.lunchStartDate}');
+      print('DEBUG: lunchEndDate: ${widget.lunchEndDate}');
+    }
+
+    // Calculate delivery modes for breakfast and lunch if custom plan
+    String? breakfastDeliveryMode;
+    String? lunchDeliveryMode;
+
+    if (widget.isCustomPlan == true) {
+      // For breakfast, use breakfast-specific weekdays if available, otherwise fallback to general
+      if (widget.breakfastSelectedWeekdays != null && isSelectingBreakfast) {
+        breakfastDeliveryMode = PreOrderDateCalculator.getDeliveryModeText(
+          widget.breakfastSelectedWeekdays!,
+        );
+        print(
+            'DEBUG: Using breakfast-specific weekdays for delivery mode: ${widget.breakfastSelectedWeekdays}');
+      } else if (widget.selectedWeekdays != null && isSelectingBreakfast) {
+        breakfastDeliveryMode = PreOrderDateCalculator.getDeliveryModeText(
+          widget.selectedWeekdays!,
+        );
+        print(
+            'DEBUG: Using general weekdays for breakfast delivery mode: ${widget.selectedWeekdays}');
+      }
+
+      // For lunch, use lunch-specific weekdays if available, otherwise fallback to general
+      if (widget.lunchSelectedWeekdays != null && isSelectingLunch) {
+        lunchDeliveryMode = PreOrderDateCalculator.getDeliveryModeText(
+          widget.lunchSelectedWeekdays!,
+        );
+        print(
+            'DEBUG: Using lunch-specific weekdays for delivery mode: ${widget.lunchSelectedWeekdays}');
+      } else if (widget.selectedWeekdays != null && isSelectingLunch) {
+        lunchDeliveryMode = PreOrderDateCalculator.getDeliveryModeText(
+          widget.selectedWeekdays!,
+        );
+        print(
+            'DEBUG: Using general weekdays for lunch delivery mode: ${widget.selectedWeekdays}');
+      }
+    } else {
+      // For regular plans, use Monday to Friday format
+      breakfastDeliveryMode = "Monday to Friday";
+      lunchDeliveryMode = "Monday to Friday";
+      print('DEBUG: Using Monday to Friday for regular plan delivery modes');
+    }
+
+    print('DEBUG: Final breakfast delivery mode: $breakfastDeliveryMode');
+    print('DEBUG: Final lunch delivery mode: $lunchDeliveryMode');
+
+    // Navigate directly to order summary
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OrderSummaryScreen(
+          planType: widget.planType ?? 'Single Day',
+          isCustomPlan: widget.isCustomPlan ?? false,
+          selectedWeekdays: widget.selectedWeekdays ?? List.filled(5, false),
+          startDate: widget.startDate ?? DateTime.now(),
+          endDate: widget.endDate ?? DateTime.now(),
+          mealDates: widget.mealDates ?? [],
+          totalAmount: widget.totalAmount ?? 0.0,
+          selectedMeals: widget.selectedMeals ?? [],
+          isExpressOrder: widget.isExpressOrder ?? false,
+          selectedStudent: _selectedStudent,
+          mealType: widget.mealType,
+          breakfastPreOrderDate: null,
+          lunchPreOrderDate: null,
+          isPreOrder: false,
+          // Pass specific delivery modes for each meal type
+          breakfastDeliveryMode: breakfastDeliveryMode,
+          lunchDeliveryMode: lunchDeliveryMode,
+          // Pass breakfast and lunch specific data
+          breakfastStartDate: widget.breakfastStartDate,
+          breakfastEndDate: widget.breakfastEndDate,
+          breakfastMealDates: widget.breakfastMealDates,
+          breakfastSelectedMeals: widget.breakfastSelectedMeals,
+          breakfastAmount: widget.breakfastAmount,
+          breakfastPlanType: widget.breakfastPlanType,
+          breakfastSelectedWeekdays: widget.breakfastSelectedWeekdays,
+          lunchStartDate: widget.lunchStartDate,
+          lunchEndDate: widget.lunchEndDate,
+          lunchMealDates: widget.lunchMealDates,
+          lunchSelectedMeals: widget.lunchSelectedMeals,
+          lunchAmount: widget.lunchAmount,
+          lunchPlanType: widget.lunchPlanType,
+          lunchSelectedWeekdays: widget.lunchSelectedWeekdays,
+        ),
       ),
     );
   }
@@ -1064,8 +1296,52 @@ class _ManageStudentProfileScreenState
 
     return WillPopScope(
       onWillPop: () async {
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil(Routes.main, (route) => false);
+        // Store the current selection in cart before navigating back
+        if (widget.selectedMeals?.isNotEmpty == true) {
+          // First, load existing cart items
+          final existingCartItems = await CartStorageService.loadCartItems();
+
+          // Create new cart item
+          final cartItem = {
+            'planType': widget.planType,
+            'isCustomPlan': widget.isCustomPlan,
+            'selectedWeekdays': widget.selectedWeekdays,
+            'startDate': widget.startDate,
+            'endDate': widget.endDate,
+            'mealDates': widget.mealDates,
+            'totalAmount': widget.totalAmount,
+            'selectedMeals': widget.selectedMeals,
+            'isExpressOrder': widget.isExpressOrder,
+            'mealType': widget.mealType,
+          };
+
+          // Check if we already have this meal type in cart
+          bool hasMealType = existingCartItems.any(
+            (item) => item['mealType'] == widget.mealType,
+          );
+
+          // If we don't have this meal type, add it to existing items
+          if (!hasMealType) {
+            existingCartItems.add(cartItem);
+          }
+
+          // Save all cart items
+          await CartStorageService.saveCartItems(existingCartItems);
+
+          // Update meal selection manager
+          if (widget.mealType == 'breakfast') {
+            MealSelectionManager.hasBreakfastInCart = true;
+          } else if (widget.mealType == 'lunch') {
+            MealSelectionManager.hasLunchInCart = true;
+          }
+        }
+
+        // Navigate to home page
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => MainScreen()),
+          (route) => false,
+        );
         return false;
       },
       child: Scaffold(
@@ -1084,35 +1360,57 @@ class _ManageStudentProfileScreenState
           ),
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Colors.white,
-            ),
-            onPressed: () => Navigator.of(context)
-                .pushNamedAndRemoveUntil(Routes.main, (route) => false),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () async {
+              // Store the current selection in cart before navigating back
+              if (widget.selectedMeals?.isNotEmpty == true) {
+                // First, load existing cart items
+                final existingCartItems =
+                    await CartStorageService.loadCartItems();
+
+                // Create new cart item
+                final cartItem = {
+                  'planType': widget.planType,
+                  'isCustomPlan': widget.isCustomPlan,
+                  'selectedWeekdays': widget.selectedWeekdays,
+                  'startDate': widget.startDate,
+                  'endDate': widget.endDate,
+                  'mealDates': widget.mealDates,
+                  'totalAmount': widget.totalAmount,
+                  'selectedMeals': widget.selectedMeals,
+                  'isExpressOrder': widget.isExpressOrder,
+                  'mealType': widget.mealType,
+                };
+
+                // Check if we already have this meal type in cart
+                bool hasMealType = existingCartItems.any(
+                  (item) => item['mealType'] == widget.mealType,
+                );
+
+                // If we don't have this meal type, add it to existing items
+                if (!hasMealType) {
+                  existingCartItems.add(cartItem);
+                }
+
+                // Save all cart items
+                await CartStorageService.saveCartItems(existingCartItems);
+
+                // Update meal selection manager
+                if (widget.mealType == 'breakfast') {
+                  MealSelectionManager.hasBreakfastInCart = true;
+                } else if (widget.mealType == 'lunch') {
+                  MealSelectionManager.hasLunchInCart = true;
+                }
+              }
+
+              // Navigate to home page
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => MainScreen()),
+                (route) => false,
+              );
+            },
           ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: widget.userProfile != null
-                  ? ProfileAvatar(
-                      userProfile: widget.userProfile,
-                      radius: 18,
-                      onAvatarTap: () {
-                        Navigator.pushNamed(context, Routes.profileSettings);
-                      },
-                    )
-                  : IconButton(
-                      icon: const Icon(
-                        Icons.account_circle,
-                        color: AppTheme.white,
-                      ),
-                      onPressed: () {
-                        Navigator.pushNamed(context, Routes.profileSettings);
-                      },
-                    ),
-            ),
-          ],
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -1201,10 +1499,7 @@ class _ManageStudentProfileScreenState
                                   color: AppTheme.purple.withOpacity(0.1),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
-                                  Icons.add,
-                                  size: 16,
-                                ),
+                                child: const Icon(Icons.add, size: 16),
                               ),
                               label: Text(
                                 'Create New Profile',
@@ -1220,6 +1515,8 @@ class _ManageStudentProfileScreenState
                           if (!widget.isManagementMode) ...[
                             const SizedBox(height: 16),
                             Container(
+                              width: double.infinity,
+                              height: 60,
                               decoration: BoxDecoration(
                                 gradient: isExpressOrder
                                     ? LinearGradient(
@@ -1233,31 +1530,29 @@ class _ManageStudentProfileScreenState
                                     : AppTheme.purpleToDeepPurple,
                                 borderRadius: BorderRadius.circular(50),
                               ),
-                              width: double.infinity,
-                              height: 60,
                               child: ElevatedButton(
-                                onPressed: (_selectedStudent != null &&
-                                        (!isExpressOrder ||
-                                            isWithinExpressWindow))
-                                    ? _proceedToOrderSummary
-                                    : null,
+                                onPressed:
+                                    (!isExpressOrder || isWithinExpressWindow)
+                                        ? _proceedToOrderSummary
+                                        : null,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: isExpressOrder
-                                      ? Colors.deepPurple
-                                      : AppTheme
-                                          .deepPurple, // your solid color here
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(50),
                                   ),
-                                  elevation: 0,
                                   padding: EdgeInsets.zero,
                                 ),
-                                child: Text(
-                                  'Continue',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  child: Text(
+                                    'Continue',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),

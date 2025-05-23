@@ -487,15 +487,15 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      planIcon,
-                      color: planIconColor,
-                      size: 24,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: _getMealImageForPlan(subscription),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -549,28 +549,9 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Section 1: Subscription Details
-                  _buildSectionHeader('Subscription Details'),
-                  const SizedBox(height: 8),
-                  Column(
-                    children: [
-                      _buildDetailRow(
-                        'Start Date',
-                        DateFormat('dd MMM yyyy')
-                            .format(planSummary['startDate']),
-                      ),
-                      _buildDetailRow(
-                        'End Date',
-                        DateFormat('dd MMM yyyy')
-                            .format(planSummary['endDate']),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
                   // Section 2: Meal Statistics
-                  _buildSectionHeader('Meal Statistics'),
-                  const SizedBox(height: 16),
+                  // _buildSectionHeader('Meal Statistics'),
+                  // const SizedBox(height: 16),
 
                   // Meal consumption metrics
                   Row(
@@ -588,8 +569,8 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
                   const SizedBox(height: 24),
 
                   // Progress section
-                  _buildSectionHeader("Consumption Progress"),
-                  const SizedBox(height: 16),
+                  // _buildSectionHeader("Consumption Progress"),
+                  // const SizedBox(height: 16),
 
                   // Progress bar with percentage
                   Column(
@@ -668,34 +649,6 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
           fontWeight: FontWeight.w600,
           color: AppTheme.textDark,
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, {TextStyle? valueStyle}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          Text(
-            value,
-            style: valueStyle ??
-                GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textDark,
-                ),
-          ),
-        ],
       ),
     );
   }
@@ -864,129 +817,116 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
                 elevation: 4,
                 shadowColor: AppTheme.deepPurple.withOpacity(0.15),
                 margin: const EdgeInsets.only(bottom: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    color: Colors.white,
-                    border: Border.all(
-                      color: AppTheme.purple.withOpacity(0.3),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _recentConsumption.length,
-                        itemBuilder: (context, index) {
-                          final consumption = _recentConsumption[index];
-                          final consumptionDate =
-                              consumption['date'] as DateTime;
-                          final isConsumed =
-                              consumption['status'] == 'Consumed';
+                child: Column(
+                  children: [
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _recentConsumption.length,
+                      itemBuilder: (context, index) {
+                        final consumption = _recentConsumption[index];
+                        final consumptionDate = consumption['date'] as DateTime;
+                        final isConsumed = consumption['status'] == 'Consumed';
 
-                          return Column(
-                            children: [
-                              if (index > 0)
-                                Divider(
-                                  height: 1,
-                                  thickness: 1,
-                                  color: Colors.grey.shade100,
-                                  indent: 16,
-                                  endIndent: 16,
+                        return Column(
+                          children: [
+                            if (index > 0)
+                              Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: Colors.grey.shade100,
+                                indent: 16,
+                                endIndent: 16,
+                              ),
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 6),
+                              leading: Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: isConsumed
+                                      ? Colors.green.withOpacity(0.1)
+                                      : MealConstants.lunchBgColor,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6),
-                                leading: Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: isConsumed
-                                        ? Colors.green.withOpacity(0.1)
-                                        : MealConstants.lunchBgColor,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    isConsumed
-                                        ? Icons.check_circle_outline
-                                        : MealConstants.lunchIcon,
-                                    color: isConsumed
-                                        ? Colors.green
-                                        : MealConstants.lunchIconColor,
-                                  ),
+                                child: Icon(
+                                  isConsumed
+                                      ? Icons.check_circle_outline
+                                      : MealConstants.lunchIcon,
+                                  color: isConsumed
+                                      ? Colors.green
+                                      : MealConstants.lunchIconColor,
                                 ),
-                                title: Row(
-                                  children: [
-                                    Text(
-                                      consumption['mealName'],
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.textDark,
-                                      ),
+                              ),
+                              title: Row(
+                                children: [
+                                  Text(
+                                    consumption['mealName'],
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textDark,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          consumption['mealType'] == 'Breakfast'
+                                              ? MealConstants.breakfastIconColor
+                                                  .withOpacity(0.1)
+                                              : MealConstants.lunchIconColor
+                                                  .withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      consumption['mealType'] ?? 'Lunch',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
                                         color: consumption['mealType'] ==
                                                 'Breakfast'
                                             ? MealConstants.breakfastIconColor
-                                                .withOpacity(0.1)
-                                            : MealConstants.lunchIconColor
-                                                .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        consumption['mealType'] ?? 'Lunch',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500,
-                                          color: consumption['mealType'] ==
-                                                  'Breakfast'
-                                              ? MealConstants.breakfastIconColor
-                                              : MealConstants.lunchIconColor,
-                                        ),
+                                            : MealConstants.lunchIconColor,
                                       ),
                                     ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                              subtitle: Text(
+                                DateFormat('MMM dd, yyyy')
+                                    .format(consumptionDate),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: AppTheme.textMedium,
                                 ),
-                                subtitle: Text(
-                                  DateFormat('MMM dd, yyyy')
-                                      .format(consumptionDate),
+                              ),
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(consumption['status'])
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  consumption['status'],
                                   style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w500,
                                     fontSize: 13,
-                                    color: AppTheme.textMedium,
-                                  ),
-                                ),
-                                trailing: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
                                     color:
-                                        _getStatusColor(consumption['status'])
-                                            .withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    consumption['status'],
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 13,
-                                      color: _getStatusColor(
-                                          consumption['status']),
-                                    ),
+                                        _getStatusColor(consumption['status']),
                                   ),
                                 ),
                               ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
       ],
@@ -1004,5 +944,54 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
       default:
         return Colors.blue;
     }
+  }
+
+  Widget _getMealImageForPlan(Subscription plan) {
+    final name = plan.mealName?.trim().toLowerCase() ?? '';
+    if (name == 'breakfast of the day breakfast' ||
+        name == 'breakfast of the day') {
+      return Image.asset(
+          'assets/images/breakfast/breakfast of the day (most recommended).png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'indian breakfast') {
+      return Image.asset('assets/images/breakfast/Indian Breakfast.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'international breakfast') {
+      return Image.asset('assets/images/breakfast/International Breakfast.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'jain breakfast') {
+      return Image.asset('assets/images/breakfast/Jain Breakfast.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'lunch of the day lunch' || name == 'lunch of the day') {
+      return Image.asset(
+          'assets/images/lunch/lunch of the day (most recommended).png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'indian lunch') {
+      return Image.asset('assets/images/lunch/Indian Lunch.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'international lunch') {
+      return Image.asset('assets/images/lunch/International Lunch.png',
+          fit: BoxFit.cover);
+    }
+    if (name == 'jain lunch') {
+      return Image.asset('assets/images/lunch/Jain Lunch.png',
+          fit: BoxFit.cover);
+    }
+    // fallback to icon
+    return Icon(
+      plan.planType == 'breakfast'
+          ? MealConstants.breakfastIcon
+          : MealConstants.lunchIcon,
+      color: plan.planType == 'breakfast'
+          ? MealConstants.breakfastIconColor
+          : MealConstants.lunchIconColor,
+      size: 24,
+    );
   }
 }

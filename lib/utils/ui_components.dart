@@ -23,7 +23,7 @@ class UIComponents {
           fontSize: 20,
         ),
       ),
-      centerTitle: true,
+      centerTitle: false,
       automaticallyImplyLeading: showBackButton,
       leading: showBackButton
           ? IconButton(

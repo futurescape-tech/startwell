@@ -68,6 +68,57 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
   @override
   void initState() {
     super.initState();
+    _loadMealsFromHomeStorage();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadMeals();
+  }
+
+  Future<void> _loadMealsFromHomeStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? jsonString = prefs.getString('home_upcoming_meals');
+    if (jsonString != null && jsonString.isNotEmpty) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        final List<MealData> meals = jsonList.map((json) {
+          return MealData(
+            studentName: json['studentName'] ?? '',
+            name: json['name'] ?? '',
+            planType: json['planType'] ?? '',
+            items: [],
+            status: json['status'] ?? '',
+            subscription: Subscription(
+              id: json['subscriptionId'] ?? '',
+              studentId: json['studentId'] ?? '',
+              planType: json['planType'] ?? '',
+              mealName: json['name'] ?? '',
+              startDate: DateTime.now(),
+              endDate: DateTime.now().add(const Duration(days: 1)),
+              status: SubscriptionStatus.active,
+              duration: SubscriptionDuration.monthly,
+              selectedWeekdays: const [],
+              isBreakfastPlan: json['planType'] == 'breakfast',
+              isLunchPlan: json['planType'] == 'lunch',
+            ),
+            canSwap: false,
+            date: DateTime.parse(json['date']),
+            studentId: json['studentId'] ?? '',
+            subscriptionId: json['subscriptionId'] ?? '',
+          );
+        }).toList();
+        setState(() {
+          _upcomingMeals = meals;
+          _isLoading = false;
+        });
+        return;
+      } catch (e) {
+        // Fallback to normal loading
+      }
+    }
+    // Fallback to normal loading if no data or error
     _loadMeals();
   }
 
@@ -367,6 +418,49 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
     return "$planPeriod $mealType Plan$customBadge";
   }
 
+  // Add a helper to normalize meal name for display
+  String _getDisplayMealName(String mealName) {
+    final name = mealName.trim().toLowerCase();
+    if (name == 'breakfast of the day breakfast') {
+      return 'Breakfast of the Day';
+    }
+    if (name == 'lunch of the day lunch') {
+      return 'Lunch of the Day';
+    }
+    return mealName;
+  }
+
+  // Add a helper to get the correct asset image for special meal names
+  String _getSpecialMealImageAsset(String mealName) {
+    final name = mealName.trim().toLowerCase();
+    if (name == 'breakfast of the day' ||
+        name == 'breakfast of the day breakfast') {
+      return 'assets/images/breakfast/breakfast of the day (most recommended).png';
+    }
+    if (name == 'indian breakfast') {
+      return 'assets/images/breakfast/Indian Breakfast.png';
+    }
+    if (name == 'international breakfast') {
+      return 'assets/images/breakfast/International Breakfast.png';
+    }
+    if (name == 'jain breakfast') {
+      return 'assets/images/breakfast/Jain Breakfast.png';
+    }
+    if (name == 'lunch of the day' || name == 'lunch of the day lunch') {
+      return 'assets/images/lunch/lunch of the day (most recommended).png';
+    }
+    if (name == 'indian lunch') {
+      return 'assets/images/lunch/Indian Lunch.png';
+    }
+    if (name == 'international lunch') {
+      return 'assets/images/lunch/International Lunch.png';
+    }
+    if (name == 'jain lunch') {
+      return 'assets/images/lunch/Jain Lunch.png';
+    }
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -392,7 +486,13 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
 
   Widget _buildMealCard(MealData meal) {
     final formattedDate = DateFormat('EEE, dd MMM yyyy').format(meal.date);
-
+    final String asset = _getSpecialMealImageAsset(meal.name);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 350;
+    final imageSize = isSmall ? 36.0 : 48.0;
+    final titleFontSize = isSmall ? 13.0 : 16.0;
+    final subtitleFontSize = isSmall ? 11.0 : 14.0;
+    final dateFontSize = isSmall ? 10.0 : 13.0;
     return GestureDetector(
       onTap: () {
         // Add haptic feedback for better tactile response
@@ -433,30 +533,50 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Meal type icon
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: MealConstants.getBgColor(
-                                    meal.subscription.planType),
+                            // Meal image instead of icon
+                            if (asset.isNotEmpty)
+                              ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: MealConstants.getIconColor(
-                                            meal.subscription.planType)
-                                        .withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
+                                child: Container(
+                                  width: imageSize,
+                                  height: imageSize,
+                                  color: Colors.white,
+                                  child: Image.asset(
+                                    asset,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(Icons.restaurant,
+                                          color: Colors.grey,
+                                          size: imageSize * 0.5);
+                                    },
                                   ),
-                                ],
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: EdgeInsets.all(imageSize * 0.2),
+                                decoration: BoxDecoration(
+                                  color: MealConstants.getBgColor(
+                                      meal.subscription.planType),
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: MealConstants.getIconColor(
+                                              meal.subscription.planType)
+                                          .withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  MealConstants.getIcon(
+                                      meal.subscription.planType),
+                                  color: MealConstants.getIconColor(
+                                      meal.subscription.planType),
+                                  size: imageSize * 0.5,
+                                ),
                               ),
-                              child: Icon(
-                                MealConstants.getIcon(
-                                    meal.subscription.planType),
-                                color: MealConstants.getIconColor(
-                                    meal.subscription.planType),
-                              ),
-                            ),
                             const SizedBox(width: 12),
 
                             // Meal details
@@ -465,27 +585,33 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    meal.name, // Show actual meal name (e.g., "Indian Lunch")
+                                    _getDisplayMealName(meal.name),
                                     style: GoogleFonts.poppins(
-                                      fontSize: 16,
+                                      fontSize: titleFontSize,
                                       fontWeight: FontWeight.w600,
                                       color: AppTheme.textDark,
                                     ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     meal.studentName, // Show student name
                                     style: GoogleFonts.poppins(
-                                      fontSize: 14,
+                                      fontSize: subtitleFontSize,
                                       fontWeight: FontWeight.w500,
                                       color: Colors.grey.shade700,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     formattedDate, // Show formatted date
                                     style: GoogleFonts.poppins(
-                                      fontSize: 13,
+                                      fontSize: dateFontSize,
                                       color: Colors.grey.shade600,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
@@ -516,16 +642,16 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                           //       : Colors.orange.withOpacity(0.3),
                           //   width: 1,
                           // ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (meal.status.toLowerCase() == 'cancelled'
-                                      ? Colors.red
-                                      : Colors.orange)
-                                  .withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          // // boxShadow: [
+                          // //   BoxShadow(
+                          // //     color: (meal.status.toLowerCase() == 'cancelled'
+                          // //             ? Colors.red
+                          // //             : Colors.orange)
+                          // //         .withOpacity(0.1),
+                          // //     blurRadius: 4,
+                          // //     offset: const Offset(0, 2),
+                          // //   ),
+                          // ],
                         ),
                         child: Text(
                           meal.status.toLowerCase() == 'cancelled'

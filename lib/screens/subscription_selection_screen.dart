@@ -5,15 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:startwell/models/meal_model.dart';
+import 'package:startwell/models/subscription_plan_model.dart';
 import 'package:startwell/services/meal_selection_manager.dart';
+import 'package:startwell/services/subscription_plan_service.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/meal_plan_validator.dart';
+import 'package:startwell/utils/routes.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:startwell/screens/manage_student_profile_screen.dart';
 import 'package:startwell/widgets/common/veg_icon.dart';
 import 'package:startwell/widgets/common/gradient_app_bar.dart';
 import 'package:startwell/widgets/common/gradient_button.dart';
+import 'package:startwell/screens/cart_screen.dart';
+import 'package:startwell/services/cart_storage_service.dart';
 
 class SubscriptionSelectionScreen extends StatefulWidget {
   final MealSelectionManager selectionManager;
@@ -42,15 +47,11 @@ class _SubscriptionSelectionScreenState
     extends State<SubscriptionSelectionScreen> {
   int _selectedPlanIndex = 0;
   bool _isCustomPlan = false;
+  bool _showMealChip = false;
 
-  final List<bool> _selectedWeekdays = [true, true, true, true, true];
-  final List<String> _weekdayNames = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday'
-  ];
+  // Initialize all weekdays as unselected
+  final List<bool> _selectedWeekdays = List.filled(5, false);
+  final List<String> _weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
   late DateTime _startDate;
   late DateTime _firstAvailableDate;
@@ -108,27 +109,34 @@ class _SubscriptionSelectionScreenState
     },
   ];
 
+  String? selectedPlan;
+  DateTime? selectedStartDate;
+  DateTime? selectedEndDate;
+  bool isPreOrder = false;
+  DateTime? currentEndDate;
+
   @override
   void initState() {
     super.initState();
-
     _selectedPlanIndex = widget.initialPlanIndex;
 
     if (widget.isExpressOrder) {
-      _selectedPlanIndex = 0;
       _selectedPlanIndex = 0; // Single Day plan
       _isCustomPlan = false; // Regular plan mode
+    }
+
+    // Set weekday selection based on plan mode
+    if (!_isCustomPlan) {
+      // Regular mode - Select all weekdays
+      _selectedWeekdays.fillRange(0, 5, true);
     }
 
     // Set first available date
     final now = DateTime.now();
     _firstAvailableDate = _getNextWeekday(now);
 
-    // For regular orders, use the next available weekday as start date
-    if (!widget.isExpressOrder) {
-      _startDate = _firstAvailableDate;
-    } else {
-      // For express orders, calculate the appropriate day based on express window
+    // For express orders, calculate the appropriate day based on express window
+    if (widget.isExpressOrder) {
       final bool isExpressWindowOpen = isWithinExpressWindow();
 
       // If express window is open and it's a weekday, use today
@@ -139,18 +147,142 @@ class _SubscriptionSelectionScreenState
         // Otherwise use the next weekday
         _startDate = _firstAvailableDate;
       }
+      _focusedCalendarDate = _startDate;
+      _calculateMealDates();
+    } else {
+      // For regular orders, don't set a default start date
+      _startDate = _firstAvailableDate;
+      _focusedCalendarDate = _firstAvailableDate;
+      if (_isCustomPlan) {
+        _calculateMealDates();
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Check if this is a pre-order
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null) {
+      isPreOrder = args['isPreOrder'] ?? false;
+      currentEndDate = args['currentEndDate'] as DateTime?;
+    }
+  }
+
+  // Check if start date has been manually selected
+  bool _isStartDateSelected() {
+    if (widget.isExpressOrder) return true;
+    if (_isCustomPlan) return true;
+    return _startDate != _firstAvailableDate;
+  }
+
+  // Modified _navigateToOrderSummary to go to cart first
+  void _navigateToOrderSummary(BuildContext context) {
+    if (!_isStartDateSelected()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select start date first',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
     }
 
-    // Set focused date to start date
-    _focusedCalendarDate = _startDate;
+    log("endDate: $_endDate");
+    log("startDate: $_startDate");
+    log("mealDates: $_mealDates");
+    log("selectedWeekdays: $_selectedWeekdays");
+    log("selectedPlanIndex: $_selectedPlanIndex");
+    log("isCustomPlan: $_isCustomPlan");
+    log("isExpressOrder: ${widget.isExpressOrder}");
 
-    // Calculate meal dates
-    _calculateMealDates();
+    // Save the selected subscription plan
+    _saveSubscriptionPlan();
 
-    // Print for debugging
-    print('First Day: $_firstAvailableDate');
-    print('Start Date: $_startDate');
-    print('Focused Day: $_focusedCalendarDate');
+    // Handle cart update if this is the same meal type - remove existing cart item first
+    if (MealSelectionManager.hasBreakfastInCart &&
+            widget.mealType == 'breakfast' ||
+        MealSelectionManager.hasLunchInCart && widget.mealType == 'lunch') {
+      // Clear any existing cart items of the same meal type before adding the updated one
+      CartStorageService.removeCartItemsByMealType(widget.mealType);
+    }
+
+    // Navigate to the Cart screen instead of directly to student profile
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CartScreen(
+          planType: _subscriptionPlans[_selectedPlanIndex]['name'],
+          isCustomPlan: _isCustomPlan,
+          selectedWeekdays: _selectedWeekdays,
+          startDate: _startDate,
+          endDate: _endDate!,
+          mealDates: _mealDates,
+          totalAmount: _calculatePrice(),
+          selectedMeals: widget.selectedMeals,
+          isExpressOrder: widget.isExpressOrder,
+          mealType: widget.mealType,
+        ),
+      ),
+    );
+  }
+
+  // Save the selected subscription plan
+  void _saveSubscriptionPlan() {
+    final String planType = _subscriptionPlans[_selectedPlanIndex]['name'];
+    dynamic deliveryMode;
+
+    if (_isCustomPlan) {
+      // Custom delivery mode (specific days)
+      deliveryMode = "Custom Days";
+    } else {
+      // Standard delivery mode (Mon to Fri)
+      deliveryMode = "Weekdays Only";
+    }
+
+    // Create subscription plan model
+    final SubscriptionPlanModel plan = SubscriptionPlanModel(
+      planType: planType,
+      deliveryMode: deliveryMode,
+      startDate: _startDate,
+      endDate: _endDate!,
+    );
+
+    // Save to SharedPreferences
+    SubscriptionPlanService.saveSubscriptionPlan(plan);
+  }
+
+  // Modified _handlePlanModeToggle to handle chip visibility
+  void _handlePlanModeToggle(bool isCustom) {
+    setState(() {
+      _isCustomPlan = isCustom;
+      _showMealChip = false;
+
+      if (!isCustom) {
+        // Regular mode (Mon to Fri) - Select all weekdays but don't set start date
+        _selectedWeekdays.fillRange(0, 5, true);
+        // Reset start date to first available date
+        _startDate = _firstAvailableDate;
+      } else {
+        // Custom mode - Unselect all weekdays
+        _selectedWeekdays.fillRange(0, 5, false);
+        // For custom mode, find the earliest date based on selected weekdays
+        _startDate = calculateCustomPlanStartDate(
+          selectedStartDate: _startDate,
+          selectedWeekdays: _getSelectedWeekdayIndexes(),
+        );
+      }
+
+      _focusedCalendarDate = _startDate;
+      _calculateMealDates();
+      _showMealChip = _shouldShowMealChip();
+    });
   }
 
   // Get next two weekdays for Regular plan
@@ -311,10 +443,11 @@ class _SubscriptionSelectionScreenState
     return selectedStart; // Respect manually selected date
   }
 
-  // Calculate meal dates based on plan and preferences
+  // Modified _calculateMealDates to handle chip visibility
   void _calculateMealDates() {
     if (widget.isExpressOrder) {
       _calculateExpressMealDates();
+      _showMealChip = _shouldShowMealChip();
       return;
     }
 
@@ -335,6 +468,8 @@ class _SubscriptionSelectionScreenState
         _calculateRegularPlanMealDates();
       }
     }
+
+    _showMealChip = _shouldShowMealChip();
   }
 
   // Calculate express meal dates for express 1-day orders
@@ -486,7 +621,7 @@ class _SubscriptionSelectionScreenState
     return _mealDates;
   }
 
-  // Handle weekday selection change
+  // Modified _handleWeekdaySelection to handle chip visibility
   void _handleWeekdaySelection(int index, bool? value) {
     // Ensure at least one weekday is selected
     final wouldHaveSelection =
@@ -507,6 +642,7 @@ class _SubscriptionSelectionScreenState
 
     setState(() {
       _selectedWeekdays[index] = value!;
+      _showMealChip = false;
 
       // Update the start date based on the earliest selected weekday
       if (_isCustomPlan) {
@@ -519,30 +655,7 @@ class _SubscriptionSelectionScreenState
 
       // Recalculate meal dates with the new start date
       _calculateMealDates();
-    });
-  }
-
-  // Handle plan mode toggle
-  void _handlePlanModeToggle(bool isCustom) {
-    setState(() {
-      _isCustomPlan = isCustom;
-
-      if (!isCustom) {
-        // Reset to default weekdays for regular plan
-        _selectedWeekdays.fillRange(0, 5, true);
-
-        // Default start date for regular mode
-        _startDate = _getNextWeekday(DateTime.now());
-      } else {
-        // For custom mode, find the earliest date based on selected weekdays
-        _startDate = calculateCustomPlanStartDate(
-          selectedStartDate: _startDate,
-          selectedWeekdays: _getSelectedWeekdayIndexes(),
-        );
-      }
-
-      _focusedCalendarDate = _startDate;
-      _calculateMealDates();
+      _showMealChip = _shouldShowMealChip();
     });
   }
 
@@ -552,6 +665,7 @@ class _SubscriptionSelectionScreenState
 
     setState(() {
       _selectedPlanIndex = index;
+      _showMealChip = false;
 
       // Reset to regular plan mode if Single Day is selected
       if (isSingleDay) {
@@ -559,6 +673,7 @@ class _SubscriptionSelectionScreenState
       }
 
       _calculateMealDates();
+      _showMealChip = _shouldShowMealChip();
     });
   }
 
@@ -681,18 +796,17 @@ class _SubscriptionSelectionScreenState
       setState(() {
         _isCustomPlan = !_isCustomPlan;
 
-        // If switching to regular mode (Mon to Fri), select all weekdays automatically
         if (!_isCustomPlan) {
-          // Auto-select all weekdays (Monday to Friday)
+          // Switching to regular mode (Mon to Fri)
           _selectedWeekdays.fillRange(0, 5, true);
           _startDate = _firstAvailableDate;
         } else {
-          // If switching to custom mode (Custom Days), use existing selections
-          // (No need to modify selections here - keep current user selection)
-          _startDate = _findEarliestDateFromSelectedWeekdays();
+          // Switching to custom mode
+          _selectedWeekdays.fillRange(0, 5, false);
+          _startDate = _firstAvailableDate;
         }
 
-        // Calculate end date and meal dates
+        _focusedCalendarDate = _startDate;
         _calculateMealDates();
       });
     }
@@ -731,11 +845,69 @@ class _SubscriptionSelectionScreenState
       if (!selectedDay.isBefore(_firstAvailableDate)) {
         _startDate = selectedDay;
         _focusedCalendarDate = focusedDay;
-
-        // Calculate end date and meal dates
         _calculateMealDates();
+        _showMealChip = _shouldShowMealChip();
       }
     });
+  }
+
+  void _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: isPreOrder && currentEndDate != null
+          ? currentEndDate!.add(
+              const Duration(days: 1)) // Start from day after current plan ends
+          : DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+
+    if (picked != null) {
+      setState(() {
+        selectedStartDate = picked;
+        // Set end date to 30 days after start date
+        selectedEndDate = picked.add(const Duration(days: 30));
+      });
+    }
+  }
+
+  void _proceedToCheckout() {
+    if (selectedPlan == null ||
+        selectedStartDate == null ||
+        selectedEndDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a plan and dates'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      return;
+    }
+
+    // Validate pre-order start date
+    if (isPreOrder && currentEndDate != null) {
+      if (selectedStartDate!.isBefore(currentEndDate!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Pre-order start date must be after current plan end date'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+        return;
+      }
+    }
+
+    Navigator.pushNamed(
+      context,
+      '/checkout',
+      arguments: {
+        'plan': selectedPlan,
+        'startDate': selectedStartDate,
+        'endDate': selectedEndDate,
+        'isPreOrder': isPreOrder,
+      },
+    );
   }
 
   @override
@@ -744,314 +916,576 @@ class _SubscriptionSelectionScreenState
 
     return Scaffold(
       appBar: GradientAppBar(
-        titleText: 'Subscription Plan',
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        titleText: 'Choose Your Plan',
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            // Navigate back to the Order Meal screen
+            Navigator.pushNamedAndRemoveUntil(
+                context, Routes.mealPlan, (route) => false);
+          },
+        ),
+        actions: [
+          // Cart Icon
+          Stack(
+            alignment: Alignment.center,
             children: [
-              // Express Order Banner (only for Express orders)
-              if (widget.isExpressOrder)
-                InfoBanner(
-                  title: MealPlanValidator.isWithinExpressWindow()
-                      ? "Express 1-Day Delivery"
-                      : "Express Order Window Closed",
-                  message: MealPlanValidator.isWithinExpressWindow()
-                      ? "Orders for same-day delivery are available between 12:00 AM to 8:00 AM (IST). Please confirm your order below."
-                      : "Express orders are only available between 12:00 AM and 8:00 AM IST. Please try again during this time window.",
-                  type: MealPlanValidator.isWithinExpressWindow()
-                      ? InfoBannerType.success
-                      : InfoBannerType.warning,
+              IconButton(
+                icon: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: Colors.white,
+                  size: 26,
                 ),
-
-              // Show some space if Express banner is shown
-              if (widget.isExpressOrder) const SizedBox(height: 16),
-
-              // Plan selection heading
-              Text(
-                widget.isExpressOrder
-                    ? "Express 1-Day Delivery Plan"
-                    : "Select ${widget.mealType.substring(0, 1).toUpperCase()}${widget.mealType.substring(1)} Subscription Plan",
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textDark,
-                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, Routes.cart);
+                },
               ),
+              if (MealSelectionManager.hasBreakfastInCart ||
+                  MealSelectionManager.hasLunchInCart)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Text(
+                      '${(MealSelectionManager.hasBreakfastInCart ? 1 : 0) + (MealSelectionManager.hasLunchInCart ? 1 : 0)}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Express Order Banner (only for Express orders)
+                    if (widget.isExpressOrder)
+                      InfoBanner(
+                        title: MealPlanValidator.isWithinExpressWindow()
+                            ? "Express 1-Day Delivery"
+                            : "Express Order Window Closed",
+                        message: MealPlanValidator.isWithinExpressWindow()
+                            ? "Orders for same-day delivery are available between 12:00 AM to 8:00 AM (IST). Please confirm your order below."
+                            : "Express orders are only available between 12:00 AM and 8:00 AM IST. Please try again during this time window.",
+                        type: MealPlanValidator.isWithinExpressWindow()
+                            ? InfoBannerType.success
+                            : InfoBannerType.warning,
+                      ),
 
-              const SizedBox(height: 16),
+                    // Show some space if Express banner is shown
+                    if (widget.isExpressOrder) const SizedBox(height: 16),
 
-              // Plan selection cards - grid layout format
-              widget.isExpressOrder
-                  ? Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child:
-                          _buildExpressOnlyPlanCard(), // Show only Single Day plan for Express
-                    )
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        // Calculate the number of columns based on screen width
-                        int crossAxisCount = 2; // Default 2 columns for phones
-                        if (constraints.maxWidth > 600) {
-                          // For tablets or larger screens
-                          crossAxisCount = 3;
-                        }
+                    // Plan selection heading
+                    Text(
+                      widget.isExpressOrder
+                          ? "Express 1-Day Delivery Plan"
+                          : "Select ${widget.mealType.substring(0, 1).toUpperCase()}${widget.mealType.substring(1)} Subscription Plan",
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
 
-                        return GridView.builder(
-                          shrinkWrap: true,
-                          physics:
-                              const NeverScrollableScrollPhysics(), // Use parent's scroll
-                          padding: EdgeInsets.zero,
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 16,
-                            childAspectRatio:
-                                constraints.maxWidth > 600 ? 1.2 : 1.1,
-                          ),
-                          itemCount: _subscriptionPlans.length,
-                          itemBuilder: (context, index) {
-                            final plan = _subscriptionPlans[index];
-                            final hasDiscount = plan['discount'] > 0;
+                    const SizedBox(height: 16),
 
-                            return Container(
-                              decoration: BoxDecoration(
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                        AppTheme.deepPurple.withOpacity(0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Card(
-                                margin: EdgeInsets.zero,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(
-                                    color: _selectedPlanIndex == index
-                                        ? AppTheme.purple
-                                        : Colors.transparent,
-                                    width:
-                                        _selectedPlanIndex == index ? 1.5 : 0,
-                                  ),
+                    // Plan selection cards - grid layout format
+                    widget.isExpressOrder
+                        ? Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child:
+                                _buildExpressOnlyPlanCard(), // Show only Single Day plan for Express
+                          )
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Calculate the number of columns based on screen width
+                              int crossAxisCount =
+                                  2; // Default 2 columns for phones
+                              if (constraints.maxWidth > 600) {
+                                // For tablets or larger screens
+                                crossAxisCount = 3;
+                              }
+
+                              return GridView.builder(
+                                shrinkWrap: true,
+                                physics:
+                                    const NeverScrollableScrollPhysics(), // Use parent's scroll
+                                padding: EdgeInsets.zero,
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 16,
+                                  childAspectRatio:
+                                      constraints.maxWidth > 600 ? 1.2 : 1.1,
                                 ),
-                                elevation: 0,
-                                child: InkWell(
-                                  onTap: () => _selectPlan(index),
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16.0),
+                                itemCount: _subscriptionPlans.length,
+                                itemBuilder: (context, index) {
+                                  final plan = _subscriptionPlans[index];
+                                  final hasDiscount = plan['discount'] > 0;
+
+                                  return Container(
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      gradient: _selectedPlanIndex == index
-                                          ? LinearGradient(
-                                              colors: [
-                                                AppTheme.purple
-                                                    .withOpacity(0.05),
-                                                AppTheme.deepPurple
-                                                    .withOpacity(0.05),
-                                              ],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            )
-                                          : null,
-                                      border: Border.all(
-                                        color: _selectedPlanIndex == index
-                                            ? AppTheme.purple
-                                            : Colors.purple.shade100,
-                                        width: _selectedPlanIndex == index
-                                            ? 1.5
-                                            : 0,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              width: 24,
-                                              height: 24,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color:
-                                                    _selectedPlanIndex == index
-                                                        ? null
-                                                        : Colors.grey.shade100,
-                                                gradient:
-                                                    _selectedPlanIndex == index
-                                                        ? AppTheme
-                                                            .purpleToDeepPurple
-                                                        : null,
-                                              ),
-                                              child: Center(
-                                                child:
-                                                    _selectedPlanIndex == index
-                                                        ? const Icon(
-                                                            Icons.check,
-                                                            color: Colors.white,
-                                                            size: 14,
-                                                          )
-                                                        : null,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                plan['name'],
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: AppTheme.textDark,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            Text(
-                                              '${plan['duration']}',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 13,
-                                                color: AppTheme.textMedium,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 5),
-                                            Container(
-                                              width: 4,
-                                              height: 4,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: AppTheme.textMedium
-                                                    .withOpacity(0.5),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 5),
-                                            Expanded(
-                                              child: Text(
-                                                '${plan['meals']} meals',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 13,
-                                                  color: AppTheme.textMedium,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const Spacer(),
-                                        if (hasDiscount)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              gradient: const LinearGradient(
-                                                colors: [
-                                                  Color(0xFF8E44AD),
-                                                  Color(0xFF9B59B6),
-                                                ],
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: AppTheme.deepPurple
-                                                      .withOpacity(0.2),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: Text(
-                                              '${(plan['discount'] * 100).toInt()}% OFF',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          mainAxisAlignment: hasDiscount
-                                              ? MainAxisAlignment.spaceBetween
-                                              : MainAxisAlignment.end,
-                                          children: [
-                                            if (hasDiscount)
-                                              Text(
-                                                '₹${(widget.totalMealCost * plan['meals']).toStringAsFixed(0)}',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 13,
-                                                  decoration: TextDecoration
-                                                      .lineThrough,
-                                                  color: AppTheme.textMedium,
-                                                ),
-                                              ),
-                                            Text(
-                                              '₹${(widget.totalMealCost * plan['meals'] * (1 - plan['discount'])).toStringAsFixed(0)}',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                color: hasDiscount
-                                                    ? AppTheme.success
-                                                    : AppTheme.purple,
-                                              ),
-                                            ),
-                                          ],
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppTheme.deepPurple
+                                              .withOpacity(0.08),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
                                         ),
                                       ],
                                     ),
+                                    child: Card(
+                                      margin: EdgeInsets.zero,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        side: BorderSide(
+                                          color: _selectedPlanIndex == index
+                                              ? AppTheme.purple
+                                              : Colors.transparent,
+                                          width: _selectedPlanIndex == index
+                                              ? 1.5
+                                              : 0,
+                                        ),
+                                      ),
+                                      elevation: 0,
+                                      child: InkWell(
+                                        onTap: () => _selectPlan(index),
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(16.0),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                            gradient: _selectedPlanIndex ==
+                                                    index
+                                                ? LinearGradient(
+                                                    colors: [
+                                                      AppTheme.purple
+                                                          .withOpacity(0.05),
+                                                      AppTheme.deepPurple
+                                                          .withOpacity(0.05),
+                                                    ],
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                  )
+                                                : null,
+                                            border: Border.all(
+                                              color: _selectedPlanIndex == index
+                                                  ? AppTheme.purple
+                                                  : Colors.purple.shade100,
+                                              width: _selectedPlanIndex == index
+                                                  ? 1.5
+                                                  : 0,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    width: 24,
+                                                    height: 24,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color:
+                                                          _selectedPlanIndex ==
+                                                                  index
+                                                              ? null
+                                                              : Colors.grey
+                                                                  .shade100,
+                                                      gradient:
+                                                          _selectedPlanIndex ==
+                                                                  index
+                                                              ? AppTheme
+                                                                  .purpleToDeepPurple
+                                                              : null,
+                                                    ),
+                                                    child: Center(
+                                                      child:
+                                                          _selectedPlanIndex ==
+                                                                  index
+                                                              ? const Icon(
+                                                                  Icons.check,
+                                                                  color: Colors
+                                                                      .white,
+                                                                  size: 14,
+                                                                )
+                                                              : null,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      plan['name'],
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            AppTheme.textDark,
+                                                      ),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    '${plan['duration']}',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 13,
+                                                      color:
+                                                          AppTheme.textMedium,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 5),
+                                                  Container(
+                                                    width: 4,
+                                                    height: 4,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: AppTheme.textMedium
+                                                          .withOpacity(0.5),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 5),
+                                                  Expanded(
+                                                    child: Text(
+                                                      '${plan['meals']} meals',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 13,
+                                                        color:
+                                                            AppTheme.textMedium,
+                                                      ),
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const Spacer(),
+                                              if (hasDiscount)
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    gradient:
+                                                        const LinearGradient(
+                                                      colors: [
+                                                        Color(0xFF8E44AD),
+                                                        Color(0xFF9B59B6),
+                                                      ],
+                                                      begin: Alignment.topLeft,
+                                                      end:
+                                                          Alignment.bottomRight,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            12),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: AppTheme
+                                                            .deepPurple
+                                                            .withOpacity(0.2),
+                                                        blurRadius: 4,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: Text(
+                                                    '${(plan['discount'] * 100).toInt()}% OFF',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                mainAxisAlignment: hasDiscount
+                                                    ? MainAxisAlignment
+                                                        .spaceBetween
+                                                    : MainAxisAlignment.end,
+                                                children: [
+                                                  if (hasDiscount)
+                                                    Text(
+                                                      '₹${(widget.totalMealCost * plan['meals']).toStringAsFixed(0)}',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 13,
+                                                        decoration:
+                                                            TextDecoration
+                                                                .lineThrough,
+                                                        color:
+                                                            AppTheme.textMedium,
+                                                      ),
+                                                    ),
+                                                  Text(
+                                                    '₹${(widget.totalMealCost * plan['meals'] * (1 - plan['discount'])).toStringAsFixed(0)}',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: hasDiscount
+                                                          ? AppTheme.success
+                                                          : AppTheme.purple,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+
+                    // Add meal chip after plan selection - REMOVE THIS LINE
+                    // if (_showMealChip) _buildMealChip(),
+
+                    const SizedBox(height: 24),
+
+                    // Plan mode selection
+                    if (!widget.isExpressOrder &&
+                        !(_subscriptionPlans[_selectedPlanIndex]
+                                ['isSingleDay'] ??
+                            false))
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.deepPurple.withOpacity(0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Delivery Mode',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textDark,
                                   ),
                                 ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-
-              const SizedBox(height: 24),
-
-              // Plan mode selection
-              if (!widget.isExpressOrder &&
-                  !(_subscriptionPlans[_selectedPlanIndex]['isSingleDay'] ??
-                      false))
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.deepPurple.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                                const SizedBox(height: 12),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => _toggleCustomMode(),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 14),
+                                            decoration: BoxDecoration(
+                                              gradient: !_isCustomPlan
+                                                  ? AppTheme.purpleToDeepPurple
+                                                  : null,
+                                              color: !_isCustomPlan
+                                                  ? null
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  const BorderRadius.horizontal(
+                                                left: Radius.circular(16),
+                                              ),
+                                              boxShadow: !_isCustomPlan
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: AppTheme.purple
+                                                            .withOpacity(0.2),
+                                                        blurRadius: 4,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                            child: Center(
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  if (!_isCustomPlan)
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              4),
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                        color: Colors.white,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.check,
+                                                        size: 12,
+                                                        color: AppTheme.purple,
+                                                      ),
+                                                    ),
+                                                  if (!_isCustomPlan)
+                                                    const SizedBox(width: 8),
+                                                  Text(
+                                                    'Mon to Fri',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: !_isCustomPlan
+                                                          ? Colors.white
+                                                          : AppTheme.textMedium,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => _toggleCustomMode(),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 14),
+                                            decoration: BoxDecoration(
+                                              gradient: _isCustomPlan
+                                                  ? AppTheme.purpleToDeepPurple
+                                                  : null,
+                                              color: _isCustomPlan
+                                                  ? null
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  const BorderRadius.horizontal(
+                                                right: Radius.circular(16),
+                                              ),
+                                              boxShadow: _isCustomPlan
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: AppTheme.purple
+                                                            .withOpacity(0.2),
+                                                        blurRadius: 4,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                            child: Center(
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  if (_isCustomPlan)
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              4),
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                        color: Colors.white,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.check,
+                                                        size: 12,
+                                                        color: AppTheme.purple,
+                                                      ),
+                                                    ),
+                                                  if (_isCustomPlan)
+                                                    const SizedBox(width: 8),
+                                                  Text(
+                                                    'Custom Days',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: _isCustomPlan
+                                                          ? Colors.white
+                                                          : AppTheme.textMedium,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Card(
-                    margin: EdgeInsets.zero,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
+
+                    // Weekday selection for custom plan
+                    if (!widget.isExpressOrder &&
+                        !(_subscriptionPlans[_selectedPlanIndex]
+                                ['isSingleDay'] ??
+                            false) &&
+                        _isCustomPlan)
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Delivery Mode',
+                            "Select Weekdays for Delivery",
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -1059,34 +1493,52 @@ class _SubscriptionSelectionScreenState
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => _toggleCustomMode(),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 14),
+
+                          // Weekday selection chips layout
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final isSmallScreen = constraints.maxWidth < 360;
+                              final chipSpacing = isSmallScreen ? 6.0 : 8.0;
+                              final chipPadding = isSmallScreen
+                                  ? const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8)
+                                  : const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 10);
+                              final fontSize = isSmallScreen ? 13.0 : 14.0;
+
+                              return Wrap(
+                                spacing: chipSpacing,
+                                runSpacing: chipSpacing,
+                                children:
+                                    _weekdayNames.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final day = entry.value;
+                                  final isSelected = _selectedWeekdays[index];
+
+                                  return GestureDetector(
+                                    onTap: () => _toggleWeekday(index),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      padding: chipPadding,
                                       decoration: BoxDecoration(
-                                        gradient: !_isCustomPlan
+                                        gradient: isSelected
                                             ? AppTheme.purpleToDeepPurple
                                             : null,
-                                        color: !_isCustomPlan
+                                        color: isSelected
                                             ? null
-                                            : Colors.transparent,
-                                        borderRadius:
-                                            const BorderRadius.horizontal(
-                                          left: Radius.circular(16),
+                                            : Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(50),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? Colors.transparent
+                                              : Colors.grey.shade300,
+                                          width: 1,
                                         ),
-                                        boxShadow: !_isCustomPlan
+                                        boxShadow: isSelected
                                             ? [
                                                 BoxShadow(
-                                                  color: AppTheme.purple
+                                                  color: AppTheme.deepPurple
                                                       .withOpacity(0.2),
                                                   blurRadius: 4,
                                                   offset: const Offset(0, 2),
@@ -1094,1246 +1546,698 @@ class _SubscriptionSelectionScreenState
                                               ]
                                             : null,
                                       ),
-                                      child: Center(
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            if (!_isCustomPlan)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.all(4),
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.white,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  Icons.check,
-                                                  size: 12,
-                                                  color: AppTheme.purple,
-                                                ),
-                                              ),
-                                            if (!_isCustomPlan)
-                                              const SizedBox(width: 8),
-                                            Text(
-                                              'Mon to Fri',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: !_isCustomPlan
-                                                    ? Colors.white
-                                                    : AppTheme.textMedium,
-                                              ),
-                                            ),
-                                          ],
+                                      child: Text(
+                                        day,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: fontSize,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.w500,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : AppTheme.textMedium,
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => _toggleCustomMode(),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 14),
-                                      decoration: BoxDecoration(
-                                        gradient: _isCustomPlan
-                                            ? AppTheme.purpleToDeepPurple
-                                            : null,
-                                        color: _isCustomPlan
-                                            ? null
-                                            : Colors.transparent,
-                                        borderRadius:
-                                            const BorderRadius.horizontal(
-                                          right: Radius.circular(16),
-                                        ),
-                                        boxShadow: _isCustomPlan
-                                            ? [
-                                                BoxShadow(
-                                                  color: AppTheme.purple
-                                                      .withOpacity(0.2),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ]
-                                            : null,
-                                      ),
-                                      child: Center(
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            if (_isCustomPlan)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.all(4),
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.white,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Icon(
-                                                  Icons.check,
-                                                  size: 12,
-                                                  color: AppTheme.purple,
-                                                ),
-                                              ),
-                                            if (_isCustomPlan)
-                                              const SizedBox(width: 8),
-                                            Text(
-                                              'Custom Days',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: _isCustomPlan
-                                                    ? Colors.white
-                                                    : AppTheme.textMedium,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                  );
+                                }).toList(),
+                              );
+                            },
                           ),
-                          const SizedBox(height: 16),
                         ],
                       ),
-                    ),
-                  ),
-                ),
 
-              // Weekday selection for custom plan - MOVED HERE
-              if (!widget.isExpressOrder &&
-                  !(_subscriptionPlans[_selectedPlanIndex]['isSingleDay'] ??
-                      false) &&
-                  _isCustomPlan)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Select Weekdays for Delivery",
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (false) // Hiding the information card for custom plan
+                    // Selected days pattern display
+                    if (!widget.isExpressOrder &&
+                        !(_subscriptionPlans[_selectedPlanIndex]
+                                ['isSingleDay'] ??
+                            false) &&
+                        !_isCustomPlan)
                       Container(
-                        margin: const EdgeInsets.only(bottom: 12),
+                        margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: AppTheme.purple.withOpacity(0.05),
-                          border: Border.all(
-                            color: AppTheme.purple.withOpacity(0.2),
-                            width: 1,
-                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.deepPurple.withOpacity(0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.purple.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.calendar_today_outlined,
-                                  color: AppTheme.purple,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
+                                    Icon(
+                                      Icons.calendar_today_outlined,
+                                      color: AppTheme.purple,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 12),
                                     Text(
-                                      "Custom Plan",
+                                      'Your Weekly Delivery Days',
                                       style: GoogleFonts.poppins(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                         color: AppTheme.textDark,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Select at least one weekday for meal delivery. The start date will be calculated based on the earliest selected weekday.",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: AppTheme.textMedium,
-                                      ),
-                                    ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-
-                    // Weekday selection chips layout
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _weekdayNames.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final day = entry.value;
-                        final isSelected = _selectedWeekdays[index];
-
-                        return GestureDetector(
-                          onTap: () => _toggleWeekday(index),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                              gradient: isSelected
-                                  ? AppTheme.purpleToDeepPurple
-                                  : null,
-                              color: isSelected ? null : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isSelected
-                                      ? AppTheme.deepPurple.withOpacity(0.2)
-                                      : Colors.grey.withOpacity(0.1),
-                                  blurRadius: isSelected ? 6 : 4,
-                                  offset: isSelected
-                                      ? const Offset(0, 3)
-                                      : const Offset(0, 2),
-                                  spreadRadius: isSelected ? 1 : 0,
-                                ),
-                              ],
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.transparent
-                                    : Colors.grey.shade300,
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              day,
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                                color: isSelected
-                                    ? Colors.white
-                                    : AppTheme.textDark,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Start date display (custom plan version) - Hidden
-                    if (false) // Hiding the start date display in custom plan section
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     color: AppTheme.deepPurple.withOpacity(0.05),
-                          //     blurRadius: 8,
-                          //     offset: const EdgeInsets.symmetric(horizontal: 12),
-                          //   ),
-                          // ],
-                          border: Border.all(
-                            color: _selectedWeekdays.contains(true)
-                                ? AppTheme.purple.withOpacity(0.3)
-                                : Colors.grey.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14.0),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  gradient: _selectedWeekdays.contains(true)
-                                      ? LinearGradient(
-                                          colors: [
-                                            AppTheme.purple.withOpacity(0.15),
-                                            AppTheme.deepPurple
-                                                .withOpacity(0.15),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        )
-                                      : null,
-                                  color: _selectedWeekdays.contains(true)
-                                      ? null
-                                      : Colors.grey.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.event_available,
-                                  color: _selectedWeekdays.contains(true)
-                                      ? AppTheme.purple
-                                      : Colors.grey,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Start Date",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: _selectedWeekdays.contains(true)
-                                            ? AppTheme.textDark
-                                            : Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _selectedWeekdays.contains(true)
-                                          ? _getFormattedStartDate()
-                                          : "Please select at least one weekday",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: _selectedWeekdays.contains(true)
-                                            ? AppTheme.textMedium
-                                            : Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-
-              // Selected days pattern display
-              if (!widget.isExpressOrder &&
-                  !(_subscriptionPlans[_selectedPlanIndex]['isSingleDay'] ??
-                      false))
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.deepPurple.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Card(
-                    margin: EdgeInsets.zero,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.purple.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.calendar_month_rounded,
-                                  color: AppTheme.purple,
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Your Weekly Delivery Days',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textDark,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 16, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.grey.shade200,
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildWeekdayCircleViewOnly(
-                                    'M', _selectedWeekdays[0]),
-                                _buildWeekdayCircleViewOnly(
-                                    'T', _selectedWeekdays[1]),
-                                _buildWeekdayCircleViewOnly(
-                                    'W', _selectedWeekdays[2]),
-                                _buildWeekdayCircleViewOnly(
-                                    'T', _selectedWeekdays[3]),
-                                _buildWeekdayCircleViewOnly(
-                                    'F', _selectedWeekdays[4]),
-                                _buildWeekdayCircleViewOnly('S', false,
-                                    disabled: true),
-                                _buildWeekdayCircleViewOnly('S', false,
-                                    disabled: true),
-                              ],
-                            ),
-                          ),
-                          if (widget.isExpressOrder)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 12.0),
-                              child: Text(
-                                'Express 1-Day orders are fixed for the selected delivery date only',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
-                                  color: Colors.orange.shade800,
-                                ),
-                              ),
-                            ),
-                          if (!widget.isExpressOrder)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 12.0),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    size: 14,
-                                    color: AppTheme.textMedium,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      'This displays your selected delivery pattern for the subscription',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        fontStyle: FontStyle.italic,
-                                        color: AppTheme.textMedium,
-                                      ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 16, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.grey.shade200,
+                                      width: 1,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final isSmallScreen =
+                                          constraints.maxWidth < 360;
+                                      final circleSize =
+                                          isSmallScreen ? 36.0 : 42.0;
+                                      final horizontalSpacing =
+                                          isSmallScreen ? 2.0 : 4.0;
+                                      final fontSize =
+                                          isSmallScreen ? 12.0 : 14.0;
 
-              // Single Day Plan Info Banner
-              if (_subscriptionPlans[_selectedPlanIndex]['isSingleDay'] ??
-                  false)
-                Column(
-                  children: [
-                    InfoBanner(
-                      title: "Single Day Plan",
-                      message:
-                          "This plan does not repeat. It is meant for one-time delivery on your selected date.",
-                      type: InfoBannerType.info,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-
-              const SizedBox(height: 16),
-
-              // Calendar view section
-              Text(
-                "Schedule",
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textDark,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // New Schedule Card with fixed BoxShadow offset and vertical layout
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Start date section - Shown for all plan modes
-                      // if (!_isCustomPlan)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 20,
-                            color: widget.isExpressOrder
-                                ? Colors.grey
-                                : AppTheme.purple,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Start Date',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textDark,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _isCustomPlan &&
-                                          _selectedWeekdays
-                                              .where((day) => day)
-                                              .isEmpty
-                                      ? "No weekdays selected"
-                                      : _getFormattedStartDate(),
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    fontWeight: _isCustomPlan
-                                        ? FontWeight.w500
-                                        : FontWeight.normal,
-                                    color: AppTheme.textDark,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                                if (widget.isExpressOrder ||
-                                    (_isCustomPlan &&
-                                        !_selectedWeekdays
-                                            .where((day) => day)
-                                            .isEmpty))
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      widget.isExpressOrder
-                                          ? 'Locked for express delivery'
-                                          : 'Based on earliest selected weekday',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        fontStyle: FontStyle.italic,
-                                        color: widget.isExpressOrder
-                                            ? Colors.orange
-                                            : AppTheme.purple,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          if (!widget.isExpressOrder)
-                            TextButton.icon(
-                              onPressed: () async {
-                                final selectedDate = await showDatePicker(
-                                  context: context,
-                                  initialDate: _startDate,
-                                  firstDate: _firstAvailableDate,
-                                  lastDate: DateTime.now()
-                                      .add(const Duration(days: 90)),
-                                  selectableDayPredicate: (DateTime date) {
-                                    // Only allow weekdays (Monday to Friday)
-                                    return date.weekday <= 5;
-                                  },
-                                );
-
-                                if (selectedDate != null) {
-                                  setState(() {
-                                    // For custom plan, use the smart start date calculation
-                                    if (_isCustomPlan) {
-                                      _startDate = calculateCustomPlanStartDate(
-                                        selectedStartDate: selectedDate,
-                                        selectedWeekdays:
-                                            _getSelectedWeekdayIndexes(),
-                                      );
-                                    } else {
-                                      _startDate = selectedDate;
-                                    }
-
-                                    _focusedCalendarDate = _startDate;
-
-                                    // If in custom mode, only allow selected weekdays
-                                    if (_isCustomPlan &&
-                                        !_selectedWeekdays[
-                                            selectedDate.weekday - 1]) {
-                                      // Show an error message
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Selected date doesn\'t match your weekday preferences. Adjusting selections.',
-                                            style: GoogleFonts.poppins(),
-                                          ),
-                                          backgroundColor: Colors.orange,
-                                        ),
-                                      );
-
-                                      // Enable the selected weekday
-                                      _selectedWeekdays[
-                                          selectedDate.weekday - 1] = true;
-                                    }
-
-                                    // Recalculate meal dates with new start date
-                                    _calculateMealDates();
-                                  });
-                                }
-                              },
-                              icon: Icon(
-                                Icons.edit_calendar,
-                                color: AppTheme.purple,
-                                size: 18,
-                              ),
-                              label: Text(
-                                'Change',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppTheme.purple,
-                                ),
-                              ),
-                              style: TextButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
-                                minimumSize: const Size(60, 36),
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      // Divider between Start Date and End Date sections
-                      Divider(
-                          thickness: 1, color: Colors.grey.withOpacity(0.1)),
-
-                      // End date section
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.event_available,
-                            size: 20,
-                            color: AppTheme.purple,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'End Date',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textDark,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _endDate != null
-                                      ? DateFormat('EEEE, MMMM d, yyyy')
-                                          .format(_endDate!)
-                                      : 'Select at least one weekday',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: _endDate != null
-                                        ? AppTheme.textDark
-                                        : Colors.red,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                                if (_endDate != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      'Calculated based on plan',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        fontStyle: FontStyle.italic,
-                                        color: AppTheme.textMedium,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Calendar view with meal dates - Hidden in all scenarios
-              // Meal Schedule Card is completely removed/hidden in all scenarios
-              // No "if (false)" condition needed as we're completely removing it
-
-              const SizedBox(height: 16),
-
-              // Upcoming Meal Preview Section
-              if (false) // Hide Upcoming Meal Preview Section
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.deepPurple.withOpacity(0.08),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Card(
-                    margin: EdgeInsets.zero,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.purple.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.restaurant_rounded,
-                                  color: AppTheme.purple,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Upcoming Meal',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textDark,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          ..._getUpcomingMealDates()
-                              .map((date) => Container(
-                                    margin: const EdgeInsets.only(bottom: 14),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color:
-                                            AppTheme.purple.withOpacity(0.15),
-                                        width: 1,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.grey.withOpacity(0.07),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
+                                      return Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          for (var i = 0;
+                                              i < _weekdayNames.length;
+                                              i++)
                                             Container(
-                                              padding: const EdgeInsets.all(7),
+                                              width: circleSize,
+                                              height: circleSize,
+                                              margin: EdgeInsets.symmetric(
+                                                  horizontal:
+                                                      horizontalSpacing),
                                               decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [
-                                                    AppTheme.purple
-                                                        .withOpacity(0.1),
-                                                    AppTheme.deepPurple
-                                                        .withOpacity(0.1),
-                                                  ],
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                ),
                                                 shape: BoxShape.circle,
+                                                gradient:
+                                                    AppTheme.purpleToDeepPurple,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: AppTheme.deepPurple
+                                                        .withOpacity(0.2),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
                                               ),
-                                              child: Icon(
-                                                Icons.calendar_today_rounded,
-                                                color: AppTheme.purple,
-                                                size: 16,
+                                              child: Center(
+                                                child: Text(
+                                                  _weekdayNames[i]
+                                                      .substring(0, 1),
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: fontSize,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                            const SizedBox(width: 8),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Single Day Plan Info Banner
+                    if (_subscriptionPlans[_selectedPlanIndex]['isSingleDay'] ??
+                        false)
+                      Column(
+                        children: [
+                          InfoBanner(
+                            title: "Single Day Plan",
+                            message:
+                                "This plan does not repeat. It is meant for one-time delivery on your selected date.",
+                            type: InfoBannerType.info,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+
+                    const SizedBox(height: 16),
+
+                    // Calendar view section
+                    // Text(
+                    //   "Schedule",
+                    //   style: GoogleFonts.poppins(
+                    //     fontSize: 18,
+                    //     fontWeight: FontWeight.w600,
+                    //     color: AppTheme.textDark,
+                    //   ),
+                    // ),
+
+                    //const SizedBox(height: 0),
+
+                    // New Schedule Card with fixed BoxShadow offset and vertical layout
+                    Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Start date section - Shown for all plan modes
+                            // if (!_isCustomPlan)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 20,
+                                  color: widget.isExpressOrder
+                                      ? Colors.grey
+                                      : AppTheme.purple,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'Start Date',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.textDark,
+                                            ),
+                                          ),
+                                          if (!widget.isExpressOrder &&
+                                              !_isCustomPlan)
                                             Text(
-                                              DateFormat('EEE dd, MMM yyyy')
-                                                  .format(date),
+                                              ' *',
                                               style: GoogleFonts.poppins(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,
-                                                color: AppTheme.textDark,
+                                                color: Colors.red,
                                               ),
                                             ),
-                                          ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        !_isCustomPlan &&
+                                                !widget.isExpressOrder &&
+                                                !_isStartDateSelected()
+                                            ? "Tap 'Change' to select start date"
+                                            : _isCustomPlan &&
+                                                    _selectedWeekdays
+                                                        .where((day) => day)
+                                                        .isEmpty
+                                                ? "No weekdays selected"
+                                                : _getFormattedStartDate(),
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontWeight: _isCustomPlan
+                                              ? FontWeight.w500
+                                              : FontWeight.normal,
+                                          color: !_isCustomPlan &&
+                                                  !widget.isExpressOrder &&
+                                                  !_isStartDateSelected()
+                                              ? Colors.orange
+                                              : AppTheme.textDark,
+                                          fontStyle: !_isCustomPlan &&
+                                                  !widget.isExpressOrder &&
+                                                  !_isStartDateSelected()
+                                              ? FontStyle.italic
+                                              : FontStyle.normal,
                                         ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.only(top: 2),
-                                              child: VegIcon(),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                      if (widget.isExpressOrder ||
+                                          (_isCustomPlan &&
+                                              !_selectedWeekdays
+                                                  .where((day) => day)
+                                                  .isEmpty))
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            widget.isExpressOrder
+                                                ? 'Locked for express delivery'
+                                                : 'Based on earliest selected weekday',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                              color: widget.isExpressOrder
+                                                  ? Colors.orange
+                                                  : AppTheme.purple,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                _getMealItemsText(),
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 13,
-                                                  color: AppTheme.textMedium,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                          ),
                                         ),
-                                      ],
-                                    ),
-                                  ))
-                              .toList(),
-                          // Show message if no upcoming meals (for custom plan with no weekdays selected)
-                          if (_getUpcomingMealDates().isEmpty)
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey.shade300,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    color: Colors.grey.shade600,
-                                    size: 20,
+                                    ],
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'No upcoming meals. Please select at least one weekday.',
+                                ),
+                                if (!widget.isExpressOrder)
+                                  TextButton.icon(
+                                    onPressed: () async {
+                                      final selectedDate = await showDatePicker(
+                                        context: context,
+                                        initialDate: _startDate,
+                                        firstDate: _firstAvailableDate,
+                                        lastDate: DateTime.now()
+                                            .add(const Duration(days: 90)),
+                                        selectableDayPredicate:
+                                            (DateTime date) {
+                                          // Only allow weekdays (Monday to Friday)
+                                          return date.weekday <= 5;
+                                        },
+                                      );
+
+                                      if (selectedDate != null) {
+                                        setState(() {
+                                          // For custom plan, use the smart start date calculation
+                                          if (_isCustomPlan) {
+                                            _startDate =
+                                                calculateCustomPlanStartDate(
+                                              selectedStartDate: selectedDate,
+                                              selectedWeekdays:
+                                                  _getSelectedWeekdayIndexes(),
+                                            );
+                                          } else {
+                                            _startDate = selectedDate;
+                                          }
+
+                                          _focusedCalendarDate = _startDate;
+
+                                          // If in custom mode, only allow selected weekdays
+                                          if (_isCustomPlan &&
+                                              !_selectedWeekdays[
+                                                  selectedDate.weekday - 1]) {
+                                            // Show an error message
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Selected date doesn\'t match your weekday preferences. Adjusting selections.',
+                                                  style: GoogleFonts.poppins(),
+                                                ),
+                                                backgroundColor: Colors.orange,
+                                              ),
+                                            );
+
+                                            // Enable the selected weekday
+                                            _selectedWeekdays[
+                                                    selectedDate.weekday - 1] =
+                                                true;
+                                          }
+
+                                          // Recalculate meal dates with new start date
+                                          _calculateMealDates();
+                                        });
+                                      }
+                                    },
+                                    icon: Icon(
+                                      Icons.edit_calendar,
+                                      color: AppTheme.purple,
+                                      size: 18,
+                                    ),
+                                    label: Text(
+                                      'Change',
                                       style: GoogleFonts.poppins(
                                         fontSize: 14,
-                                        color: Colors.grey.shade600,
-                                        fontStyle: FontStyle.italic,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppTheme.purple,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 24),
-
-              // Order Summary Section
-              if (false) // Hide Order Summary Section
-                Container(
-                  margin: const EdgeInsets.only(bottom: 24),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.deepPurple.withOpacity(0.1),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: Card(
-                    margin: EdgeInsets.zero,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        // gradient: LinearGradient(
-                        //   begin: Alignment.topLeft,
-                        //   end: Alignment.bottomRight,
-                        //   colors: [
-                        //     Colors.white,
-                        //     AppTheme.purple.withOpacity(0.08),
-                        //   ],
-                        // ),
-                      ),
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Enhanced header
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      AppTheme.purple.withOpacity(0.9),
-                                      AppTheme.deepPurple.withOpacity(0.9),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          AppTheme.deepPurple.withOpacity(0.2),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8),
+                                      minimumSize: const Size(60, 36),
                                     ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.receipt_long_rounded,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                'Order Summary',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textDark,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              color: Colors.white,
-                              border: Border.all(
-                                color: AppTheme.purple.withOpacity(0.15),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                // Enhanced summary rows
-                                _buildEnhancedSummaryRow(
-                                  'Plan Type',
-                                  _subscriptionPlans[_selectedPlanIndex]
-                                          ['name'] +
-                                      (_isCustomPlan
-                                          ? ' (Custom)'
-                                          : ' (Mon to Fri)'),
-                                  Icons.assignment_outlined,
-                                ),
-                                _buildEnhancedSummaryRow(
-                                  'Duration',
-                                  _subscriptionPlans[_selectedPlanIndex]
-                                      ['duration'],
-                                  Icons.date_range_outlined,
-                                ),
-                                if (_isCustomPlan)
-                                  _buildEnhancedSummaryRow(
-                                    'Selected Days',
-                                    _getSelectedWeekdaysText(),
-                                    Icons.calendar_today_outlined,
-                                    isMultiline: true,
-                                  ),
-                                _buildEnhancedSummaryRow(
-                                  'Total Meals',
-                                  '${_mealDates.length} of ${_subscriptionPlans[_selectedPlanIndex]['meals']}',
-                                  Icons.restaurant_menu_outlined,
-                                ),
-                                _buildEnhancedSummaryRow(
-                                  'Start Date',
-                                  _isCustomPlan
-                                      ? (_selectedWeekdays
-                                              .where((day) => day)
-                                              .isEmpty
-                                          ? "No weekdays selected"
-                                          : _getFormattedStartDate())
-                                      : DateFormat('MMM d, yyyy')
-                                          .format(_startDate),
-                                  Icons.play_circle_outline_rounded,
-                                ),
-                                if (_endDate != null)
-                                  _buildEnhancedSummaryRow(
-                                    'End Date',
-                                    DateFormat('MMM d, yyyy').format(_endDate!),
-                                    Icons.event_busy_outlined,
                                   ),
                               ],
                             ),
-                          ),
-                          // Enhanced divider with gradient
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            child: Container(
-                              height: 2,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    // Colors.transparent,
-                                    AppTheme.gray.withOpacity(0.8),
-                                    AppTheme.gray.withOpacity(0.8),
 
-                                    // Colors.transparent,
-                                  ],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ),
-                                borderRadius: BorderRadius.circular(1),
-                              ),
-                            ),
-                          ),
+                            // Divider between Start Date and End Date sections
+                            Divider(
+                                thickness: 1,
+                                color: Colors.grey.withOpacity(0.1)),
 
-                          // Pricing section
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppTheme.purple.withOpacity(0.1),
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
+                            // End date section
+                            Row(
                               children: [
-                                if (hasDiscount)
-                                  _buildEnhancedSummaryRow(
-                                    'Subtotal',
-                                    '₹${_calculateOriginalPrice().toStringAsFixed(0)}',
-                                    Icons.wallet_outlined,
-                                    valueStyle: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      decoration: TextDecoration.lineThrough,
-                                      color: AppTheme.textMedium,
-                                    ),
-                                    showIcon: false,
-                                  ),
-                                if (hasDiscount)
-                                  _buildEnhancedSummaryRow(
-                                    'Discount (${(_subscriptionPlans[_selectedPlanIndex]['discount'] * 100).toInt()}%)',
-                                    '-₹${_getSavings().toStringAsFixed(0)}',
-                                    Icons.discount_outlined,
-                                    valueStyle: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      color: AppTheme.success,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    showIcon: false,
-                                  ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12, horizontal: 16),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        AppTheme.purple.withOpacity(0.05),
-                                        AppTheme.deepPurple.withOpacity(0.1),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                Icon(
+                                  Icons.event_available,
+                                  size: 20,
+                                  color: AppTheme.purple,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Total Amount',
+                                        'End Date',
                                         style: GoogleFonts.poppins(
-                                          fontSize: 16,
+                                          fontSize: 14,
                                           fontWeight: FontWeight.w600,
                                           color: AppTheme.textDark,
                                         ),
                                       ),
+                                      const SizedBox(height: 4),
                                       Text(
-                                        '₹${_calculatePrice().toStringAsFixed(0)}',
+                                        _endDate != null
+                                            ? DateFormat('EEEE, MMMM d, yyyy')
+                                                .format(_endDate!)
+                                            : 'Select at least one weekday',
                                         style: GoogleFonts.poppins(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppTheme.purple,
+                                          fontSize: 14,
+                                          color: _endDate != null
+                                              ? AppTheme.textDark
+                                              : Colors.red,
                                         ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
                                       ),
+                                      if (_endDate != null)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            'Calculated based on plan',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                              color: AppTheme.textMedium,
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 32),
-
-              // Proceed to payment button
-              Container(
-                margin: const EdgeInsets.only(bottom: 32),
-                width: double.infinity,
-                height: 60,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(50),
-                  gradient: AppTheme.purpleToDeepPurple,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.deepPurple.withOpacity(0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                      spreadRadius: -4,
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: _endDate != null &&
-                          !(widget.isExpressOrder &&
-                              !MealPlanValidator.isWithinExpressWindow())
-                      ? () => _navigateToOrderSummary(context)
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    padding: EdgeInsets.zero,
-                    disabledBackgroundColor: Colors.transparent,
-                    disabledForegroundColor: Colors.white.withOpacity(0.6),
-                    elevation: 0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        widget.isExpressOrder
-                            ? (MealPlanValidator.isWithinExpressWindow()
-                                ? 'Confirm Express Order'
-                                : 'Express Orders Unavailable')
-                            : 'Continue',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
+                          ],
                         ),
                       ),
-                      // const SizedBox(width: 10),
-                      // Container(
-                      //   padding: const EdgeInsets.all(6),
-                      //   decoration: BoxDecoration(
-                      //     color: Colors.white.withOpacity(0.2),
-                      //     shape: BoxShape.circle,
-                      //   ),
-                      //   child: const Icon(
-                      //     Icons.arrow_forward_rounded,
-                      //     color: Colors.white,
-                      //     size: 20,
-                      //   ),
-                      // ),
-                    ],
-                  ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Calendar view with meal dates - Hidden in all scenarios
+                    // Meal Schedule Card is completely removed/hidden in all scenarios
+                    // No "if (false)" condition needed as we're completely removing it
+
+                    const SizedBox(height: 16),
+
+                    // Upcoming Meal Preview Section
+                    if (false) // Hide Upcoming Meal Preview Section
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.deepPurple.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.purple.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Icon(
+                                        Icons.restaurant_rounded,
+                                        color: AppTheme.purple,
+                                        size: 22,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Upcoming Meal',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textDark,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                ..._getUpcomingMealDates()
+                                    .map((date) => Container(
+                                          margin:
+                                              const EdgeInsets.only(bottom: 14),
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: AppTheme.purple
+                                                  .withOpacity(0.15),
+                                              width: 1,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.grey
+                                                    .withOpacity(0.07),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.all(7),
+                                                    decoration: BoxDecoration(
+                                                      gradient: LinearGradient(
+                                                        colors: [
+                                                          AppTheme.purple
+                                                              .withOpacity(0.1),
+                                                          AppTheme.deepPurple
+                                                              .withOpacity(0.1),
+                                                        ],
+                                                        begin:
+                                                            Alignment.topLeft,
+                                                        end: Alignment
+                                                            .bottomRight,
+                                                      ),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: Icon(
+                                                      Icons
+                                                          .calendar_today_rounded,
+                                                      color: AppTheme.purple,
+                                                      size: 16,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    DateFormat(
+                                                            'EEE dd, MMM yyyy')
+                                                        .format(date),
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: AppTheme.textDark,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 2),
+                                                    child: VegIcon(),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      _getMealItemsText(),
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 13,
+                                                        color:
+                                                            AppTheme.textMedium,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ))
+                                    .toList(),
+                                // Show message if no upcoming meals (for custom plan with no weekdays selected)
+                                if (_getUpcomingMealDates().isEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          color: Colors.grey.shade600,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            'No upcoming meals. Please select at least one weekday.',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14,
+                                              color: Colors.grey.shade600,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 32),
+                  ],
                 ),
               ),
+            ),
+          ),
+          // Bottom section with chips and buttons
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Chips container - REMOVED
+                // _buildChipsContainer(),
 
-              // Warning for closed express window
-              if (widget.isExpressOrder &&
-                  !MealPlanValidator.isWithinExpressWindow()) ...[
-                const SizedBox(height: 8),
-                Center(
-                  child: Text(
-                    'Express ordering is currently unavailable',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.red,
-                      fontStyle: FontStyle.italic,
+                // Continue button (Primary)
+                Container(
+                  height: 60,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(50),
+                    gradient: AppTheme.purpleToDeepPurple,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.deepPurple.withOpacity(0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                        spreadRadius: -4,
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _endDate != null &&
+                            !(widget.isExpressOrder &&
+                                !MealPlanValidator.isWithinExpressWindow())
+                        ? () => _navigateToOrderSummary(context)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      padding: EdgeInsets.zero,
+                      disabledBackgroundColor: Colors.transparent,
+                      disabledForegroundColor: Colors.white.withOpacity(0.6),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      widget.isExpressOrder
+                          ? (MealPlanValidator.isWithinExpressWindow()
+                              ? 'Continue'
+                              : 'Express Orders Unavailable')
+                          : 'Continue',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
               ],
-
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -2613,34 +2517,6 @@ class _SubscriptionSelectionScreenState
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  void _navigateToOrderSummary(BuildContext context) {
-    log("endDate: $_endDate");
-    log("startDate: $_startDate");
-    log("mealDates: $_mealDates");
-    log("selectedWeekdays: $_selectedWeekdays");
-    log("selectedPlanIndex: $_selectedPlanIndex");
-    log("isCustomPlan: $_isCustomPlan");
-    log("isExpressOrder: ${widget.isExpressOrder}");
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ManageStudentProfileScreen(
-          planType: _subscriptionPlans[_selectedPlanIndex]['name'],
-          isCustomPlan: _isCustomPlan,
-          selectedWeekdays: _selectedWeekdays,
-          startDate: _startDate,
-          endDate: _endDate!,
-          mealDates: _mealDates,
-          totalAmount: _calculatePrice(),
-          selectedMeals: widget.selectedMeals,
-          isExpressOrder: widget.isExpressOrder,
-          mealType: widget.mealType,
         ),
       ),
     );
@@ -3114,13 +2990,13 @@ class _SubscriptionSelectionScreenState
                                 // Custom builder for day of week labels
                                 dowBuilder: (context, day) {
                                   final weekdayNames = [
-                                    'M',
-                                    'T',
-                                    'W',
-                                    'T',
-                                    'F',
-                                    'S',
-                                    'S'
+                                    'Mon',
+                                    'Tue',
+                                    'Wed',
+                                    'Thu',
+                                    'Fri',
+                                    'Sat',
+                                    'Sun'
                                   ];
                                   final idx = day.weekday -
                                       1; // 0-indexed (0 = Monday, 6 = Sunday)
@@ -3201,5 +3077,12 @@ class _SubscriptionSelectionScreenState
         ],
       ),
     );
+  }
+
+  // Add method to check if chip should be shown
+  bool _shouldShowMealChip() {
+    if (!_isStartDateSelected()) return false;
+    if (_endDate == null) return false;
+    return true;
   }
 }

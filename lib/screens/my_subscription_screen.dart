@@ -231,11 +231,12 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
                             color: AppTheme.purple,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Text(
                           'Upcoming Meals',
                           style: GoogleFonts.poppins(
-                            fontSize: 14,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -249,20 +250,21 @@ class _MySubscriptionScreenState extends State<MySubscriptionScreen>
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: AppTheme.purple.withOpacity(0.1),
+                            color: AppTheme.error.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             Icons.cancel_outlined,
                             size: 18,
-                            color: AppTheme.purple,
+                            color: AppTheme.error,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Text(
                           'Cancelled Meals',
                           style: GoogleFonts.poppins(
-                            fontSize: 14,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],

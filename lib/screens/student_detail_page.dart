@@ -3,8 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/student_model.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/profile_avatar.dart';
+import 'package:intl/intl.dart';
+import 'package:startwell/screens/main_screen.dart';
 
-class StudentDetailPage extends StatelessWidget {
+class StudentDetailPage extends StatefulWidget {
   final Student student;
 
   const StudentDetailPage({
@@ -13,49 +15,70 @@ class StudentDetailPage extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<StudentDetailPage> createState() => _StudentDetailPageState();
+}
+
+class _StudentDetailPageState extends State<StudentDetailPage> {
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Student Details',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => MainScreen()),
+          (route) => false,
+        );
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Student Details',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
+          centerTitle: false,
+          leading: IconButton(
+            icon: Icon(
+              Icons.arrow_back,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => MainScreen()),
+                (route) => false,
+              );
+            },
           ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: AppTheme.purpleToDeepPurple,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.purpleToDeepPurple,
+            ),
           ),
+          elevation: 4,
+          shadowColor: AppTheme.deepPurple.withOpacity(0.3),
         ),
-        elevation: 4,
-        shadowColor: AppTheme.deepPurple.withOpacity(0.3),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Student profile header with avatar
-            _buildProfileHeader(),
-            const SizedBox(height: 24),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Student profile header with avatar
+              _buildProfileHeader(),
+              const SizedBox(height: 24),
 
-            // Student details card
-            _buildDetailsCard(),
-            const SizedBox(height: 24),
+              // Student details card
+              _buildDetailsCard(),
+              const SizedBox(height: 24),
 
-            // Meal plan information card (if applicable)
-            if (student.hasActivePlan) _buildMealPlanCard(),
-          ],
+              // Meal plan information card (if applicable)
+              // if (widget.student.hasActivePlan) _buildMealPlanCard(),
+            ],
+          ),
         ),
       ),
     );
@@ -126,7 +149,7 @@ class StudentDetailPage extends StatelessWidget {
             width: double.infinity,
             alignment: Alignment.center,
             child: Text(
-              student.name,
+              widget.student.name,
               style: GoogleFonts.poppins(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -143,7 +166,7 @@ class StudentDetailPage extends StatelessWidget {
             width: double.infinity,
             alignment: Alignment.center,
             child: Text(
-              student.schoolName,
+              widget.student.schoolName,
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 color: AppTheme.textMedium,
@@ -240,7 +263,7 @@ class StudentDetailPage extends StatelessWidget {
                 _buildInfoRow(
                   Icons.class_,
                   'Class & Division',
-                  'Class ${student.className} - ${student.division}',
+                  'Class ${widget.student.className} - ${widget.student.division}',
                 ),
                 const SizedBox(height: 16),
 
@@ -248,7 +271,7 @@ class StudentDetailPage extends StatelessWidget {
                 _buildInfoRow(
                   Icons.apartment,
                   'Floor',
-                  'Floor: ${student.floor}',
+                  'Floor: ${widget.student.floor}',
                 ),
                 const SizedBox(height: 16),
 
@@ -256,12 +279,15 @@ class StudentDetailPage extends StatelessWidget {
                 _buildInfoRow(
                   Icons.healing,
                   'Allergies',
-                  student.allergies.isEmpty ? 'None' : student.allergies,
+                  widget.student.allergies.isEmpty
+                      ? 'None'
+                      : widget.student.allergies,
                   valueColor:
-                      student.allergies.isEmpty ? null : Colors.red[700],
+                      widget.student.allergies.isEmpty ? null : Colors.red[700],
                   iconBackground:
-                      student.allergies.isEmpty ? null : Colors.red[50],
-                  iconColor: student.allergies.isEmpty ? null : Colors.red[700],
+                      widget.student.allergies.isEmpty ? null : Colors.red[50],
+                  iconColor:
+                      widget.student.allergies.isEmpty ? null : Colors.red[700],
                 ),
               ],
             ),
@@ -272,9 +298,6 @@ class StudentDetailPage extends StatelessWidget {
   }
 
   Widget _buildMealPlanCard() {
-    final hasBreakfast = student.hasActiveBreakfast;
-    final hasLunch = student.hasActiveLunch;
-
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -302,7 +325,7 @@ class StudentDetailPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft,
+                begin: Alignment.topCenter,
                 end: Alignment.bottomRight,
                 colors: [
                   AppTheme.purple.withOpacity(0.1),
@@ -331,14 +354,14 @@ class StudentDetailPage extends StatelessWidget {
                     ],
                   ),
                   child: Icon(
-                    Icons.restaurant,
+                    Icons.restaurant_menu,
                     color: AppTheme.purple,
                     size: 24,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Meal Plan Information',
+                  'Meal Plans',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -354,41 +377,189 @@ class StudentDetailPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (hasBreakfast) ...[
-                  _buildInfoRow(
-                    Icons.ramen_dining,
+                // Breakfast Plan
+                if (widget.student.hasActiveBreakfast) ...[
+                  _buildMealPlanSection(
                     'Breakfast Plan',
-                    _formatPlanInfo('breakfast'),
-                    valueColor: AppTheme.purple,
+                    widget.student.breakfastPlanStartDate,
+                    widget.student.breakfastPlanEndDate,
+                    widget.student.breakfastPreference,
+                    widget.student.breakfastSelectedWeekdays,
+                    onPreOrder: () => _showPreOrderDialog(context, 'breakfast'),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                 ],
-                if (hasLunch) ...[
-                  _buildInfoRow(
-                    Icons.flatware,
+
+                // Lunch Plan
+                if (widget.student.hasActiveLunch) ...[
+                  _buildMealPlanSection(
                     'Lunch Plan',
-                    _formatPlanInfo('lunch'),
-                    valueColor: AppTheme.purple,
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                if (hasBreakfast && student.breakfastPreference != null) ...[
-                  _buildInfoRow(
-                    Icons.restaurant_menu,
-                    'Breakfast Preference',
-                    student.breakfastPreference!,
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                if (hasLunch && student.lunchPreference != null) ...[
-                  _buildInfoRow(
-                    Icons.restaurant_menu,
-                    'Lunch Preference',
-                    student.lunchPreference!,
+                    widget.student.lunchPlanStartDate,
+                    widget.student.lunchPlanEndDate,
+                    widget.student.lunchPreference,
+                    widget.student.lunchSelectedWeekdays,
+                    onPreOrder: () => _showPreOrderDialog(context, 'lunch'),
                   ),
                 ],
+
+                // No active plans message
+                if (!widget.student.hasActiveBreakfast &&
+                    !widget.student.hasActiveLunch)
+                  Center(
+                    child: Text(
+                      'No active meal plans',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: AppTheme.textMedium,
+                      ),
+                    ),
+                  ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMealPlanSection(
+    String title,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? preference,
+    List<int>? weekdays, {
+    required VoidCallback onPreOrder,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.purple.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onPreOrder,
+                icon: Icon(Icons.add_circle_outline, size: 20),
+                label: Text('Pre-order'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.purple,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (startDate != null && endDate != null) ...[
+            _buildDateRange(startDate, endDate),
+            const SizedBox(height: 12),
+          ],
+          if (preference != null) ...[
+            _buildPreferenceInfo(preference),
+            const SizedBox(height: 12),
+          ],
+          if (weekdays != null && weekdays.isNotEmpty)
+            _buildWeekdaysInfo(weekdays),
+        ],
+      ),
+    );
+  }
+
+  void _showPreOrderDialog(BuildContext context, String planType) {
+    final endDate = planType == 'breakfast'
+        ? widget.student.breakfastPlanEndDate
+        : widget.student.lunchPlanEndDate;
+
+    if (endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No active plan found for $planType'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Pre-order $planType',
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Current plan ends on:',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: AppTheme.textMedium,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              DateFormat('MMMM d, yyyy').format(endDate),
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.purple,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'You can place a pre-order for after this date.',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppTheme.textMedium,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate to subscription selection screen
+              Navigator.pushNamed(
+                context,
+                '/subscription-selection',
+                arguments: {
+                  'studentId': widget.student.id,
+                  'planType': planType,
+                  'isPreOrder': true,
+                  'currentEndDate': endDate,
+                },
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.purple,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Continue to Order'),
           ),
         ],
       ),
@@ -454,11 +625,11 @@ class StudentDetailPage extends StatelessWidget {
     DateTime? endDate;
 
     if (planType == 'breakfast') {
-      startDate = student.breakfastPlanStartDate;
-      endDate = student.breakfastPlanEndDate;
+      startDate = widget.student.breakfastPlanStartDate;
+      endDate = widget.student.breakfastPlanEndDate;
     } else {
-      startDate = student.lunchPlanStartDate;
-      endDate = student.lunchPlanEndDate;
+      startDate = widget.student.lunchPlanStartDate;
+      endDate = widget.student.lunchPlanEndDate;
     }
 
     if (startDate == null || endDate == null) {
@@ -469,5 +640,44 @@ class StudentDetailPage extends StatelessWidget {
     final endStr = '${endDate.day}/${endDate.month}/${endDate.year}';
 
     return 'Active ($startStr - $endStr)';
+  }
+
+  Widget _buildDateRange(DateTime startDate, DateTime endDate) {
+    final startStr = '${startDate.day}/${startDate.month}/${startDate.year}';
+    final endStr = '${endDate.day}/${endDate.month}/${endDate.year}';
+
+    return Text(
+      '$startStr - $endStr',
+      style: GoogleFonts.poppins(
+        fontSize: 16,
+        color: AppTheme.textDark,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
+  Widget _buildPreferenceInfo(String preference) {
+    return Text(
+      'Preference: $preference',
+      style: GoogleFonts.poppins(
+        fontSize: 16,
+        color: AppTheme.textDark,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
+  Widget _buildWeekdaysInfo(List<int> weekdays) {
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final selectedDays = weekdays.map((index) => days[index]).join(', ');
+
+    return Text(
+      'Selected Weekdays: $selectedDays',
+      style: GoogleFonts.poppins(
+        fontSize: 16,
+        color: AppTheme.textDark,
+        fontWeight: FontWeight.w500,
+      ),
+    );
   }
 }

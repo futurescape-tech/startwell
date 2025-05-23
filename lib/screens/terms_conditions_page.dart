@@ -25,7 +25,7 @@ class _TermsConditionsPageState extends State<TermsConditionsPage> {
             color: Colors.white,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,

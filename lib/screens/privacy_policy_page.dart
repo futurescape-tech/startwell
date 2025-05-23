@@ -25,7 +25,7 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
             color: Colors.white,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
