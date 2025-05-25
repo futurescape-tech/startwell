@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/models/student_model.dart';
+import 'package:startwell/utils/meal_names.dart';
 
 /// Service responsible for managing student profiles with persistence
 class StudentProfileService {
@@ -58,10 +59,30 @@ class StudentProfileService {
       for (var student in _studentProfiles) {
         uniqueProfiles[student.id] = student;
       }
+
+      // --- Merge in any per-student keys (student_profile_{id}) ---
+      final allKeys = prefs.getKeys();
+      for (final key in allKeys) {
+        if (key.startsWith('student_profile_')) {
+          try {
+            final studentJson = prefs.getString(key);
+            if (studentJson != null) {
+              final Map<String, dynamic> studentData = jsonDecode(studentJson);
+              final student = Student.fromJson(studentData);
+              uniqueProfiles[student.id] = student;
+            }
+          } catch (e) {
+            print('Error parsing student profile from $key: $e');
+          }
+        }
+      }
       _studentProfiles = uniqueProfiles.values.toList();
 
       // Mark as initialized after loading
       _isInitialized = true;
+
+      // Save merged list back to main key to ensure consistency
+      await saveStudentProfiles();
 
       return _studentProfiles;
     } catch (e) {
@@ -189,6 +210,22 @@ class StudentProfileService {
       {String? mealPreference, List<int>? selectedWeekdays}) async {
     await _ensureInitialized();
 
+    // Normalize mealPreference to strict lowercase value if provided
+    String? normalizedMealPreference;
+    if (mealPreference != null && mealPreference.isNotEmpty) {
+      final n = mealPreference.trim().toLowerCase();
+      if (planType == 'breakfast' && MealNames.breakfastMeals.contains(n)) {
+        normalizedMealPreference = n;
+      } else if ((planType == 'lunch' || planType == 'express') &&
+          MealNames.lunchMeals.contains(n)) {
+        normalizedMealPreference = n;
+      } else {
+        normalizedMealPreference = planType == 'breakfast'
+            ? MealNames.breakfastOfTheDay
+            : MealNames.lunchOfTheDay;
+      }
+    }
+
     final int index =
         _studentProfiles.indexWhere((profile) => profile.id == studentId);
     if (index >= 0) {
@@ -221,10 +258,10 @@ class StudentProfileService {
             : existingStudent.lunchPlanEndDate,
         // Set meal preferences based on plan type, preserving existing preferences
         breakfastPreference: planType == 'breakfast'
-            ? mealPreference
+            ? normalizedMealPreference
             : existingStudent.breakfastPreference,
         lunchPreference: (planType == 'lunch' || planType == 'express')
-            ? mealPreference
+            ? normalizedMealPreference
             : existingStudent.lunchPreference,
         // Store selected weekdays in meal-specific fields
         breakfastSelectedWeekdays: planType == 'breakfast'

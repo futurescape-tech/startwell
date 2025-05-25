@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 import 'package:startwell/widgets/common/gradient_app_bar.dart';
 import 'package:startwell/widgets/common/gradient_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:collection/collection.dart';
 
 class PhonePeDummyScreen extends StatefulWidget {
   final String planType;
@@ -27,6 +28,14 @@ class PhonePeDummyScreen extends StatefulWidget {
   final bool isExpressOrder;
   final Student selectedStudent;
   final String? mealType;
+  final DateTime? breakfastPreOrderDate;
+  final DateTime? lunchPreOrderDate;
+  final String? breakfastDeliveryMode;
+  final String? lunchDeliveryMode;
+  final List<bool>? breakfastSelectedWeekdays;
+  final List<bool>? lunchSelectedWeekdays;
+  final DateTime? preOrderStartDate;
+  final DateTime? preOrderEndDate;
 
   const PhonePeDummyScreen({
     Key? key,
@@ -41,6 +50,14 @@ class PhonePeDummyScreen extends StatefulWidget {
     required this.isExpressOrder,
     required this.selectedStudent,
     this.mealType,
+    this.breakfastPreOrderDate,
+    this.lunchPreOrderDate,
+    this.breakfastDeliveryMode,
+    this.lunchDeliveryMode,
+    this.breakfastSelectedWeekdays,
+    this.lunchSelectedWeekdays,
+    this.preOrderStartDate,
+    this.preOrderEndDate,
   }) : super(key: key);
 
   @override
@@ -115,6 +132,11 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
   }
 
   void _processPayment(BuildContext context) async {
+    // Determine if both meal types are selected
+    final bool hasBothMealTypes = (widget.mealType == 'both') ||
+        (widget.breakfastPreOrderDate != null &&
+            widget.lunchPreOrderDate != null);
+
     // Determine the meal plan type from the mealType parameter or from the selected meals
     final String planType = widget.mealType ??
         (widget.selectedMeals.first.categories.first == MealCategory.breakfast
@@ -154,54 +176,85 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
       // Process payment (simulated for demo)
       await Future.delayed(const Duration(seconds: 2));
 
-      // Get the selected meal preference from the meal name
-      String? mealPreference;
-      if (widget.selectedMeals.isNotEmpty) {
-        final mealName = widget.selectedMeals.first.name;
-        // Extract the meal preference from the name (e.g. "Indian Breakfast" -> "Indian")
-        if (mealName.contains("Indian")) {
-          mealPreference = "Indian";
-        } else if (mealName.contains("Jain")) {
-          mealPreference = "Jain";
-        } else if (mealName.contains("International")) {
-          mealPreference = "International";
-        } else if (mealName.contains("Express")) {
-          mealPreference = "Express";
-        } else {
-          // Default to the most specific name we have
-          mealPreference = mealName;
-        }
-      }
+      // Extract correct meal for each plan
+      Meal? breakfastMeal = widget.selectedMeals.firstWhereOrNull(
+          (m) => m.categories.contains(MealCategory.breakfast));
+      Meal? lunchMeal = widget.selectedMeals
+          .firstWhereOrNull((m) => m.categories.contains(MealCategory.lunch));
 
-      // Assign the meal plan to the student
       final StudentProfileService profileService = StudentProfileService();
+      bool success = false;
 
-      // If this is a breakfast or lunch plan (not express), use April 14, 2025 as start date
-      DateTime actualStartDate = widget.startDate;
-      // No longer override the start date - use the date selected by the user
-      // if (planType == 'breakfast' || planType == 'lunch') {
-      //   // Set standardized plan start date to April 14, 2025
-      //   actualStartDate = DateTime(2025, 4, 14);
-      // }
-
-      log('[DEBUG] Using actual start date in payment screen: ${DateFormat('yyyy-MM-dd').format(actualStartDate)}');
-      log('[DEBUG] Meal plan type: $planType');
-
-      final success = await profileService.assignMealPlan(
-        actualStartDate,
+      if (hasBothMealTypes || widget.mealType == 'both') {
+        // Assign both breakfast and lunch plans with correct meal preferences and dates
+        success = await profileService.assignMealPlan(
+          widget.breakfastPreOrderDate ?? widget.startDate,
+          widget.selectedStudent.id,
+          'breakfast',
+          widget.preOrderEndDate ?? widget.endDate,
+          mealPreference: breakfastMeal?.name ?? 'Breakfast of the Day',
+          selectedWeekdays: (widget.breakfastSelectedWeekdays?.cast<int>()) ??
+              (widget.lunchSelectedWeekdays?.cast<int>()) ??
+              (widget.isCustomPlan
+                  ? widget.selectedWeekdays
+                      .asMap()
+                      .entries
+                      .where((entry) => entry.value)
+                      .map((entry) => entry.key + 1)
+                      .toList()
+                  : null),
+        );
+        if (success) {
+          success = await profileService.assignMealPlan(
+            widget.lunchPreOrderDate ?? widget.startDate,
+            widget.selectedStudent.id,
+            'lunch',
+            widget.preOrderEndDate ?? widget.endDate,
+            mealPreference: lunchMeal?.name ?? 'Lunch of the Day',
+            selectedWeekdays: (widget.lunchSelectedWeekdays?.cast<int>()) ??
+                (widget.isCustomPlan
+                    ? widget.selectedWeekdays
+                        .asMap()
+                        .entries
+                        .where((entry) => entry.value)
+                        .map((entry) => entry.key + 1)
+                        .toList()
+                    : null),
+          );
+        }
+      } else {
+        // Standard single plan type
+        String? mealPreference;
+        if (planType == 'breakfast') {
+          mealPreference = breakfastMeal?.name ?? 'Breakfast of the Day';
+        } else if (planType == 'lunch') {
+          mealPreference = lunchMeal?.name ?? 'Lunch of the Day';
+        } else {
+          // fallback for express or other
+          mealPreference = widget.selectedMeals.isNotEmpty
+              ? widget.selectedMeals.first.name
+              : null;
+        }
+        success = await profileService.assignMealPlan(
+          widget.breakfastPreOrderDate ??
+              widget.lunchPreOrderDate ??
+              widget.startDate,
         widget.selectedStudent.id,
         planType,
-        widget.endDate,
+          widget.preOrderEndDate ?? widget.endDate,
         mealPreference: mealPreference,
-        selectedWeekdays: widget.isCustomPlan
+          selectedWeekdays: (widget.breakfastSelectedWeekdays?.cast<int>()) ??
+              (widget.lunchSelectedWeekdays?.cast<int>()) ??
+              (widget.isCustomPlan
             ? widget.selectedWeekdays
                 .asMap()
                 .entries
                 .where((entry) => entry.value)
-                .map((entry) => entry.key + 1) // Convert to 1-7 for Mon-Sun
+                      .map((entry) => entry.key + 1)
                 .toList()
-            : null,
+                  : null),
       );
+      }
 
       // Close loading dialog
       Navigator.pop(context);
@@ -231,8 +284,10 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                 const SizedBox(height: 16),
                 Text(
                   widget.isExpressOrder
-                      ? 'Your express order has been placed successfully! Your meal will be delivered to ${widget.selectedStudent.name} today.'
-                      : 'Your subscription has been activated! Meals will be delivered to ${widget.selectedStudent.name} according to the schedule.',
+                      ? 'Your express order has been placed successfully! Your meal will be delivered to \\${widget.selectedStudent.name} today.'
+                      : (hasBothMealTypes || widget.mealType == 'both')
+                          ? 'Your breakfast and lunch subscriptions have been activated! Meals will be delivered to \\${widget.selectedStudent.name} according to the schedule.'
+                          : 'Your subscription has been activated! Meals will be delivered to \\${widget.selectedStudent.name} according to the schedule.',
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                   ),
@@ -246,20 +301,7 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                   text: 'Manage Subscription',
                   isFullWidth: true,
                   onPressed: () {
-                    // Close dialog
                     Navigator.pop(context);
-                    log("PhonePeDummyScreen startDate: ${widget.startDate}");
-                    log("PhonePeDummyScreen endDate: ${widget.endDate}");
-
-                    // If this is a breakfast or lunch plan (not express), ensure startDate is April 14, 2025
-                    DateTime actualStartDate = widget.startDate;
-                    // No longer override start date - use what was selected by the user
-                    // if (planType == 'breakfast' || planType == 'lunch') {
-                    //   // Set standardized plan start date to April 14, 2025
-                    //   actualStartDate = DateTime(2025, 4, 14);
-                    // }
-
-                    // Navigate directly to MySubscriptionScreen with Upcoming Meals tab (index 0)
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
@@ -267,7 +309,7 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                           initialTabIndex: 2,
                         ),
                       ),
-                      (route) => false, // Remove all previous routes
+                      (route) => false,
                     );
                   },
                 ),
@@ -275,8 +317,65 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
             ],
           ),
         );
+
+        // After successful payment, store the total for each plan
+        final prefs = await SharedPreferences.getInstance();
+        final studentId = widget.selectedStudent.id;
+        final isBoth = (widget.mealType == 'both') ||
+            (widget.breakfastPreOrderDate != null &&
+                widget.lunchPreOrderDate != null);
+        if (isBoth) {
+          final double breakfastTotal = widget.totalAmount / 2;
+          final double lunchTotal = widget.totalAmount / 2;
+          await prefs.setDouble(
+              'order_total_${studentId}_breakfast-$studentId', breakfastTotal);
+          await prefs.setDouble(
+              'order_total_${studentId}_lunch-$studentId', lunchTotal);
+          // Store start/end/delivery for each plan
+          await prefs.setString(
+              'order_dates_${studentId}_breakfast-$studentId',
+              jsonEncode({
+                'startDate': (widget.breakfastPreOrderDate ?? widget.startDate)
+                    .toIso8601String(),
+                'endDate': (widget.preOrderEndDate ?? widget.endDate)
+                    .toIso8601String(),
+                'selectedWeekdays': _selectedWeekdaysToIndices(
+                    widget.breakfastSelectedWeekdays ??
+                        widget.selectedWeekdays),
+              }));
+          await prefs.setString(
+              'order_dates_${studentId}_lunch-$studentId',
+              jsonEncode({
+                'startDate': (widget.lunchPreOrderDate ?? widget.startDate)
+                    .toIso8601String(),
+                'endDate': (widget.preOrderEndDate ?? widget.endDate)
+                    .toIso8601String(),
+                'selectedWeekdays': _selectedWeekdaysToIndices(
+                    widget.lunchSelectedWeekdays ?? widget.selectedWeekdays),
+              }));
       } else {
-        // Show error message
+          String planId =
+              (widget.planType == 'breakfast' || widget.mealType == 'breakfast')
+                  ? 'breakfast-$studentId'
+                  : 'lunch-$studentId';
+          await prefs.setDouble(
+              'order_total_${studentId}_$planId', widget.totalAmount);
+          await prefs.setString(
+              'order_dates_${studentId}_$planId',
+              jsonEncode({
+                'startDate': (widget.breakfastPreOrderDate ??
+                        widget.lunchPreOrderDate ??
+                        widget.startDate)
+                    .toIso8601String(),
+                'endDate': (widget.preOrderEndDate ?? widget.endDate)
+                    .toIso8601String(),
+                'selectedWeekdays': _selectedWeekdaysToIndices(
+                    widget.breakfastSelectedWeekdays ??
+                        widget.lunchSelectedWeekdays ??
+                        widget.selectedWeekdays),
+              }));
+        }
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -288,10 +387,7 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
         );
       }
     } catch (e) {
-      // Close loading dialog
       Navigator.pop(context);
-
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -302,6 +398,17 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
         ),
       );
     }
+  }
+
+  // Helper to convert List<bool>? to List<int> of selected weekday indices (1-based)
+  List<int> _selectedWeekdaysToIndices(List<bool>? weekdays) {
+    if (weekdays == null) return <int>[];
+    return weekdays
+        .asMap()
+        .entries
+        .where((e) => e.value)
+        .map((e) => e.key + 1)
+        .toList();
   }
 }
 
@@ -317,6 +424,14 @@ class RazorpayDummyScreen extends StatefulWidget {
   final bool isExpressOrder;
   final Student selectedStudent;
   final String? mealType;
+  final DateTime? breakfastPreOrderDate;
+  final DateTime? lunchPreOrderDate;
+  final String? breakfastDeliveryMode;
+  final String? lunchDeliveryMode;
+  final List<bool>? breakfastSelectedWeekdays;
+  final List<bool>? lunchSelectedWeekdays;
+  final DateTime? preOrderStartDate;
+  final DateTime? preOrderEndDate;
 
   const RazorpayDummyScreen({
     Key? key,
@@ -331,6 +446,14 @@ class RazorpayDummyScreen extends StatefulWidget {
     required this.isExpressOrder,
     required this.selectedStudent,
     this.mealType,
+    this.breakfastPreOrderDate,
+    this.lunchPreOrderDate,
+    this.breakfastDeliveryMode,
+    this.lunchDeliveryMode,
+    this.breakfastSelectedWeekdays,
+    this.lunchSelectedWeekdays,
+    this.preOrderStartDate,
+    this.preOrderEndDate,
   }) : super(key: key);
 
   // Common code for storing subscription link info
@@ -462,24 +585,11 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
       // Process payment (simulated for demo)
       await Future.delayed(const Duration(seconds: 2));
 
-      // Get the selected meal preference from the meal name
-      String? mealPreference;
-      if (widget.selectedMeals.isNotEmpty) {
-        final mealName = widget.selectedMeals.first.name;
-        // Extract the meal preference from the name (e.g. "Indian Breakfast" -> "Indian")
-        if (mealName.contains("Indian")) {
-          mealPreference = "Indian";
-        } else if (mealName.contains("Jain")) {
-          mealPreference = "Jain";
-        } else if (mealName.contains("International")) {
-          mealPreference = "International";
-        } else if (mealName.contains("Express")) {
-          mealPreference = "Express";
-        } else {
-          // Default to the most specific name we have
-          mealPreference = mealName;
-        }
-      }
+      // Extract correct meal for each plan
+      Meal? breakfastMeal = widget.selectedMeals.firstWhereOrNull(
+          (m) => m.categories.contains(MealCategory.breakfast));
+      Meal? lunchMeal = widget.selectedMeals
+          .firstWhereOrNull((m) => m.categories.contains(MealCategory.lunch));
 
       // Assign the meal plan to the student
       final StudentProfileService profileService = StudentProfileService();
@@ -503,7 +613,7 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
           widget.selectedStudent.id,
           'breakfast',
           widget.endDate,
-          mealPreference: mealPreference,
+          mealPreference: breakfastMeal?.name ?? 'Breakfast of the Day',
           selectedWeekdays: widget.isCustomPlan
               ? widget.selectedWeekdays
                   .asMap()
@@ -521,7 +631,7 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
             widget.selectedStudent.id,
             'lunch',
             widget.endDate,
-            mealPreference: mealPreference,
+            mealPreference: lunchMeal?.name ?? 'Lunch of the Day',
             selectedWeekdays: widget.isCustomPlan
                 ? widget.selectedWeekdays
                     .asMap()
@@ -536,10 +646,21 @@ class _RazorpayDummyScreenState extends State<RazorpayDummyScreen> {
         // Store the combined plan information in shared preferences for my subscription page
         if (success) {
           await _storeCombinedPlanInfo(widget.selectedStudent.id, 'breakfast',
-              'lunch', actualStartDate, widget.endDate, mealPreference);
+              'lunch', actualStartDate, widget.endDate, breakfastMeal?.name);
         }
       } else {
         // Standard single plan type
+        String? mealPreference;
+        if (planType == 'breakfast') {
+          mealPreference = breakfastMeal?.name ?? 'Breakfast of the Day';
+        } else if (planType == 'lunch') {
+          mealPreference = lunchMeal?.name ?? 'Lunch of the Day';
+        } else {
+          // fallback for express or other
+          mealPreference = widget.selectedMeals.isNotEmpty
+              ? widget.selectedMeals.first.name
+              : null;
+        }
         success = await profileService.assignMealPlan(
           actualStartDate,
           widget.selectedStudent.id,
@@ -753,6 +874,14 @@ class StartwellWalletDummyScreen extends StatefulWidget {
   final bool isExpressOrder;
   final Student selectedStudent;
   final String? mealType;
+  final DateTime? breakfastPreOrderDate;
+  final DateTime? lunchPreOrderDate;
+  final String? breakfastDeliveryMode;
+  final String? lunchDeliveryMode;
+  final List<bool>? breakfastSelectedWeekdays;
+  final List<bool>? lunchSelectedWeekdays;
+  final DateTime? preOrderStartDate;
+  final DateTime? preOrderEndDate;
 
   const StartwellWalletDummyScreen({
     Key? key,
@@ -767,6 +896,14 @@ class StartwellWalletDummyScreen extends StatefulWidget {
     required this.isExpressOrder,
     required this.selectedStudent,
     this.mealType,
+    this.breakfastPreOrderDate,
+    this.lunchPreOrderDate,
+    this.breakfastDeliveryMode,
+    this.lunchDeliveryMode,
+    this.breakfastSelectedWeekdays,
+    this.lunchSelectedWeekdays,
+    this.preOrderStartDate,
+    this.preOrderEndDate,
   }) : super(key: key);
 
   @override
@@ -882,24 +1019,11 @@ class _StartwellWalletDummyScreenState
       // Process payment (simulated for demo)
       await Future.delayed(const Duration(seconds: 2));
 
-      // Get the selected meal preference from the meal name
-      String? mealPreference;
-      if (widget.selectedMeals.isNotEmpty) {
-        final mealName = widget.selectedMeals.first.name;
-        // Extract the meal preference from the name (e.g. "Indian Breakfast" -> "Indian")
-        if (mealName.contains("Indian")) {
-          mealPreference = "Indian";
-        } else if (mealName.contains("Jain")) {
-          mealPreference = "Jain";
-        } else if (mealName.contains("International")) {
-          mealPreference = "International";
-        } else if (mealName.contains("Express")) {
-          mealPreference = "Express";
-        } else {
-          // Default to the most specific name we have
-          mealPreference = mealName;
-        }
-      }
+      // Extract correct meal for each plan
+      Meal? breakfastMeal = widget.selectedMeals.firstWhereOrNull(
+          (m) => m.categories.contains(MealCategory.breakfast));
+      Meal? lunchMeal = widget.selectedMeals
+          .firstWhereOrNull((m) => m.categories.contains(MealCategory.lunch));
 
       // Assign the meal plan to the student
       final StudentProfileService profileService = StudentProfileService();
@@ -920,15 +1044,17 @@ class _StartwellWalletDummyScreenState
         widget.selectedStudent.id,
         planType,
         widget.endDate,
-        mealPreference: mealPreference,
-        selectedWeekdays: widget.isCustomPlan
+        mealPreference: breakfastMeal?.name ?? 'Breakfast of the Day',
+        selectedWeekdays: (widget.breakfastSelectedWeekdays?.cast<int>()) ??
+            (widget.lunchSelectedWeekdays?.cast<int>()) ??
+            (widget.isCustomPlan
             ? widget.selectedWeekdays
                 .asMap()
                 .entries
                 .where((entry) => entry.value)
-                .map((entry) => entry.key + 1) // Convert to 1-7 for Mon-Sun
+                    .map((entry) => entry.key + 1)
                 .toList()
-            : null,
+                : null),
       );
 
       // Close loading dialog

@@ -18,6 +18,7 @@ import 'package:startwell/utils/meal_constants.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'dart:math' as math;
 import 'package:startwell/services/meal_data_service.dart';
+import 'package:startwell/utils/meal_names.dart';
 
 // Extension to add capitalize method to String
 extension StringExtension on String {
@@ -241,8 +242,17 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
           ? 'Breakfast of the Day'
           : 'Lunch of the Day';
     }
-
-    return '$preference ${mealType.substring(0, 1).toUpperCase()}${mealType.substring(1)}';
+    final lowerPref = preference.trim().toLowerCase();
+    if (mealType == 'breakfast' && lowerPref.endsWith('breakfast')) {
+      return preference.trim();
+    }
+    if (mealType == 'lunch' && lowerPref.endsWith('lunch')) {
+      return preference.trim();
+    }
+    return preference.trim() +
+        ' ' +
+        mealType.substring(0, 1).toUpperCase() +
+        mealType.substring(1);
   }
 
   // Enhance meal card to show subscription type more clearly
@@ -343,9 +353,13 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           Text(
                             meal.displayPlanType,
                             style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: AppTheme.textMedium,
+                              fontSize: 14,
+                              color: AppTheme.textDark,
+                              fontWeight: FontWeight.w500,
                             ),
+                            softWrap: true,
+                            overflow: TextOverflow.visible,
+                            maxLines: 2,
                           ),
                         ],
                       ),
@@ -451,7 +465,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             // If we get here, displayPlanType is not null
           } catch (e) {
             // If an error occurs when accessing displayPlanType, generate a new one
-            displayPlanType = _getFormattedPlanType(meals[i].subscription);
+            displayPlanType = meals[i].subscription.planDisplayName;
             log('[swap_meal_flow] Error accessing displayPlanType: $e. Generated new value: $displayPlanType');
           }
 
@@ -745,7 +759,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
               studentName: student.name,
               name: subscription.getMealNameForDate(date),
               planType: subscription.planType,
-              displayPlanType: _getFormattedPlanType(subscription),
+              displayPlanType: subscription.planDisplayName,
               items: subscription.getMealItems(),
               status: isCancelled
                   ? "Cancelled"
@@ -897,23 +911,16 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     await prefs.setString('home_upcoming_meals', jsonEncode(jsonMeals));
   }
 
-  String _getFormattedPlanType(Subscription subscription) {
-    int days = subscription.endDate.difference(subscription.startDate).inDays;
-    if (subscription.planType == 'express') {
-      return "Express 1-Day Plan";
-    }
-    if (days <= 1) {
-      return "Single Day";
-    } else if (days <= 7) {
-      return "Weekly";
-    } else if (days <= 31) {
-      return "Monthly";
-    } else if (days <= 90) {
-      return "Quarterly";
-    } else if (days <= 180) {
-      return "Half-Yearly";
-    } else {
-      return "Annual";
+  String _getFormattedPlanType(String planType) {
+    switch (planType) {
+      case 'breakfast':
+        return 'Breakfast';
+      case 'lunch':
+        return 'Lunch';
+      case 'express':
+        return 'Express Lunch';
+      default:
+        return planType.capitalize();
     }
   }
 
@@ -1000,7 +1007,11 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                     .toList()
                   ..sort((a, b) => a.date.compareTo(b.date));
                 if (index >= allMeals.length) return null;
-                return _buildCalendarMealCard(allMeals[index]);
+                // Add horizontal padding to each meal card in list view
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildCalendarMealCard(allMeals[index]),
+                );
               },
             ),
           ),
@@ -1226,6 +1237,9 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                 });
                 // Save the selected student ID to SharedPreferences
                 _saveSelectedStudentId(newValue);
+                // Clear cache for this student to force reload
+                _cachedSubscriptionsByStudent.remove(newValue);
+                _cachedMealMapByStudent.remove(newValue);
                 _loadSubscriptionsForStudent(newValue, skipCancelled: true);
               }
             },
@@ -2364,16 +2378,15 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          _getDisplayMealName(meal.name),
+                          _getDisplayMealName(meal.name, meal.planType),
                           style: GoogleFonts.poppins(
                             fontSize: 14,
-                            color: AppTheme.textMedium,
-                            decoration: isCancelled
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,
+                            color: AppTheme.textDark,
+                            fontWeight: FontWeight.w500,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                          softWrap: true,
+                          overflow: TextOverflow.visible,
+                          maxLines: 2,
                         ),
                       ],
                     ),
@@ -2567,13 +2580,14 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: meal.items
-                          .map((item) => _buildItemChip(item,
-                              isCancelled: isCancelled, isSwapped: isSwapped))
-                          .toList(),
+                    // Show meal items as plain text instead of badges
+                    Text(
+                      meal.items.join(', '),
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: AppTheme.textMedium,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
 
@@ -2784,8 +2798,10 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     // Remove the current meal from the available options (case-insensitive, trimmed)
     availableMeals.removeWhere((mealNameOption) =>
         mealNameOption.trim().toLowerCase() == meal.name.trim().toLowerCase() ||
-        _getDisplayMealName(mealNameOption).trim().toLowerCase() ==
-            _getDisplayMealName(meal.name).trim().toLowerCase());
+        _getDisplayMealName(mealNameOption, meal.planType)
+                .trim()
+                .toLowerCase() ==
+            _getDisplayMealName(meal.name, meal.planType).trim().toLowerCase());
 
     showModalBottomSheet(
       context: context,
@@ -2895,7 +2911,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _getDisplayMealName(meal.name),
+                          _getDisplayMealName(meal.name, meal.planType),
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w600,
                             fontSize: 16,
@@ -3112,22 +3128,17 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   // Implementation of the meal swap process
   Future<void> _swapMeal(MealData meal, String newMealName) async {
     try {
-      // Show loading indicator
       setState(() {
         _isSwapLoading = true;
       });
       _showSnackBar('Swapping meal...');
 
-      // For this implementation, we'll just update the local state
-      // In a real app, you would call a service to perform the swap on the server
-
-      // For demo purposes, simulate a network delay
       await Future.delayed(const Duration(seconds: 1));
 
       // Store in SharedPreferences for persistence
       final prefs = await SharedPreferences.getInstance();
       final swapKey =
-          'swappedMeal_${meal.subscriptionId}_${DateFormat('yyyy-MM-dd').format(meal.date)}';
+          'swappedMeal_${meal.studentId}_${meal.subscriptionId}_${DateFormat('yyyy-MM-dd').format(meal.date)}';
 
       final swapData = {
         'subscriptionId': meal.subscriptionId,
@@ -3140,13 +3151,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
 
       await prefs.setString(swapKey, jsonEncode(swapData));
 
-      // Update the meal in the UI
       _updateMealInUI(meal, newMealName);
-
-      // Clear cached data for this student to ensure fresh data on next load
       _clearCachedDataForStudent(meal.studentId);
-
-      // Show success message
       _showSnackBar('Meal swapped successfully!');
     } catch (e) {
       log('[upcoming_meals] Error swapping meal: $e');
@@ -3839,15 +3845,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   }
 
   // Add a helper to normalize meal name for display
-  String _getDisplayMealName(String mealName) {
-    final name = mealName.trim().toLowerCase();
-    if (name == 'breakfast of the day breakfast') {
-      return 'Breakfast of the Day';
-    }
-    if (name == 'lunch of the day lunch') {
-      return 'Lunch of the Day';
-    }
-    return mealName;
+  String _getDisplayMealName(String mealName, String planType) {
+    return normalizeMealName(mealName, planType);
   }
 
   // Add a helper to get the correct asset image for special meal names

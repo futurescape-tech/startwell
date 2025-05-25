@@ -397,14 +397,28 @@ class SubscriptionService {
       if (student.hasActiveBreakfast && student.breakfastPlanEndDate != null) {
         final DateTime subscriptionStartDate =
             student.breakfastPlanStartDate ?? DateTime.now();
+        final List<int> selectedWeekdays =
+            student.breakfastSelectedWeekdays ?? [];
+        final String mealName = (student.breakfastPreference != null &&
+                student.breakfastPreference!.isNotEmpty)
+            ? (student.breakfastPreference!
+                    .trim()
+                    .toLowerCase()
+                    .endsWith('breakfast')
+                ? student.breakfastPreference!.trim()
+                : student.breakfastPreference!.trim() + ' Breakfast')
+            : 'Breakfast of the Day';
 
         final subscription = Subscription(
           id: 'breakfast-${student.id}',
           studentId: student.id,
           planType: 'breakfast',
-          mealName: 'Indian Breakfast',
+          mealName: mealName,
           startDate: subscriptionStartDate,
           endDate: student.breakfastPlanEndDate!,
+          selectedWeekdays: selectedWeekdays,
+          isBreakfastPlan: true,
+          isLunchPlan: false,
         );
 
         subscriptions.add(subscription);
@@ -416,45 +430,30 @@ class SubscriptionService {
             student.mealPlanType == 'express' ? 'express' : 'lunch';
         final DateTime subscriptionStartDate =
             student.lunchPlanStartDate ?? DateTime.now();
+        final List<int> selectedWeekdays = student.lunchSelectedWeekdays ?? [];
+        final String mealName = (student.lunchPreference != null &&
+                student.lunchPreference!.isNotEmpty)
+            ? (student.lunchPreference!.trim().toLowerCase().endsWith('lunch')
+                ? student.lunchPreference!.trim()
+                : student.lunchPreference!.trim() + ' Lunch')
+            : 'Lunch of the Day';
 
         final subscription = Subscription(
           id: '$planType-${student.id}',
           studentId: student.id,
           planType: planType,
-          mealName: 'Indian Lunch',
+          mealName: mealName,
           startDate: subscriptionStartDate,
           endDate: student.lunchPlanEndDate!,
+          selectedWeekdays: selectedWeekdays,
+          isBreakfastPlan: false,
+          isLunchPlan: true,
         );
 
         subscriptions.add(subscription);
       }
 
-      // If no active subscriptions are found from the student model, return demo data
-      if (subscriptions.isEmpty) {
-        log('No active subscriptions found, returning demo subscriptions');
-
-        final now = DateTime.now();
-        final oneMonthLater = DateTime(now.year, now.month + 1, now.day);
-
-        subscriptions.add(Subscription(
-          id: '1-${studentId}',
-          studentId: studentId,
-          planType: 'breakfast',
-          mealName: 'Indian Breakfast',
-          startDate: now,
-          endDate: oneMonthLater,
-        ));
-
-        subscriptions.add(Subscription(
-          id: '2-${studentId}',
-          studentId: studentId,
-          planType: 'lunch',
-          mealName: 'Standard Lunch',
-          startDate: now,
-          endDate: oneMonthLater,
-        ));
-      }
-
+      // If no active subscriptions are found, return an empty list (no demo data)
       return subscriptions;
     } catch (e) {
       log('Error getting active subscriptions: $e');

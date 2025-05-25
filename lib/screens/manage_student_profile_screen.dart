@@ -289,67 +289,6 @@ class _ManageStudentProfileScreenState
               icon: const Icon(Icons.close, color: Colors.white),
               onPressed: () => Navigator.of(context).pop(),
             ),
-            actions: [
-              _isEditing
-                  ? TextButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          _saveStudentProfile();
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      child: Text(
-                        'Update',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
-                  : Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 2, horizontal: 2),
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.orangeToYellow,
-                        borderRadius: BorderRadius.circular(50),
-                        border: Border.all(color: Colors.orange, width: 1),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(50),
-                          onTap: () {
-                            if (_formKey.currentState!.validate()) {
-                              _saveStudentProfile();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Student created successfully',
-                                      style: GoogleFonts.poppins()),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                              Navigator.of(context).pop();
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 6),
-                            child: Text(
-                              'Create',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textDark,
-
-                                //color: Colors.blueGrey,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-            ],
           ),
           body: SafeArea(
             child: SingleChildScrollView(
@@ -484,6 +423,72 @@ class _ManageStudentProfileScreenState
                       labelText: 'Medical Allergies (Optional)',
                       icon: Icons.healing,
                       isOptional: true,
+                    ),
+                    const SizedBox(height: 32),
+                    // Gradient Create/Update button below the form
+                    SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.purpleToDeepPurple,
+                          borderRadius: BorderRadius.circular(50),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.deepPurple.withOpacity(0.12),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(50),
+                            onTap: () {
+                              if (_formKey.currentState!.validate()) {
+                                final wasEditing =
+                                    _isEditing; // Capture before save
+                                _saveStudentProfile();
+                                if (wasEditing) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'student updated successfully',
+                                          style: GoogleFonts.poppins()),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  Navigator.of(context).pop();
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'student created successfully',
+                                          style: GoogleFonts.poppins()),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  Navigator.of(context).pop();
+                                }
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: Text(
+                                  _isEditing ? 'Update' : 'Create',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),

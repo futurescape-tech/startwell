@@ -16,6 +16,9 @@ import 'package:startwell/models/subscription_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/screens/my_subscription_screen.dart';
 import 'package:startwell/utils/meal_constants.dart';
+import 'package:startwell/utils/meal_names.dart'
+    show getMealImageAsset, normalizeMealName;
+import 'dart:async';
 
 // Define the MealData class to hold meal information
 class MealData {
@@ -64,6 +67,8 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
   // Map to store meal status
   Map<String, String> _mealStatusMap = {};
   List<Student> _students = [];
+  Timer? _autoRefreshTimer;
+  bool _isAutoRefreshing = false;
 
   @override
   void initState() {
@@ -75,6 +80,27 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _loadMeals();
+    _scheduleAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleAutoRefresh() {
+    // Cancel any existing timer
+    _autoRefreshTimer?.cancel();
+    // Schedule a new refresh 1.2 seconds after widget is visible
+    _autoRefreshTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (!_isLoading && !_isAutoRefreshing) {
+        _isAutoRefreshing = true;
+        _loadMeals().whenComplete(() {
+          _isAutoRefreshing = false;
+        });
+      }
+    });
   }
 
   Future<void> _loadMealsFromHomeStorage() async {
@@ -230,18 +256,16 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
       }
 
       // Get all active subscriptions for all students
-      List<MealData> allUpcomingMeals = [];
+      List<MealData> soonestMealsPerStudent = [];
 
       for (var student in students) {
         try {
-          log('Loading subscriptions for student: ${student.name}');
+          log('Loading subscriptions for student: [32m${student.name}[0m');
 
-          // Skip students without active meal plans
           if (!student.hasActiveBreakfast && !student.hasActiveLunch) {
             continue;
           }
 
-          // Get active subscriptions for this student
           final subscriptions = await _modelSubscriptionService
               .getActiveSubscriptionsForStudent(student.id);
 
@@ -250,40 +274,40 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
             continue;
           }
 
-          // Get current date for filtering
           final now = DateTime.now();
           final today = DateTime(now.year, now.month, now.day);
 
-          // Track if we found a valid meal for this student
-          bool foundMealForStudent = false;
+          // Fetch all cancelled meals for this student ONCE
+          final cancelledMeals =
+              await _subscriptionService.getCancelledMeals(student.id);
 
-          // Process each subscription to get meal data
+          // Collect all valid upcoming meals for this student
+          List<MealData> studentUpcomingMeals = [];
+
           for (var subscription in subscriptions) {
-            // Skip expired subscriptions
             if (subscription.endDate.isBefore(today)) {
               continue;
             }
 
-            // Generate scheduled dates
             final List<DateTime> scheduledDates = _generateScheduleDates(
                 subscription.startDate,
                 subscription.endDate,
                 subscription.selectedWeekdays,
                 subscription.planType);
 
-            // Process each scheduled date
             for (var date in scheduledDates) {
-              // Skip past dates
               final normalizedDate = DateTime(date.year, date.month, date.day);
               if (normalizedDate.isBefore(today)) {
                 continue;
               }
 
-              // Check if this meal is cancelled (now uses SharedPreferences too)
-              bool isCancelled = await _isMealCancelled(
-                  student.id, subscription.id, normalizedDate);
+              // Check if this meal is cancelled using the fetched list
+              bool isCancelled = cancelledMeals.any((meal) =>
+                  meal.subscriptionId == subscription.id &&
+                  meal.cancellationDate.year == normalizedDate.year &&
+                  meal.cancellationDate.month == normalizedDate.month &&
+                  meal.cancellationDate.day == normalizedDate.day);
 
-              // Check if meal is swapped and get the new meal name
               final swapInfo = await _getMealSwapInfo(
                   student.id, subscription.id, normalizedDate);
 
@@ -292,53 +316,46 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
 
               if (isCancelled) {
                 status = "Cancelled";
-                // Include cancelled meals in display with Cancelled badge
               } else if (swapInfo['isSwapped']) {
                 status = "Swapped";
-                // Use new meal name from swap info
                 if (swapInfo['newMealName'].isNotEmpty) {
                   mealName = swapInfo['newMealName'];
                 }
               }
 
-              // Create meal data
               final mealData = MealData(
                 studentName: student.name,
-                name: mealName, // Use updated meal name if swapped
+                name: mealName,
                 planType: _getFormattedPlanType(subscription),
                 items: subscription.getMealItems(),
                 status: status,
                 subscription: subscription,
-                canSwap: !isCancelled, // Can't swap cancelled meals
+                canSwap: !isCancelled,
                 date: date,
                 studentId: student.id,
                 subscriptionId: subscription.id,
               );
 
-              // Only add the first meal for this student
-              if (!foundMealForStudent) {
-                allUpcomingMeals.add(mealData);
-                foundMealForStudent = true;
-                break; // Exit date loop
-              }
+              studentUpcomingMeals.add(mealData);
             }
+          }
 
-            // If we found a meal for this student, break out of subscription loop
-            if (foundMealForStudent) {
-              break;
-            }
+          // Find the soonest valid meal for this student
+          if (studentUpcomingMeals.isNotEmpty) {
+            studentUpcomingMeals.sort((a, b) => a.date.compareTo(b.date));
+            soonestMealsPerStudent.add(studentUpcomingMeals.first);
           }
         } catch (error) {
           log('Error processing student ${student.name}: $error');
         }
       }
 
-      // Sort the meals by date (closest first)
-      allUpcomingMeals.sort((a, b) => a.date.compareTo(b.date));
+      // Sort the soonest meals per student by date (closest first)
+      soonestMealsPerStudent.sort((a, b) => a.date.compareTo(b.date));
 
       if (mounted) {
         setState(() {
-          _upcomingMeals = allUpcomingMeals;
+          _upcomingMeals = soonestMealsPerStudent;
           _isLoading = false;
         });
       }
@@ -419,15 +436,8 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
   }
 
   // Add a helper to normalize meal name for display
-  String _getDisplayMealName(String mealName) {
-    final name = mealName.trim().toLowerCase();
-    if (name == 'breakfast of the day breakfast') {
-      return 'Breakfast of the Day';
-    }
-    if (name == 'lunch of the day lunch') {
-      return 'Lunch of the Day';
-    }
-    return mealName;
+  String _getDisplayMealName(String mealName, String mealType) {
+    return normalizeMealName(mealName, mealType);
   }
 
   // Add a helper to get the correct asset image for special meal names
@@ -486,7 +496,10 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
 
   Widget _buildMealCard(MealData meal) {
     final formattedDate = DateFormat('EEE, dd MMM yyyy').format(meal.date);
-    final String asset = _getSpecialMealImageAsset(meal.name);
+    final String asset = getMealImageAsset(
+      normalizeMealName(meal.name, meal.planType),
+      meal.planType,
+    );
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmall = screenWidth < 350;
     final imageSize = isSmall ? 36.0 : 48.0;
@@ -585,7 +598,10 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _getDisplayMealName(meal.name),
+                                    meal.name.isNotEmpty
+                                        ? meal.name
+                                        : _getDisplayMealName(
+                                            meal.name, meal.planType),
                                     style: GoogleFonts.poppins(
                                       fontSize: titleFontSize,
                                       fontWeight: FontWeight.w600,
@@ -593,6 +609,18 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
+                                  ),
+                                  // Plan type (plan name) wrapped for visibility
+                                  Text(
+                                    meal.subscription.planDisplayName,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: subtitleFontSize,
+                                      color: AppTheme.textMedium,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    softWrap: true,
+                                    overflow: TextOverflow.visible,
+                                    maxLines: 2,
                                   ),
                                   Text(
                                     meal.studentName, // Show student name

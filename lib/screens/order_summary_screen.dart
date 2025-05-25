@@ -14,6 +14,10 @@ import 'package:startwell/widgets/common/veg_icon.dart';
 import 'package:startwell/widgets/common/gradient_app_bar.dart';
 import 'package:startwell/widgets/common/gradient_button.dart';
 import 'package:startwell/utils/pre_order_date_calculator.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:startwell/utils/meal_names.dart';
 
 // Extension to add capitalize method to String
 extension StringExtension on String {
@@ -214,15 +218,15 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
   }
 
   // Navigate to Payment Methods screen
-  void _navigateToPaymentMethods(BuildContext context, String planType) {
+  void _navigateToPaymentMethods(BuildContext context, String planType) async {
     print("Navigating to payment screen for $planType...");
-    log("endDate: ${widget.endDate}");
-    log("startDate: ${widget.startDate}");
+    log("endDate: \\${widget.endDate}");
+    log("startDate: \\${widget.startDate}");
 
     // Create a default student if none is selected
     final student = widget.selectedStudent ??
         Student(
-          id: 'default_${DateTime.now().millisecondsSinceEpoch}',
+          id: 'default_\${DateTime.now().millisecondsSinceEpoch}',
           name: 'Guest Student',
           schoolName: 'Not Specified',
           className: 'Not Specified',
@@ -233,6 +237,44 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
           section: 'Not Specified',
           profileImageUrl: '',
         );
+
+    // Store order summary data in SharedPreferences for each plan
+    final prefs = await SharedPreferences.getInstance();
+    if (_hasBothMealTypes) {
+      // Store breakfast
+      if (widget.breakfastStartDate != null &&
+          widget.breakfastEndDate != null) {
+        await prefs.setString(
+          'order_summary_${student.id}_breakfast-${student.id}',
+          jsonEncode({
+            'startDate': widget.breakfastStartDate!.toIso8601String(),
+            'endDate': widget.breakfastEndDate!.toIso8601String(),
+            'deliveryMode': widget.breakfastDeliveryMode ?? 'Mon to Fri',
+          }),
+        );
+      }
+      // Store lunch
+      if (widget.lunchStartDate != null && widget.lunchEndDate != null) {
+        await prefs.setString(
+          'order_summary_${student.id}_lunch-${student.id}',
+          jsonEncode({
+            'startDate': widget.lunchStartDate!.toIso8601String(),
+            'endDate': widget.lunchEndDate!.toIso8601String(),
+            'deliveryMode': widget.lunchDeliveryMode ?? 'Mon to Fri',
+          }),
+        );
+      }
+    } else {
+      // Single plan
+      await prefs.setString(
+        'order_summary_${student.id}_${planType}-${student.id}',
+        jsonEncode({
+          'startDate': widget.startDate.toIso8601String(),
+          'endDate': widget.endDate.toIso8601String(),
+          'deliveryMode': widget.deliveryMode ?? 'Mon to Fri',
+        }),
+      );
+    }
 
     // Calculate final amount after promo discount, GST, and delivery charges
     double finalAmount = widget.totalAmount;
@@ -1283,20 +1325,23 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
 
     // Get meal name and determine which meal selection to use
     final String mealName;
+    final mealType = title == "Breakfast Plan" ? 'breakfast' : 'lunch';
     if (title == "Breakfast Plan" &&
         widget.breakfastSelectedMeals != null &&
         widget.breakfastSelectedMeals!.isNotEmpty) {
-      mealName = widget.breakfastSelectedMeals!.first.name;
+      mealName = normalizeMealName(
+          widget.breakfastSelectedMeals!.first.name, mealType);
     } else if (title == "Lunch Plan" &&
         widget.lunchSelectedMeals != null &&
         widget.lunchSelectedMeals!.isNotEmpty) {
-      mealName = widget.lunchSelectedMeals!.first.name;
+      mealName =
+          normalizeMealName(widget.lunchSelectedMeals!.first.name, mealType);
     } else if (widget.selectedMeals.isNotEmpty) {
-      mealName = widget.selectedMeals.first.name;
+      mealName = normalizeMealName(widget.selectedMeals.first.name, mealType);
     } else {
-      mealName = title == "Breakfast Plan"
-          ? "Breakfast of the Day"
-          : "Lunch of the Day";
+      mealName = mealType == 'breakfast'
+          ? MealNames.breakfastOfTheDay
+          : MealNames.lunchOfTheDay;
     }
 
     return Column(
@@ -1324,16 +1369,16 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
           ),
         const SizedBox(height: 12),
 
-        // Selected Meal Name with meal type icon when title is hidden
+        // Strict meal image for this plan
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              title == "Breakfast Plan" ? Icons.ramen_dining : Icons.flatware,
-              size: 18,
-              color: title == "Breakfast Plan" ? Colors.pink : AppTheme.success,
+            Image.asset(
+              getMealImageAsset(mealName, mealType),
+              width: 48,
+              height: 48,
+              fit: BoxFit.contain,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2364,6 +2409,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
     final double mealPrice = widget.totalAmount / widget.mealDates.length;
     final Color typeColor = _getMealTypeColor(mealType);
 
+    // Use strict asset mapping for meal image
     return Card(
       color: Colors.white,
       margin: EdgeInsets.zero,
@@ -2379,91 +2425,16 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Meal image with gradient overlay for better text visibility
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Stack(
-                  children: [
-                    Image.asset(
-                      imageUrl,
-                      width: double.infinity,
-                      height: 160,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 160,
-                          width: double.infinity,
-                          color: typeColor.withOpacity(0.1),
-                          child: Icon(
-                            _getMealTypeIcon(mealType),
-                            size: 60,
-                            color: typeColor.withOpacity(0.3),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              // Selected badge
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Colors.orange,
-                        Colors.deepPurple,
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Top Pick',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          // Strict meal image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Image.asset(
+              getMealImageAsset(name, mealType),
+              width: double.infinity,
+              height: 160,
+              fit: BoxFit.contain,
+            ),
           ),
-
           // Meal details
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -2501,9 +2472,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 12),
-
                 // Price and details row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2511,11 +2480,11 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                     Row(
                       children: [
                         Icon(
-                          widget.isPreOrder && widget.mealType == 'lunch'
+                          mealType == 'lunch'
                               ? Icons.flatware
                               : Icons.ramen_dining,
                           size: 18,
-                          color: widget.isPreOrder && widget.mealType == 'lunch'
+                          color: mealType == 'lunch'
                               ? AppTheme.success
                               : Colors.pink,
                         ),
@@ -2559,7 +2528,6 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                     ),
                   ],
                 ),
-
                 if (isExpress) ...[
                   const SizedBox(height: 12),
                   Container(
@@ -2742,14 +2710,15 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 ? 'express'
                 : 'lunch');
 
+    final String mealName = widget.selectedMeals.isNotEmpty
+        ? normalizeMealName(widget.selectedMeals.first.name, mealType)
+        : (mealType == 'breakfast'
+            ? MealNames.breakfastOfTheDay
+            : mealType == 'express'
+                ? MealNames.lunchOfTheDay
+                : MealNames.lunchOfTheDay);
     return _buildSelectedMealCard(
-      widget.selectedMeals.isNotEmpty
-          ? widget.selectedMeals.first.name
-          : mealType == 'breakfast'
-              ? 'Breakfast of the Day'
-              : mealType == 'express'
-                  ? 'Express Lunch'
-                  : 'Lunch of the Day',
+      mealName,
       widget.selectedMeals.isNotEmpty &&
               widget.selectedMeals.first.imageUrl.isNotEmpty
           ? widget.selectedMeals.first.imageUrl
@@ -2758,5 +2727,31 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
               : 'assets/images/lunch/lunch of the day (most recommended).png',
       mealType,
     );
+  }
+
+  // Helper to strictly map meal names to allowed asset images
+  String getMealImageAsset(String mealName, String mealType) {
+    final name = mealName.trim().toLowerCase();
+    if (mealType == 'breakfast') {
+      if (name == 'breakfast of the day')
+        return 'assets/images/breakfast/breakfast of the day (most recommended).png';
+      if (name == 'indian breakfast')
+        return 'assets/images/breakfast/Indian Breakfast.png';
+      if (name == 'international breakfast')
+        return 'assets/images/breakfast/International Breakfast.png';
+      if (name == 'jain breakfast')
+        return 'assets/images/breakfast/Jain Breakfast.png';
+    } else if (mealType == 'lunch') {
+      if (name == 'lunch of the day')
+        return 'assets/images/lunch/lunch of the day (most recommended).png';
+      if (name == 'indian lunch') return 'assets/images/lunch/Indian Lunch.png';
+      if (name == 'international lunch')
+        return 'assets/images/lunch/International Lunch.png';
+      if (name == 'jain lunch') return 'assets/images/lunch/Jain Lunch.png';
+    }
+    // fallback
+    return mealType == 'breakfast'
+        ? 'assets/images/breakfast/breakfast of the day (most recommended).png'
+        : 'assets/images/lunch/lunch of the day (most recommended).png';
   }
 }

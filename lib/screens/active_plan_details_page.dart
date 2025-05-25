@@ -14,6 +14,7 @@ import 'package:startwell/widgets/common/student_selector_dropdown.dart';
 import 'package:startwell/utils/meal_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:startwell/utils/meal_names.dart';
 
 class ActivePlanDetailsPage extends StatefulWidget {
   final String studentId;
@@ -38,6 +39,8 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
   String _currentStudentId = '';
   Map<String, String> _deliveryModes = {};
   Map<String, Map<String, dynamic>> _orderSummaryData = {};
+  Map<String, double> _storedTotals = {}; // planId -> total
+  Map<String, Map<String, dynamic>> _storedPlanDates = {};
 
   @override
   void initState() {
@@ -136,6 +139,52 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
     return plan.selectedWeekdays.isEmpty ? 'Mon to Fri' : 'Custom Plan';
   }
 
+  Future<void> _loadStoredTotals() async {
+    final prefs = await SharedPreferences.getInstance();
+    final Map<String, double> totals = {};
+    for (final plan in _activePlans) {
+      final key = 'order_total_${plan.studentId}_${plan.id}';
+      if (prefs.containsKey(key)) {
+        final val = prefs.getDouble(key) ?? prefs.getInt(key)?.toDouble();
+        if (val != null) totals[plan.id] = val;
+      }
+    }
+    setState(() {
+      _storedTotals = totals;
+    });
+  }
+
+  // Helper to load stored plan dates and weekdays from SharedPreferences
+  Future<Map<String, dynamic>?> _getStoredPlanDates(
+      String studentId, String planId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'order_dates_${studentId}_$planId';
+    if (prefs.containsKey(key)) {
+      final data = jsonDecode(prefs.getString(key)!);
+      return {
+        'startDate': DateTime.parse(data['startDate']),
+        'endDate': DateTime.parse(data['endDate']),
+        'selectedWeekdays':
+            (data['selectedWeekdays'] as List).map((e) => e as int).toList(),
+      };
+    }
+    return null;
+  }
+
+  // Prefetch stored plan dates for all plans in _loadData
+  Future<void> _loadStoredPlanDates() async {
+    final Map<String, Map<String, dynamic>> result = {};
+    for (final plan in _activePlans) {
+      final stored = await _getStoredPlanDates(plan.studentId, plan.id);
+      if (stored != null) {
+        result[plan.id] = stored;
+      }
+    }
+    setState(() {
+      _storedPlanDates = result;
+    });
+  }
+
   Future<void> _loadData() async {
     try {
       setState(() {
@@ -155,6 +204,12 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
       final subscriptionService = services.SubscriptionService();
       _activePlans = await subscriptionService
           .getActiveSubscriptionsForStudent(_currentStudentId);
+
+      // Load stored totals for these plans
+      await _loadStoredTotals();
+
+      // Load stored plan dates for these plans
+      await _loadStoredPlanDates();
 
       if (_activePlans.isNotEmpty) {
         // Process each active plan
@@ -373,13 +428,18 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
     final bool isBreakfastPlan = plan.planType == 'breakfast';
     final bool hasStoredSummary = planSummary['hasStoredSummary'] ?? false;
 
+    // Use stored plan dates if available
+    final stored = _storedPlanDates[plan.id];
+    final DateTime startDate = stored?['startDate'] ?? plan.startDate;
+    final DateTime endDate = stored?['endDate'] ?? plan.endDate;
+    final List<int> selectedWeekdays =
+        stored?['selectedWeekdays'] ?? plan.selectedWeekdays;
+    final String deliveryMode = _getDeliveryDaysText(plan);
+
     // Ensure consumed meals is never negative
     final int consumed =
         planSummary['consumed'] < 0 ? 0 : planSummary['consumed'];
     final int remaining = planSummary['totalMeals'] - consumed;
-
-    // Get delivery mode
-    final String deliveryMode = planSummary['deliveryMode'] ?? 'Loading...';
 
     // Get plan period description
     final String planPeriod = _getPlanPeriodDescription(plan);
@@ -388,16 +448,21 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
     final String pricePerMeal = '₹${planSummary['pricePerMeal']}';
 
     // Calculate total price
-    final num totalPrice =
-        hasStoredSummary && planSummary['totalAmount'] != null
+    final num totalPrice = _storedTotals[plan.id] ??
+        (hasStoredSummary && planSummary['totalAmount'] != null
             ? planSummary['totalAmount']
-            : planSummary['totalMeals'] * planSummary['pricePerMeal'];
+            : planSummary['totalMeals'] * planSummary['pricePerMeal']);
 
     // Use MealConstants for consistent styling
     final Color planIconColor = MealConstants.getIconColor(plan.planType);
     final Color planBgColor = MealConstants.getBgColor(plan.planType);
     final Color planBorderColor = MealConstants.getBorderColor(plan.planType);
     final IconData planIcon = MealConstants.getIcon(plan.planType);
+
+    // Helper to clean up meal name
+    String _strictMealName(String name, String planType) {
+      return normalizeMealName(name, planType);
+    }
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -494,18 +559,25 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Section 1: Subscription Details
-                  _buildSectionHeader('Subscription Details'),
-                  const SizedBox(height: 8),
+                  // HIDE Section 1: Subscription Details label
+                  // _buildSectionHeader('Subscription Details'),
+                  // const SizedBox(height: 8),
                   Column(
                     children: [
                       _buildDetailRow(
+                        'Meal Name',
+                        plan.mealName.isNotEmpty
+                            ? plan.mealName[0].toUpperCase() +
+                                plan.mealName.substring(1)
+                            : '',
+                      ),
+                      _buildDetailRow(
                         'Start Date',
-                        DateFormat('dd MMM yyyy').format(plan.startDate),
+                        DateFormat('dd MMM yyyy').format(startDate),
                       ),
                       _buildDetailRow(
                         'End Date',
-                        DateFormat('dd MMM yyyy').format(plan.endDate),
+                        DateFormat('dd MMM yyyy').format(endDate),
                       ),
                     ],
                   ),
@@ -553,35 +625,6 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
                           ],
                         ),
                       ),
-                      if (hasStoredSummary)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.info_outline,
-                                    size: 16, color: Colors.blue.shade800),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Order summary synced from payment details',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: Colors.blue.shade800,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ],
@@ -922,5 +965,11 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
           : MealConstants.lunchIconColor,
       size: 24,
     );
+  }
+
+  // Helper to cast dynamic list to List<int>
+  List<int> _castToIntList(dynamic list) {
+    if (list == null) return <int>[];
+    return (list as List).map((e) => e as int).toList();
   }
 }

@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/models/student_model.dart';
 import 'package:startwell/utils/date_utils.dart';
+import 'package:startwell/utils/meal_names.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
@@ -379,31 +380,26 @@ class SubscriptionService {
 
   // Get meal name based on plan type and preferences with more detailed options
   String _getMealNameFromPlanType(String planType, String? preferredStyle) {
-    // If a specific preferred style is provided, use it
+    // If a specific preferred style is provided, use it (already normalized)
     if (preferredStyle != null && preferredStyle.isNotEmpty) {
-      switch (planType) {
-        case 'breakfast':
-          return '$preferredStyle Breakfast';
-        case 'lunch':
-          return '$preferredStyle Lunch';
-        case 'express':
-          return '$preferredStyle Lunch'; // Express is a lunch option
-        default:
-          return 'Standard Meal';
+      if (planType == 'breakfast' &&
+          MealNames.breakfastMeals.contains(preferredStyle)) {
+        return preferredStyle;
+      } else if ((planType == 'lunch' || planType == 'express') &&
+          MealNames.lunchMeals.contains(preferredStyle)) {
+        return preferredStyle;
       }
     }
-
     // If no preference is specified, use default meal types
-    // Note: We should NEVER use random selection for meal names as it creates inconsistency
     switch (planType) {
       case 'breakfast':
-        return 'Breakfast of the Day';
+        return MealNames.breakfastOfTheDay;
       case 'lunch':
-        return 'Lunch of the Day';
+        return MealNames.lunchOfTheDay;
       case 'express':
-        return 'Express Lunch';
+        return 'express lunch';
       default:
-        return 'Meal of the Day';
+        return 'meal of the day';
     }
   }
 

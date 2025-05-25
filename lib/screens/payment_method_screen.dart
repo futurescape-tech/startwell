@@ -316,17 +316,17 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Selected Delivery Address',
+                        'Delivery Address',
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textDark,
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                            horizontal: 4, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppTheme.success.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -1830,9 +1830,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
     switch (_selectedPaymentMethod) {
       case 0:
         log("PhonePe");
-        log("endDate: ${widget.endDate}");
-        log("startDate: ${widget.startDate}");
-        log("Applied promo: ${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
+        log("endDate: \\${widget.endDate}");
+        log("startDate: \\${widget.startDate}");
+        log("Applied promo: \\${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1848,15 +1848,23 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               isExpressOrder: widget.isExpressOrder,
               selectedStudent: widget.selectedStudent,
               mealType: widget.mealType,
+              breakfastPreOrderDate: widget.breakfastPreOrderDate,
+              lunchPreOrderDate: widget.lunchPreOrderDate,
+              breakfastDeliveryMode: widget.breakfastDeliveryMode,
+              lunchDeliveryMode: widget.lunchDeliveryMode,
+              breakfastSelectedWeekdays: widget.breakfastSelectedWeekdays,
+              lunchSelectedWeekdays: widget.lunchSelectedWeekdays,
+              preOrderStartDate: widget.preOrderStartDate,
+              preOrderEndDate: widget.preOrderEndDate,
             ),
           ),
         );
         break;
       case 1:
         log("Razorpay");
-        log("endDate: ${widget.endDate}");
-        log("startDate: ${widget.startDate}");
-        log("Applied promo: ${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
+        log("endDate: \\${widget.endDate}");
+        log("startDate: \\${widget.startDate}");
+        log("Applied promo: \\${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1872,15 +1880,23 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               isExpressOrder: widget.isExpressOrder,
               selectedStudent: widget.selectedStudent,
               mealType: widget.mealType,
+              breakfastPreOrderDate: widget.breakfastPreOrderDate,
+              lunchPreOrderDate: widget.lunchPreOrderDate,
+              breakfastDeliveryMode: widget.breakfastDeliveryMode,
+              lunchDeliveryMode: widget.lunchDeliveryMode,
+              breakfastSelectedWeekdays: widget.breakfastSelectedWeekdays,
+              lunchSelectedWeekdays: widget.lunchSelectedWeekdays,
+              preOrderStartDate: widget.preOrderStartDate,
+              preOrderEndDate: widget.preOrderEndDate,
             ),
           ),
         );
         break;
       case 2:
         log("Startwell Wallet");
-        log("endDate: ${widget.endDate}");
-        log("startDate: ${widget.startDate}");
-        log("Applied promo: ${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
+        log("endDate: \\${widget.endDate}");
+        log("startDate: \\${widget.startDate}");
+        log("Applied promo: \\${_appliedPromoCode ?? 'None'}, Final amount: ₹$finalAmount");
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1896,6 +1912,14 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               isExpressOrder: widget.isExpressOrder,
               selectedStudent: widget.selectedStudent,
               mealType: widget.mealType,
+              breakfastPreOrderDate: widget.breakfastPreOrderDate,
+              lunchPreOrderDate: widget.lunchPreOrderDate,
+              breakfastDeliveryMode: widget.breakfastDeliveryMode,
+              lunchDeliveryMode: widget.lunchDeliveryMode,
+              breakfastSelectedWeekdays: widget.breakfastSelectedWeekdays,
+              lunchSelectedWeekdays: widget.lunchSelectedWeekdays,
+              preOrderStartDate: widget.preOrderStartDate,
+              preOrderEndDate: widget.preOrderEndDate,
             ),
           ),
         );

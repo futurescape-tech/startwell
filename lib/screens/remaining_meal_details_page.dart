@@ -312,42 +312,32 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
   }
 
   int _calculateTotalMeals(Subscription subscription) {
+    // For single day plan (start and end date are the same), always 1
+    if (subscription.startDate.year == subscription.endDate.year &&
+        subscription.startDate.month == subscription.endDate.month &&
+        subscription.startDate.day == subscription.endDate.day) {
+      return 1;
+    }
     if (subscription.planType == 'express') {
       return 1; // Express plan is just one meal
     }
 
-    // Calculate days between start and end date
     final days =
         subscription.endDate.difference(subscription.startDate).inDays + 1;
 
-    // If using custom weekdays
-    if (subscription.selectedWeekdays.isNotEmpty) {
-      // Calculate how many of each weekday falls within the date range
-      final weekdayCounts = <int, int>{};
-      for (int i = 0; i < days; i++) {
-        final date = subscription.startDate.add(Duration(days: i));
-        final weekday = date.weekday;
-        if (subscription.selectedWeekdays.contains(weekday)) {
-          weekdayCounts[weekday] = (weekdayCounts[weekday] ?? 0) + 1;
-        }
-      }
-
-      // Sum all weekday counts
-      return weekdayCounts.values.fold(0, (sum, count) => sum + count);
+    // Fixed meal counts for each plan type
+    if (days <= 1) {
+      return 1; // Single Day
+    } else if (days <= 7) {
+      return 5; // Weekly
+    } else if (days <= 31) {
+      return 20; // Monthly
+    } else if (days <= 90) {
+      return 60; // Quarterly
+    } else if (days <= 180) {
+      return 90; // Half-Yearly
     } else {
-      // Default Mon-Fri plan
-      final weekdays = [1, 2, 3, 4, 5]; // Monday to Friday
-
-      // Calculate how many weekdays fall within the date range
-      int count = 0;
-      for (int i = 0; i < days; i++) {
-        final date = subscription.startDate.add(Duration(days: i));
-        if (weekdays.contains(date.weekday)) {
-          count++;
-        }
-      }
-
-      return count;
+      return 200; // Annual
     }
   }
 
