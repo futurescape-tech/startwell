@@ -1,29 +1,26 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/models/meal_model.dart';
 import 'package:startwell/models/student_model.dart';
-import 'package:startwell/services/student_profile_service.dart';
-import 'package:startwell/utils/meal_plan_validator.dart';
-import 'package:startwell/themes/app_theme.dart';
-import 'package:startwell/widgets/common/info_banner.dart';
 import 'package:startwell/screens/payment_method_screen.dart';
-import 'package:startwell/widgets/common/veg_icon.dart';
-import 'package:startwell/widgets/common/gradient_app_bar.dart';
-import 'package:startwell/widgets/common/gradient_button.dart';
-import 'package:startwell/utils/pre_order_date_calculator.dart';
-import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/utils/meal_names.dart';
+import 'package:startwell/utils/meal_plan_validator.dart';
+import 'package:startwell/utils/pre_order_date_calculator.dart';
+import 'package:startwell/widgets/common/gradient_app_bar.dart';
+import 'package:startwell/widgets/common/info_banner.dart';
+import 'package:startwell/widgets/common/veg_icon.dart';
 
 // Extension to add capitalize method to String
 extension StringExtension on String {
   String capitalize() {
-    if (this.isEmpty) return this;
-    return "${this[0].toUpperCase()}${this.substring(1)}";
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }
 
@@ -267,7 +264,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
     } else {
       // Single plan
       await prefs.setString(
-        'order_summary_${student.id}_${planType}-${student.id}',
+        'order_summary_${student.id}_$planType-${student.id}',
         jsonEncode({
           'startDate': widget.startDate.toIso8601String(),
           'endDate': widget.endDate.toIso8601String(),
@@ -319,7 +316,9 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         ),
       ),
     );
-    log("navigating to the next screen witht the following data: $planType, ${widget.isCustomPlan}, ${widget.selectedWeekdays}, ${widget.startDate}, ${widget.endDate}, ${widget.mealDates}, ${widget.totalAmount}, ${widget.selectedMeals}, ${widget.isExpressOrder}, ${widget.selectedStudent}, ${widget.mealType}, ${widget.breakfastPreOrderDate}, ${widget.lunchPreOrderDate}, ${widget.isPreOrder}, ${widget.selectedPlanType}, ${widget.deliveryMode}, ${widget.breakfastDeliveryMode}, ${widget.lunchDeliveryMode}, ${widget.breakfastStartDate}, ${widget.breakfastEndDate}, ${widget.breakfastMealDates}, ${widget.breakfastSelectedMeals}, ${widget.breakfastAmount}, ${widget.breakfastPlanType}, ${widget.breakfastSelectedWeekdays}, ${widget.lunchStartDate}, ${widget.lunchEndDate}, ${widget.lunchMealDates}, ${widget.lunchSelectedMeals}, ${widget.lunchAmount}, ${widget.lunchPlanType}, ${widget.lunchSelectedWeekdays}, ${widget.promoCode}, ${widget.promoDiscount}, ${widget.preOrderStartDate}, ${widget.preOrderEndDate}");
+    log(
+      "navigating to the next screen witht the following data: $planType, ${widget.isCustomPlan}, ${widget.selectedWeekdays}, ${widget.startDate}, ${widget.endDate}, ${widget.mealDates}, ${widget.totalAmount}, ${widget.selectedMeals}, ${widget.isExpressOrder}, ${widget.selectedStudent}, ${widget.mealType}, ${widget.breakfastPreOrderDate}, ${widget.lunchPreOrderDate}, ${widget.isPreOrder}, ${widget.selectedPlanType}, ${widget.deliveryMode}, ${widget.breakfastDeliveryMode}, ${widget.lunchDeliveryMode}, ${widget.breakfastStartDate}, ${widget.breakfastEndDate}, ${widget.breakfastMealDates}, ${widget.breakfastSelectedMeals}, ${widget.breakfastAmount}, ${widget.breakfastPlanType}, ${widget.breakfastSelectedWeekdays}, ${widget.lunchStartDate}, ${widget.lunchEndDate}, ${widget.lunchMealDates}, ${widget.lunchSelectedMeals}, ${widget.lunchAmount}, ${widget.lunchPlanType}, ${widget.lunchSelectedWeekdays}, ${widget.promoCode}, ${widget.promoDiscount}, ${widget.preOrderStartDate}, ${widget.preOrderEndDate}",
+    );
   }
 
   @override
@@ -329,7 +328,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         widget.planType == 'Annual';
 
     return Scaffold(
-      appBar: GradientAppBar(
+      appBar: const GradientAppBar(
         titleText: 'Order Summary',
       ),
       backgroundColor: AppTheme.offWhite,
@@ -432,7 +431,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
 
                       // Single Day Plan Info Banner (if applicable)
                       if (widget.planType == 'Single Day')
-                        Column(
+                        const Column(
                           children: [
                             InfoBanner(
                               title: "Single Day Plan",
@@ -440,7 +439,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                                   "This plan does not repeat. It is meant for one-time delivery on your selected date.",
                               type: InfoBannerType.info,
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                           ],
                         ),
 
@@ -535,7 +534,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       foreground: Paint()
-                                        ..shader = LinearGradient(
+                                        ..shader = const LinearGradient(
                                           colors: [
                                             AppTheme.purple,
                                             AppTheme.deepPurple,
@@ -1020,7 +1019,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         foreground: Paint()
-                          ..shader = LinearGradient(
+                          ..shader = const LinearGradient(
                             colors: [
                               AppTheme.purple,
                               AppTheme.deepPurple,
@@ -1136,7 +1135,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
               if (!widget.isPreOrder ||
                   (widget.isPreOrder && widget.preOrderStartDate == null))
                 Padding(
-                  padding: EdgeInsets.only(
+                  padding: const EdgeInsets.only(
                     bottom: 12,
                     left: 8,
                   ),
@@ -1291,7 +1290,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         foreground: Paint()
-                          ..shader = LinearGradient(
+                          ..shader = const LinearGradient(
                             colors: [
                               AppTheme.purple,
                               AppTheme.deepPurple,
@@ -1439,7 +1438,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         // Start and End Dates side by side
         if (!isPreOrder || (isPreOrder && widget.preOrderStartDate == null))
           Padding(
-            padding: EdgeInsets.only(
+            padding: const EdgeInsets.only(
               bottom: 12,
               left: 8,
             ),
@@ -1450,7 +1449,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.date_range_outlined,
                         size: 18,
                         color: Colors.purple,
@@ -1489,7 +1488,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.event_outlined,
                         size: 18,
                         color: Colors.purple,
@@ -1876,7 +1875,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                       elevation: 0,
                     ),
                     child: _isValidatingPromo
-                        ? SizedBox(
+                        ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -2122,7 +2121,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           foreground: Paint()
-                            ..shader = LinearGradient(
+                            ..shader = const LinearGradient(
                               colors: [
                                 AppTheme.purple,
                                 AppTheme.deepPurple,
@@ -2276,7 +2275,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                   child: Container(
                     height: 90,
                     width: 90,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
                     ),
                     child: meal.imageUrl.isNotEmpty
@@ -2354,7 +2353,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 // Meal type
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.restaurant,
                       size: 14,
                       color: AppTheme.purple,

@@ -1,24 +1,24 @@
-import 'dart:developer';
 import 'dart:convert';
+import 'dart:developer';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:startwell/models/cancelled_meal.dart';
+import 'package:startwell/models/student_model.dart';
+import 'package:startwell/models/subscription_model.dart';
+import 'package:startwell/services/meal_data_service.dart';
 import 'package:startwell/services/meal_service.dart';
 import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/services/subscription_service.dart' as service;
-import 'package:startwell/services/cancelled_meal_service.dart';
-import 'package:startwell/models/student_model.dart';
-import 'package:startwell/models/subscription_model.dart';
-import 'package:startwell/models/cancelled_meal.dart';
+import 'package:startwell/themes/app_theme.dart';
+import 'package:startwell/utils/meal_constants.dart';
+import 'package:startwell/utils/meal_names.dart';
+import 'package:startwell/utils/plan_type_debugger.dart';
 import 'package:startwell/widgets/subscription/cancelled_meals_tab.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
-import 'package:startwell/screens/my_subscription_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:startwell/utils/meal_constants.dart';
-import 'package:startwell/themes/app_theme.dart';
-import 'dart:math' as math;
-import 'package:startwell/services/meal_data_service.dart';
-import 'package:startwell/utils/meal_names.dart';
 
 // Extension to add capitalize method to String
 extension StringExtension on String {
@@ -90,7 +90,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   List<Subscription> _activeSubscriptions = [];
   String? _selectedStudentId;
   List<Student> _studentsWithMealPlans = [];
-  List<Map<String, dynamic>> _allScheduledMeals = [];
+  final List<Map<String, dynamic>> _allScheduledMeals = [];
 
   // Map to cache meal data by student ID for faster switching between students
   final Map<String, List<Subscription>> _cachedSubscriptionsByStudent = {};
@@ -115,6 +115,106 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     await _loadStudentsWithMealPlans();
     await _loadCombinedSubscriptions();
     // We're now applying local swaps in _generateMealMap after the meal map is fully populated
+
+    // Verify plan types for all loaded subscriptions
+    _verifySubscriptionPlanTypes();
+  }
+
+  // Verify that all subscription plan types are set correctly
+  void _verifySubscriptionPlanTypes() {
+    if (_activeSubscriptions.isEmpty) {
+      log('🔍 No active subscriptions to verify');
+      return;
+    }
+
+    log('🔍 Verifying plan types for ${_activeSubscriptions.length} subscriptions');
+
+    final PlanTypeDebugger debugger = PlanTypeDebugger();
+    int incorrectCount = 0;
+
+    for (final subscription in _activeSubscriptions) {
+      final bool isValid = debugger.validateDuration(subscription);
+
+      if (!isValid) {
+        incorrectCount++;
+        log('⚠️ INVALID PLAN TYPE: ${subscription.id}');
+        log('⚠️  - Start: ${DateFormat('yyyy-MM-dd').format(subscription.startDate)}');
+        log('⚠️  - End: ${DateFormat('yyyy-MM-dd').format(subscription.endDate)}');
+        log('⚠️  - Days: ${subscription.endDate.difference(subscription.startDate).inDays}');
+        log('⚠️  - Current duration: ${subscription.duration}');
+        log('⚠️  - Display name: ${subscription.planDisplayName}');
+
+        // Attempt to fix the duration on the fly
+        _fixSubscriptionDuration(subscription);
+      }
+    }
+
+    // Print summary statistics
+    log('🔍 Plan type verification complete: $incorrectCount out of ${_activeSubscriptions.length} have incorrect plan types.');
+    debugger.printPlanTypeStatistics();
+
+    // After verification, check for Annual plan overrepresentation
+    _checkForAnnualPlanOverrepresentation();
+  }
+
+  // Helper method to fix a subscription's duration
+  void _fixSubscriptionDuration(Subscription subscription) {
+    final int days =
+        subscription.endDate.difference(subscription.startDate).inDays;
+    SubscriptionDuration correctedDuration;
+
+    // Use the same logic as in SubscriptionService._getDurationFromEndDate
+    if (days <= 1) {
+      correctedDuration = SubscriptionDuration.singleDay;
+    } else if (days <= 7) {
+      correctedDuration = SubscriptionDuration.weekly;
+    } else if (days <= 31) {
+      correctedDuration = SubscriptionDuration.monthly;
+    } else if (days <= 100) {
+      correctedDuration = SubscriptionDuration.quarterly;
+    } else if (days <= 190) {
+      correctedDuration = SubscriptionDuration.halfYearly;
+    } else {
+      correctedDuration = SubscriptionDuration.annual;
+    }
+
+    if (correctedDuration != subscription.duration) {
+      log('🔧 FIXING DURATION: ${subscription.id} from ${subscription.duration} to $correctedDuration');
+
+      // Create a corrected subscription
+      final correctedSubscription =
+          subscription.copyWith(duration: correctedDuration);
+
+      // Update in our internal list
+      final index = _activeSubscriptions.indexOf(subscription);
+      if (index >= 0) {
+        _activeSubscriptions[index] = correctedSubscription;
+        log('🔧 Fixed subscription duration for ${subscription.id}');
+        log('🔧 New display name: ${correctedSubscription.planDisplayName}');
+      }
+    }
+  }
+
+  // Check if there's an unusually high number of Annual plans
+  void _checkForAnnualPlanOverrepresentation() {
+    int annualCount = 0;
+    int totalCount = 0;
+
+    for (final subscription in _activeSubscriptions) {
+      totalCount++;
+      if (subscription.duration == SubscriptionDuration.annual) {
+        annualCount++;
+        log('📊 Annual plan detected: ${subscription.id}, ${subscription.planDisplayName}');
+        log('📊   - Start: ${DateFormat('yyyy-MM-dd').format(subscription.startDate)}');
+        log('📊   - End: ${DateFormat('yyyy-MM-dd').format(subscription.endDate)}');
+        log('📊   - Days: ${subscription.endDate.difference(subscription.startDate).inDays}');
+      }
+    }
+
+    // If more than 50% of plans are Annual, that's suspicious
+    if (totalCount > 0 && (annualCount / totalCount) > 0.5) {
+      log('⚠️ WARNING: Unusually high percentage of Annual plans detected: ${(annualCount / totalCount * 100).toStringAsFixed(1)}%');
+    }
   }
 
   // Save the currently selected student ID to SharedPreferences
@@ -249,10 +349,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     if (mealType == 'lunch' && lowerPref.endsWith('lunch')) {
       return preference.trim();
     }
-    return preference.trim() +
-        ' ' +
-        mealType.substring(0, 1).toUpperCase() +
-        mealType.substring(1);
+    return '${preference.trim()} ${mealType.substring(0, 1).toUpperCase()}${mealType.substring(1)}';
   }
 
   // Enhance meal card to show subscription type more clearly
@@ -556,7 +653,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       List<String> recentStudentIds = [];
 
       // Get the list of recently active student IDs
-      final recentStudentsKey = 'recently_active_students';
+      const recentStudentsKey = 'recently_active_students';
       if (prefs.containsKey(recentStudentsKey)) {
         final recentStudentsJson = prefs.getString(recentStudentsKey) ?? '[]';
         recentStudentIds = List<String>.from(jsonDecode(recentStudentsJson));
@@ -710,6 +807,9 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
       return;
     }
 
+    // Verify and fix subscription plan types before generating meal map
+    _verifySubscriptionPlanTypes();
+
     // Pre-fetch cancellation data to avoid multiple queries
     _subscriptionService
         .getCancelledMeals(_selectedStudentId)
@@ -754,6 +854,26 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                 meal.cancellationDate.day == normalized.day);
 
             final bool canSwap = _isSwapAllowed(date, subscription.planType);
+
+            // Log detailed subscription info before creating MealData
+            log('📊 Creating MealData for subscription ${subscription.id}');
+            log('📊 Subscription plan type: ${subscription.planType}');
+            log('📊 Subscription duration: ${subscription.duration}');
+            log('📊 Plan display name: ${subscription.planDisplayName}');
+            log('📊 Subscription start date: ${DateFormat('yyyy-MM-dd').format(subscription.startDate)}');
+            log('📊 Subscription end date: ${DateFormat('yyyy-MM-dd').format(subscription.endDate)}');
+            log('📊 Days difference: ${subscription.endDate.difference(subscription.startDate).inDays}');
+
+            // Use plan type debugger for additional diagnostics
+            final planDebugger = PlanTypeDebugger();
+            planDebugger.logSubscription(subscription,
+                context: 'meal_creation');
+            final bool isDurationValid =
+                planDebugger.validateDuration(subscription);
+
+            if (!isDurationValid) {
+              log('⚠️ WARNING: Subscription ${subscription.id} has inconsistent duration!');
+            }
 
             final mealData = MealData(
               studentName: student.name,
@@ -951,7 +1071,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.no_meals,
                 size: 64,
                 color: AppTheme.textLight,
@@ -1019,19 +1139,93 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     );
   }
 
+  // Show a diagnostic dialog with plan type information
+  void _showPlanTypeDebugDialog() {
+    // Create statistics for plan types
+    final Map<String, int> planTypeCounts = {};
+    final Map<String, int> durationCounts = {};
+
+    for (final subscription in _activeSubscriptions) {
+      // Count by plan type (breakfast, lunch, express)
+      final planType = subscription.planType;
+      planTypeCounts[planType] = (planTypeCounts[planType] ?? 0) + 1;
+
+      // Count by duration (Single Day, Weekly, Monthly, etc)
+      final duration = subscription.durationDisplayName;
+      durationCounts[duration] = (durationCounts[duration] ?? 0) + 1;
+    }
+
+    // Run verification of plan types
+    _verifySubscriptionPlanTypes();
+
+    // Show a dialog with the results
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Plan Type Diagnostics'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Plan Types:'),
+              ...planTypeCounts.entries.map(
+                (e) => Text('${e.key}: ${e.value}'),
+              ),
+              const SizedBox(height: 16),
+              const Text('Durations:'),
+              ...durationCounts.entries.map(
+                (e) => Text('${e.key}: ${e.value}'),
+              ),
+              const SizedBox(height: 16),
+              const Text('Check log for detailed diagnostic information.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Refresh meal map to fix any issues
+              _generateMealMap();
+              Navigator.of(context).pop();
+            },
+            child: const Text('Fix Issues & Refresh'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildScreenHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "Upcoming Meals",
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textDark,
-            ),
+          Row(
+            children: [
+              Text(
+                "Upcoming Meals",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              // Add debug button (can be activated in production with long press)
+              IconButton(
+                icon:
+                    const Icon(Icons.bug_report, color: Colors.grey, size: 18),
+                onPressed: _showPlanTypeDebugDialog,
+                tooltip: 'Plan Type Diagnostics',
+              ),
+            ],
           ),
           Container(
             decoration: BoxDecoration(
@@ -1180,7 +1374,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
             isExpanded: true,
             icon: Container(
               padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: AppTheme.purpleToDeepPurple,
                 shape: BoxShape.circle,
               ),
@@ -1338,7 +1532,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                             color: AppTheme.purple.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.chevron_left,
                             color: AppTheme.purple,
                           ),
@@ -1367,7 +1561,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                             color: AppTheme.purple.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.chevron_right,
                             color: AppTheme.purple,
                           ),
@@ -1404,7 +1598,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                   calendarStyle: CalendarStyle(
                     outsideDaysVisible: false,
                     markerSize: 8,
-                    markerDecoration: BoxDecoration(
+                    markerDecoration: const BoxDecoration(
                       color: AppTheme.purple,
                       shape: BoxShape.circle,
                     ),
@@ -1537,7 +1731,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       color: AppTheme.purple.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.info_outline,
                       color: AppTheme.purple,
                       size: 14,
@@ -1618,7 +1812,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                     ),
                   ],
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.calendar_today_rounded,
                   color: AppTheme.purple,
                   size: 20,
@@ -1905,7 +2099,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
 
     switch (status) {
       case 'Scheduled':
-        gradient = LinearGradient(
+        gradient = const LinearGradient(
           colors: [
             Color(0xFF4CAF50), // Green
             Color(0xFF2E7D32), // Dark Green
@@ -1915,7 +2109,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         );
         break;
       case 'Cancelled':
-        gradient = LinearGradient(
+        gradient = const LinearGradient(
           colors: [
             Color(0xFFF44336), // Red
             Color(0xFFD32F2F), // Dark Red
@@ -1925,7 +2119,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         );
         break;
       case 'Swapped':
-        gradient = LinearGradient(
+        gradient = const LinearGradient(
           colors: [
             Color(0xFFFF9800), // Orange
             Color(0xFFE65100), // Dark Orange
@@ -2152,7 +2346,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           color: AppTheme.purple.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.calendar_today_rounded,
                           color: AppTheme.purple,
                           size: 16,
@@ -2293,6 +2487,11 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     final bool isExpress = meal.planType == 'express';
     final bool isCancelled = meal.status == "Cancelled";
     final bool isSwapped = meal.status == "Swapped";
+
+    log("isBreakFast: ${meal.planType}");
+    log("isExpress: ${meal.planType}");
+    log("isCancelled: ${meal.status}");
+    log("isSwapped: ${meal.status}");
 
     // Use MealConstants for consistent styling across app
     final Color planIconColor = MealConstants.getIconColor(meal.planType);
@@ -2451,7 +2650,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.info_outline,
                             color: AppTheme.error,
                             size: 20,
@@ -2486,7 +2685,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.swap_horiz_rounded,
                             color: AppTheme.orange,
                             size: 20,
@@ -2519,7 +2718,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                             _buildInfoRow(
                               Icons.restaurant_menu_rounded,
                               "Plan Type",
-                              meal.displayPlanType,
+                              // meal.displayPlanType,
+                              meal.name,
                               planIconColor,
                             ),
                             // HIDE items row
@@ -2545,6 +2745,11 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                               Icons.event_rounded,
                               "Date",
                               DateFormat('EEE, MMM d').format(meal.date),
+                              // // DateFormat('EEE, MMM d').format(widget.endDate!),
+                              // // subscription.startDate,
+
+                              // _allScheduledMeals.length,
+
                               AppTheme.purple,
                             ),
                             // HIDE meal time row
@@ -2604,7 +2809,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         OutlinedButton.icon(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.cancel_outlined,
                             color: AppTheme.error,
                             size: 18,
@@ -2618,7 +2823,8 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.error,
-                            side: BorderSide(color: AppTheme.error, width: 1.5),
+                            side: const BorderSide(
+                                color: AppTheme.error, width: 1.5),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -2632,7 +2838,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         if (meal.canSwap && !isExpress) ...[
                           const SizedBox(width: 12),
                           ElevatedButton.icon(
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.swap_horiz_rounded,
                               color: AppTheme.textDark,
                               size: 18,
@@ -2707,7 +2913,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
           Padding(
             padding: const EdgeInsets.only(right: 10),
             child: ElevatedButton.icon(
-              icon: Icon(
+              icon: const Icon(
                 Icons.swap_horiz_rounded,
                 size: 18,
               ),
@@ -2735,7 +2941,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
           ),
         if (canCancel)
           ElevatedButton.icon(
-            icon: Icon(
+            icon: const Icon(
               Icons.cancel_outlined,
               size: 18,
             ),
@@ -2841,7 +3047,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           color: AppTheme.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.swap_horiz_rounded,
                           color: AppTheme.orange,
                           size: 20,
@@ -2974,7 +3180,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: availableMeals.length,
-                  separatorBuilder: (context, index) => Divider(
+                  separatorBuilder: (context, index) => const Divider(
                     height: 1,
                     color: Color(0x33000000), // black with 0.2 opacity
                   ),
@@ -3020,7 +3226,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                             ),
                           ],
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.arrow_forward,
                           size: 16,
                           color: AppTheme.orange,
@@ -3052,7 +3258,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                   // Cancel button
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.close,
                         size: 16,
                         color: AppTheme.error,
@@ -3096,7 +3302,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.access_time_rounded,
                             size: 16,
                             color: AppTheme.orange,
@@ -3263,7 +3469,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
           borderRadius: BorderRadius.circular(16),
         ),
         contentPadding: EdgeInsets.zero,
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -3295,7 +3501,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                           ),
                         ],
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.cancel_outlined,
                         color: AppTheme.error,
                         size: 22,
@@ -3347,7 +3553,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                         children: [
                           Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.account_balance_wallet_outlined,
                                 color: AppTheme.success,
                                 size: 18,
@@ -3369,7 +3575,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.info_outline,
                                   color: Colors.red,
                                   size: 16,
@@ -3427,7 +3633,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                               children: [
                                 Container(
                                   padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
+                                  decoration: const BoxDecoration(
                                     color: Colors.white,
                                     shape: BoxShape.circle,
                                   ),
@@ -3499,7 +3705,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.warning_amber_rounded,
                             color: AppTheme.error,
                             size: 20,
@@ -3684,10 +3890,10 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
 
         // Notify the cancelled meals tab about the change (if it's in the widget tree)
         try {
-          final GlobalKey<CancelledMealsTabState>? cancelledMealsTabKey =
+          final GlobalKey<CancelledMealsTabState> cancelledMealsTabKey =
               GlobalObjectKey<CancelledMealsTabState>(meal.studentId);
 
-          cancelledMealsTabKey?.currentState?.refreshCancelledMeals();
+          cancelledMealsTabKey.currentState?.refreshCancelledMeals();
           log('[upcoming_meals] Notified the cancelled meals tab to refresh');
         } catch (e) {
           log('[upcoming_meals] Could not notify cancelled meals tab: $e');
@@ -3743,6 +3949,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
   // Helper to build detail rows in the meal card
   Widget _buildInfoRow(
       IconData icon, String label, String value, Color iconColor) {
+    log("valueeeee: $value");
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

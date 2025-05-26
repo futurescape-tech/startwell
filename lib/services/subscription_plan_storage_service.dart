@@ -1,13 +1,20 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SubscriptionPlanStorageService {
-  static const String planDetailsKey = 'selected_plan_details';
-  static const String mealTypeKey = 'selected_meal_type';
-  static const String preOrderDatesKey = 'pre_order_dates';
+  // Renamed to avoid conflict and indicate it's no longer the primary key for new plan details.
+  static const String _legacyPlanDetailsKey = 'selected_plan_details';
+  static const String _studentPlansKeyPrefix =
+      'student_plans_'; // New prefix for student-specific plans
 
-  // Save plan details to shared preferences
+  static const String mealTypeKey =
+      'selected_meal_type'; // Remains as is, if used independently
+  static const String preOrderDatesKey = 'pre_order_dates'; // Remains as is
+
+  // Save plan details to shared preferences, now per student
   static Future<void> savePlanDetails({
+    String? studentId, // New required parameter
     required String selectedPlanType,
     required String deliveryMode,
     String? mealType,
@@ -15,19 +22,41 @@ class SubscriptionPlanStorageService {
     bool hasLunchInCart = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
+    final studentKey = '$_studentPlansKeyPrefix$studentId';
 
-    final planDetails = {
+    List<Map<String, dynamic>> studentPlans = [];
+    final String? existingPlansJson = prefs.getString(studentKey);
+
+    if (existingPlansJson != null && existingPlansJson.isNotEmpty) {
+      try {
+        final List<dynamic> decodedList = jsonDecode(existingPlansJson);
+        // Ensure all items in the list are correctly cast to Map<String, dynamic>
+        studentPlans = decodedList
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      } catch (e) {
+        print('Error decoding existing student plans for $studentId: $e');
+        // Decide on error handling: clear corrupted data or start fresh
+        studentPlans = []; // Starting fresh if decoding fails
+      }
+    }
+
+    final newPlanDetails = {
       'selectedPlanType': selectedPlanType,
       'deliveryMode': deliveryMode,
       'mealType': mealType,
       'hasBreakfastInCart': hasBreakfastInCart,
       'hasLunchInCart': hasLunchInCart,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
+      // Consider adding a unique ID to each plan if needed for updates/deletions later
+      // 'planId': UniqueKey().toString(),
     };
 
-    // Save as JSON string
-    await prefs.setString(planDetailsKey, jsonEncode(planDetails));
-    print('DEBUG: Saved plan details to SharedPreferences: $planDetails');
+    studentPlans.add(newPlanDetails);
+
+    await prefs.setString(studentKey, jsonEncode(studentPlans));
+    print(
+        'DEBUG: Saved plan details for student $studentId. Plan added: $newPlanDetails. Total plans now: ${studentPlans.length}');
   }
 
   // Save pre-order dates separately (useful for going back to modify)
@@ -119,43 +148,48 @@ class SubscriptionPlanStorageService {
     }
   }
 
-  // Load plan details from shared preferences
-  static Future<Map<String, dynamic>?> loadPlanDetails() async {
+  // Load plan details from shared preferences for a specific student
+  static Future<List<Map<String, dynamic>>?> loadPlanDetails(
+      {required String studentId} // New required parameter
+      ) async {
     final prefs = await SharedPreferences.getInstance();
+    final studentKey = '$_studentPlansKeyPrefix$studentId';
+    final String? plansJson = prefs.getString(studentKey);
 
-    final String? planDetailsJson = prefs.getString(planDetailsKey);
-
-    if (planDetailsJson == null || planDetailsJson.isEmpty) {
-      return null;
-    }
-
-    // Parse JSON string to Map
-    try {
-      final Map<String, dynamic> decodedDetails = jsonDecode(planDetailsJson);
+    if (plansJson == null || plansJson.isEmpty) {
       print(
-          'DEBUG: Loaded plan details from SharedPreferences: $decodedDetails');
+          'DEBUG: No plan details found for student $studentId in SharedPreferences using key $studentKey');
+      return null;
+    }
 
-      return {
-        'selectedPlanType': decodedDetails['selectedPlanType'],
-        'deliveryMode': decodedDetails['deliveryMode'],
-        'mealType': decodedDetails['mealType'],
-        'hasBreakfastInCart': decodedDetails['hasBreakfastInCart'] ?? false,
-        'hasLunchInCart': decodedDetails['hasLunchInCart'] ?? false,
-      };
+    try {
+      final List<dynamic> decodedList = jsonDecode(plansJson);
+      // Ensure all items in the list are correctly cast to Map<String, dynamic>
+      final List<Map<String, dynamic>> studentPlans = decodedList
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+      print(
+          'DEBUG: Loaded ${studentPlans.length} plan details for student $studentId from SharedPreferences: $studentPlans');
+      return studentPlans;
     } catch (e) {
-      print('ERROR: Failed to parse plan details: $e');
+      print(
+          'ERROR: Failed to parse plan details for student $studentId: $e. Raw JSON: $plansJson');
       return null;
     }
   }
 
-  // Clear plan details
-  static Future<void> clearPlanDetails() async {
+  // Clear plan details for a specific student
+  static Future<void> clearPlanDetails(
+      {required String studentId} // New required parameter
+      ) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(planDetailsKey);
-    print('DEBUG: Cleared plan details from SharedPreferences');
+    final studentKey = '$_studentPlansKeyPrefix$studentId';
+    await prefs.remove(studentKey);
+    print(
+        'DEBUG: Cleared plan details for student $studentId from SharedPreferences using key $studentKey');
   }
 
-  // Clear pre-order dates
+  // Clear pre-order dates (remains unchanged)
   static Future<void> clearPreOrderDates() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(preOrderDatesKey);
@@ -163,8 +197,20 @@ class SubscriptionPlanStorageService {
   }
 
   // Clear all storage
-  static Future<void> clearAll() async {
-    await clearPlanDetails();
+  // Note: This method currently only clears preOrderDatesKey.
+  // If it should clear all student plans, it needs to iterate through all student keys or have a list of them.
+  // For now, its specific action is limited to preOrderDatesKey and the legacy key if desired.
+  static Future<void> clearAll({bool clearLegacyGlobalPlan = false}) async {
     await clearPreOrderDates();
+    if (clearLegacyGlobalPlan) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_legacyPlanDetailsKey);
+      print(
+          'DEBUG: Cleared legacy global plan details from SharedPreferences.');
+    }
+    // To clear all student-specific plans, you would need to discover all keys matching _studentPlansKeyPrefix
+    // or maintain a list of student IDs who have plans. This is a more complex operation.
+    print(
+        'DEBUG: Cleared pre-order dates. Student-specific plans require targeted clearing or a more advanced clearAll strategy.');
   }
 }

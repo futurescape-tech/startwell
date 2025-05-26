@@ -261,7 +261,7 @@ class _CartScreenState extends State<CartScreen> {
 
       // Use plan type from one of the items (should be the same)
       planType = breakfastItem!['planType'];
-      isCustomPlan = breakfastItem!['isCustomPlan'];
+      isCustomPlan = breakfastItem['isCustomPlan'];
 
       // Store breakfast-specific data
       breakfastStartDate = breakfastItem['startDate'];
@@ -281,12 +281,12 @@ class _CartScreenState extends State<CartScreen> {
 
       // For the combined display, use outer boundaries
       startDate = breakfastStartDate!.isBefore(lunchStartDate!)
-          ? breakfastStartDate!
-          : lunchStartDate!;
+          ? breakfastStartDate
+          : lunchStartDate;
 
       endDate = breakfastEndDate!.isAfter(lunchEndDate!)
-          ? breakfastEndDate!
-          : lunchEndDate!;
+          ? breakfastEndDate
+          : lunchEndDate;
 
       // Combine weekdays if custom plan
       selectedWeekdays = List.generate(
@@ -296,10 +296,10 @@ class _CartScreenState extends State<CartScreen> {
               lunchItem!['selectedWeekdays'][index]);
 
       // Combine meal dates and remove duplicates
-      mealDates = [
+      mealDates = <dynamic>{
         ...breakfastItem['mealDates'] as List<DateTime>,
         ...lunchItem['mealDates'] as List<DateTime>
-      ].toSet().toList();
+      }.toList().cast<DateTime>();
 
       // Total amount is sum of both subscription costs
       totalAmount = breakfastItem['totalAmount'] + lunchItem['totalAmount'];
@@ -440,7 +440,7 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: GradientAppBar(
+      appBar: const GradientAppBar(
         titleText: 'Your Cart',
       ),
       body: Column(
@@ -591,7 +591,7 @@ class _CartScreenState extends State<CartScreen> {
                 (route) => false,
               );
             },
-            icon: Icon(
+            icon: const Icon(
               Icons.arrow_back,
               color: AppTheme.purple,
             ),
@@ -705,7 +705,7 @@ class _CartScreenState extends State<CartScreen> {
     // Get primary meal (first in list)
     final Meal primaryMeal = meals.isNotEmpty
         ? meals.first
-        : Meal(
+        : const Meal(
             id: '',
             name: '',
             description: '',
