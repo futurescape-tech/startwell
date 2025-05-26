@@ -621,6 +621,23 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                               'Meal Type',
                               widget.mealType?.capitalize() ?? 'Not Specified',
                             ),
+                            // Display delivery mode for breakfast and lunch if both are selected
+                            if (_hasBothMealTypes) ...[
+                              _buildOrderInformationRow(
+                                'Breakfast Delivery Mode',
+                                widget.breakfastDeliveryMode ?? 'Not Specified',
+                              ),
+                              _buildOrderInformationRow(
+                                'Lunch Delivery Mode',
+                                widget.lunchDeliveryMode ?? 'Not Specified',
+                              ),
+                            ] else ...[
+                              // Display general delivery mode for single plans
+                              _buildOrderInformationRow(
+                                'Delivery Mode',
+                                widget.deliveryMode ?? 'Not Specified',
+                              ),
+                            ],
                             _buildOrderInformationRow(
                               'Selected Days',
                               widget.isCustomPlan
@@ -1110,13 +1127,8 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
               if (widget.isCustomPlan)
                 _buildDetailRow(
                   "Delivery Mode",
-                  widget.mealType == 'breakfast'
-                      ? (widget.breakfastDeliveryMode ??
-                          _getSelectedWeekdaysText())
-                      : widget.mealType == 'lunch'
-                          ? (widget.lunchDeliveryMode ??
-                              _getSelectedWeekdaysText())
-                          : _getSelectedWeekdaysText(),
+                  widget.deliveryMode ??
+                      'Not Specified', // Use the general delivery mode for single custom plans
                   Icons.calendar_view_week_outlined,
                 ),
 
@@ -1410,13 +1422,16 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         const SizedBox(height: 12),
 
         // Delivery Mode (if custom plan)
-        if (widget.isCustomPlan)
+        if (widget
+            .isCustomPlan) // Keep this condition to only show for custom plans overall
           _buildDetailRow(
             "Delivery Mode",
-            // Always use the specific delivery mode passed to this section,
-            // only fall back to calculating from weekdays if needed
+            // Use the specific delivery mode passed, or calculate from specific weekdays if available
+            // Fallback to general delivery mode if neither is provided
             specificDeliveryMode ??
-                _getDeliveryModeForWeekdays(specificSelectedWeekdays),
+                (specificSelectedWeekdays != null
+                    ? _getDeliveryModeForWeekdays(specificSelectedWeekdays)
+                    : widget.deliveryMode ?? 'Not Specified'),
             Icons.calendar_view_week_outlined,
             indent: true,
           ),

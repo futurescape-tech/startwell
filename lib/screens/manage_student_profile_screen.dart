@@ -1301,52 +1301,8 @@ class _ManageStudentProfileScreenState
 
     return WillPopScope(
       onWillPop: () async {
-        // Store the current selection in cart before navigating back
-        if (widget.selectedMeals?.isNotEmpty == true) {
-          // First, load existing cart items
-          final existingCartItems = await CartStorageService.loadCartItems();
-
-          // Create new cart item
-          final cartItem = {
-            'planType': widget.planType,
-            'isCustomPlan': widget.isCustomPlan,
-            'selectedWeekdays': widget.selectedWeekdays,
-            'startDate': widget.startDate,
-            'endDate': widget.endDate,
-            'mealDates': widget.mealDates,
-            'totalAmount': widget.totalAmount,
-            'selectedMeals': widget.selectedMeals,
-            'isExpressOrder': widget.isExpressOrder,
-            'mealType': widget.mealType,
-          };
-
-          // Check if we already have this meal type in cart
-          bool hasMealType = existingCartItems.any(
-            (item) => item['mealType'] == widget.mealType,
-          );
-
-          // If we don't have this meal type, add it to existing items
-          if (!hasMealType) {
-            existingCartItems.add(cartItem);
-          }
-
-          // Save all cart items
-          await CartStorageService.saveCartItems(existingCartItems);
-
-          // Update meal selection manager
-          if (widget.mealType == 'breakfast') {
-            MealSelectionManager.hasBreakfastInCart = true;
-          } else if (widget.mealType == 'lunch') {
-            MealSelectionManager.hasLunchInCart = true;
-          }
-        }
-
-        // Navigate to home page
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => MainScreen()),
-          (route) => false,
-        );
+        // Pop the current screen to return to the previous screen (Cart Screen)
+        Navigator.pop(context);
         return false;
       },
       child: Scaffold(
@@ -1408,12 +1364,8 @@ class _ManageStudentProfileScreenState
                 }
               }
 
-              // Navigate to home page
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => MainScreen()),
-                (route) => false,
-              );
+              // Pop the current screen to return to the previous screen (Cart Screen)
+              Navigator.pop(context);
             },
           ),
         ),
