@@ -567,8 +567,10 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
                       _buildDetailRow(
                         'Meal Name',
                         plan.mealName.isNotEmpty
-                            ? plan.mealName[0].toUpperCase() +
-                                plan.mealName.substring(1)
+                            ? _strictMealName(plan.mealName, plan.planType)[0]
+                                    .toUpperCase() +
+                                _strictMealName(plan.mealName, plan.planType)
+                                    .substring(1)
                             : '',
                       ),
                       _buildDetailRow(
@@ -701,29 +703,29 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
 
   String _getDeliveryDaysText(Subscription plan) {
     if (plan.selectedWeekdays.isEmpty) {
-      return "Monday to Friday";
+      return "Mon to Fri"; // Default for non-custom plans
     }
 
-    final weekdayNames = [
+    final weekdayShortNames = [
       '',
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun'
     ];
 
     final List<String> selectedDays = [];
     for (int day in plan.selectedWeekdays) {
       if (day >= 1 && day <= 7) {
-        selectedDays.add(weekdayNames[day]);
+        selectedDays.add(weekdayShortNames[day]);
       }
     }
 
     if (selectedDays.isEmpty) {
-      return "Monday to Friday"; // Fallback
+      return "Mon to Fri"; // Fallback if custom days are somehow empty
     }
 
     return selectedDays.join(', ');

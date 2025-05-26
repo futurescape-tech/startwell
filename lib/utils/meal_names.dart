@@ -25,7 +25,18 @@ class MealNames {
 }
 
 String normalizeMealName(String name, String mealType) {
-  final n = name.trim().toLowerCase();
+  String cleanedName = name.trim().toLowerCase();
+
+  // Remove redundant suffixes based on mealType
+  if (mealType == 'breakfast' && cleanedName.endsWith(' breakfast')) {
+    cleanedName =
+        cleanedName.substring(0, cleanedName.length - ' breakfast'.length);
+  } else if (mealType == 'lunch' && cleanedName.endsWith(' lunch')) {
+    cleanedName =
+        cleanedName.substring(0, cleanedName.length - ' lunch'.length);
+  }
+
+  final n = cleanedName;
   if (mealType == 'breakfast' && MealNames.breakfastMeals.contains(n)) return n;
   if (mealType == 'lunch' && MealNames.lunchMeals.contains(n)) return n;
   // fallback

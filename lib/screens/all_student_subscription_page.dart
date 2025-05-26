@@ -8,6 +8,7 @@ import 'package:startwell/types/subscription_types.dart';
 import 'package:startwell/screens/active_plan_details_page.dart';
 import 'package:startwell/screens/remaining_meal_details_page.dart';
 import 'package:startwell/widgets/common/gradient_app_bar.dart';
+import 'package:intl/intl.dart';
 
 class AllStudentSubscriptionPage extends StatelessWidget {
   final List<Student> students;
@@ -93,8 +94,6 @@ class AllStudentSubscriptionPage extends StatelessWidget {
 
   Widget _buildActivePlanCard(
       BuildContext context, Student student, List<SubscriptionPlanData> plans) {
-    final int planCount = plans.length;
-
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -102,110 +101,146 @@ class AllStudentSubscriptionPage extends StatelessWidget {
       elevation: 4,
       shadowColor: AppTheme.deepPurple.withOpacity(0.15),
       margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () {
-          // Add haptic feedback for better tactile response
-          HapticFeedback.lightImpact();
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ActivePlanDetailsPage(studentId: student.id),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: AppTheme.offWhite,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: AppTheme.offWhite,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.calendar_month,
+                      color: Colors.green,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      student.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textDark,
                       ),
-                    ],
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.calendar_month,
-                    color: Colors.green,
-                    size: 24,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Active',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Display each plan individually
+              for (var plan in plans)
+                Padding(
+                  padding:
+                      const EdgeInsets.only(bottom: 8.0), // Space between plans
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        student.name,
+                        plan.planType, // Display the explicit plan type
                         style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                           color: AppTheme.textDark,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        planCount == 1
-                            ? '1 Active Plan'
-                            : '$planCount Active Plans',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: AppTheme.textMedium,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Start Date:',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: AppTheme.textMedium,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('dd MMM yyyy').format(plan
+                                .subscription.startDate), // Display start date
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'End Date:',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: AppTheme.textMedium,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('dd MMM yyyy').format(
+                                plan.subscription.endDate), // Display end date
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Active',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey.shade600,
-                ),
-              ],
-            ),
+            ],
           ),
         ),
       ),

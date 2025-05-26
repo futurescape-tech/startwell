@@ -319,6 +319,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         ),
       ),
     );
+    log("navigating to the next screen witht the following data: $planType, ${widget.isCustomPlan}, ${widget.selectedWeekdays}, ${widget.startDate}, ${widget.endDate}, ${widget.mealDates}, ${widget.totalAmount}, ${widget.selectedMeals}, ${widget.isExpressOrder}, ${widget.selectedStudent}, ${widget.mealType}, ${widget.breakfastPreOrderDate}, ${widget.lunchPreOrderDate}, ${widget.isPreOrder}, ${widget.selectedPlanType}, ${widget.deliveryMode}, ${widget.breakfastDeliveryMode}, ${widget.lunchDeliveryMode}, ${widget.breakfastStartDate}, ${widget.breakfastEndDate}, ${widget.breakfastMealDates}, ${widget.breakfastSelectedMeals}, ${widget.breakfastAmount}, ${widget.breakfastPlanType}, ${widget.breakfastSelectedWeekdays}, ${widget.lunchStartDate}, ${widget.lunchEndDate}, ${widget.lunchMealDates}, ${widget.lunchSelectedMeals}, ${widget.lunchAmount}, ${widget.lunchPlanType}, ${widget.lunchSelectedWeekdays}, ${widget.promoCode}, ${widget.promoDiscount}, ${widget.preOrderStartDate}, ${widget.preOrderEndDate}");
   }
 
   @override

@@ -167,24 +167,33 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   String _getPlanTypeDisplay(Subscription plan) {
     String planPeriod;
-    final days = plan.endDate.difference(plan.startDate).inDays;
 
-    if (days <= 1) {
+    // Prioritize checking for Single Day duration enum
+    if (plan.duration == SubscriptionDuration.singleDay) {
       planPeriod = "Single Day";
-    } else if (days <= 7) {
-      planPeriod = "Weekly";
-    } else if (days <= 31) {
-      planPeriod = "Monthly";
-    } else if (days <= 90) {
-      planPeriod = "Quarterly";
-    } else if (days <= 180) {
-      planPeriod = "Half-Yearly";
     } else {
-      planPeriod = "Annual";
+      // Calculate the number of *calendar days* the plan spans.
+      final int durationInDays =
+          plan.endDate.difference(plan.startDate).inDays + 1;
+
+      if (durationInDays <= 7) {
+        planPeriod = "Weekly";
+      } else if (durationInDays <= 31) {
+        planPeriod = "Monthly"; // Approximation for a month
+      } else if (durationInDays <= 90) {
+        planPeriod = "Quarterly"; // Approximation for 3 months
+      } else if (durationInDays <= 180) {
+        planPeriod = "Half-Yearly"; // Approximation for 6 months
+      } else if (durationInDays <= 365) {
+        // Approximation for a year
+        planPeriod = "Annual";
+      } else {
+        planPeriod = "Long Term"; // For plans longer than a year
+      }
     }
 
     final mealType = plan.planType == 'breakfast' ? 'Breakfast' : 'Lunch';
-    return "$planPeriod $mealType";
+    return "$planPeriod $mealType Plan";
   }
 
   String _getMonthName(int month) {
