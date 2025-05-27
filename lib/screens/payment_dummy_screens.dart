@@ -36,6 +36,8 @@ class PhonePeDummyScreen extends StatefulWidget {
   final List<bool>? lunchSelectedWeekdays;
   final DateTime? preOrderStartDate;
   final DateTime? preOrderEndDate;
+  final String? breakfastPlanType;
+  final String? lunchPlanType;
 
   const PhonePeDummyScreen({
     Key? key,
@@ -58,6 +60,8 @@ class PhonePeDummyScreen extends StatefulWidget {
     this.lunchSelectedWeekdays,
     this.preOrderStartDate,
     this.preOrderEndDate,
+    this.breakfastPlanType,
+    this.lunchPlanType,
   }) : super(key: key);
 
   @override
@@ -324,14 +328,97 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
         final isBoth = (widget.mealType == 'both') ||
             (widget.breakfastPreOrderDate != null &&
                 widget.lunchPreOrderDate != null);
+
+        // Store comprehensive subscription data for My Subscription screen
         if (isBoth) {
+          // Store separate breakfast and lunch subscription data
           final double breakfastTotal = widget.totalAmount / 2;
           final double lunchTotal = widget.totalAmount / 2;
+
+          // Store breakfast subscription data
+          final breakfastSubscriptionData = {
+            'studentId': studentId,
+            'planType': 'breakfast',
+            'mealType': 'breakfast',
+            'planDisplayName':
+                widget.breakfastPlanType ?? 'Monthly Breakfast Plan',
+            'startDate': (widget.breakfastPreOrderDate ?? widget.startDate)
+                .toIso8601String(),
+            'endDate':
+                (widget.preOrderEndDate ?? widget.endDate).toIso8601String(),
+            'totalAmount': breakfastTotal,
+            'deliveryMode':
+                widget.breakfastDeliveryMode ?? 'Mon, Tue, Wed, Thu, Fri',
+            'selectedWeekdays': _selectedWeekdaysToIndices(
+                widget.breakfastSelectedWeekdays ?? widget.selectedWeekdays),
+            'mealPreference': breakfastMeal?.name ?? 'Breakfast of the Day',
+            'isActive': true,
+            'subscriptionId': 'breakfast-$studentId',
+            'timestamp': DateTime.now().toIso8601String(),
+          };
+
+          // Store lunch subscription data
+          final lunchSubscriptionData = {
+            'studentId': studentId,
+            'planType': 'lunch',
+            'mealType': 'lunch',
+            'planDisplayName': widget.lunchPlanType ?? 'Monthly Lunch Plan',
+            'startDate': (widget.lunchPreOrderDate ?? widget.startDate)
+                .toIso8601String(),
+            'endDate':
+                (widget.preOrderEndDate ?? widget.endDate).toIso8601String(),
+            'totalAmount': lunchTotal,
+            'deliveryMode': widget.lunchDeliveryMode ?? 'Tue, Thu',
+            'selectedWeekdays': _selectedWeekdaysToIndices(
+                widget.lunchSelectedWeekdays ?? widget.selectedWeekdays),
+            'mealPreference': lunchMeal?.name ?? 'Lunch of the Day',
+            'isActive': true,
+            'subscriptionId': 'lunch-$studentId',
+            'timestamp': DateTime.now().toIso8601String(),
+          };
+
+          // Save breakfast subscription
+          await prefs.setString(
+              'subscription_data_${studentId}_breakfast-$studentId',
+              jsonEncode(breakfastSubscriptionData));
           await prefs.setDouble(
               'order_total_${studentId}_breakfast-$studentId', breakfastTotal);
+
+          // Save lunch subscription
+          await prefs.setString(
+              'subscription_data_${studentId}_lunch-$studentId',
+              jsonEncode(lunchSubscriptionData));
           await prefs.setDouble(
               'order_total_${studentId}_lunch-$studentId', lunchTotal);
-          // Store start/end/delivery for each plan
+
+          // Store combined plan details for cart/order summary reference
+          final combinedPlanDetails = {
+            'selectedPlanType': 'both',
+            'deliveryMode': 'Combined',
+            'mealType': 'both',
+            'hasBreakfastInCart': true,
+            'hasLunchInCart': true,
+            'breakfastDeliveryMode':
+                widget.breakfastDeliveryMode ?? 'Mon, Tue, Wed, Thu, Fri',
+            'lunchDeliveryMode': widget.lunchDeliveryMode ?? 'Tue, Thu',
+            'breakfastStartDate':
+                (widget.breakfastPreOrderDate ?? widget.startDate)
+                    .toIso8601String(),
+            'breakfastEndDate':
+                (widget.preOrderEndDate ?? widget.endDate).toIso8601String(),
+            'lunchStartDate': (widget.lunchPreOrderDate ?? widget.startDate)
+                .toIso8601String(),
+            'lunchEndDate':
+                (widget.preOrderEndDate ?? widget.endDate).toIso8601String(),
+            'breakfastPlanType':
+                widget.breakfastPlanType ?? 'Monthly Breakfast Plan',
+            'lunchPlanType': widget.lunchPlanType ?? 'Monthly Lunch Plan',
+          };
+
+          await prefs.setString(
+              'selected_plan_details', jsonEncode(combinedPlanDetails));
+
+          // Store legacy format for backward compatibility
           await prefs.setString(
               'order_dates_${studentId}_breakfast-$studentId',
               jsonEncode({
@@ -354,12 +441,51 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                     widget.lunchSelectedWeekdays ?? widget.selectedWeekdays),
               }));
         } else {
+          // Single plan type
           String planId =
               (widget.planType == 'breakfast' || widget.mealType == 'breakfast')
                   ? 'breakfast-$studentId'
                   : 'lunch-$studentId';
+          String mealType =
+              (widget.planType == 'breakfast' || widget.mealType == 'breakfast')
+                  ? 'breakfast'
+                  : 'lunch';
+
+          final subscriptionData = {
+            'studentId': studentId,
+            'planType': mealType,
+            'mealType': mealType,
+            'planDisplayName': mealType == 'breakfast'
+                ? (widget.breakfastPlanType ?? 'Monthly Breakfast Plan')
+                : (widget.lunchPlanType ?? 'Monthly Lunch Plan'),
+            'startDate': (widget.breakfastPreOrderDate ??
+                    widget.lunchPreOrderDate ??
+                    widget.startDate)
+                .toIso8601String(),
+            'endDate':
+                (widget.preOrderEndDate ?? widget.endDate).toIso8601String(),
+            'totalAmount': widget.totalAmount,
+            'deliveryMode': mealType == 'breakfast'
+                ? (widget.breakfastDeliveryMode ?? 'Mon, Tue, Wed, Thu, Fri')
+                : (widget.lunchDeliveryMode ?? 'Tue, Thu'),
+            'selectedWeekdays': _selectedWeekdaysToIndices(
+                widget.breakfastSelectedWeekdays ??
+                    widget.lunchSelectedWeekdays ??
+                    widget.selectedWeekdays),
+            'mealPreference': mealType == 'breakfast'
+                ? (breakfastMeal?.name ?? 'Breakfast of the Day')
+                : (lunchMeal?.name ?? 'Lunch of the Day'),
+            'isActive': true,
+            'subscriptionId': planId,
+            'timestamp': DateTime.now().toIso8601String(),
+          };
+
+          await prefs.setString('subscription_data_${studentId}_$planId',
+              jsonEncode(subscriptionData));
           await prefs.setDouble(
               'order_total_${studentId}_$planId', widget.totalAmount);
+
+          // Store legacy format for backward compatibility
           await prefs.setString(
               'order_dates_${studentId}_$planId',
               jsonEncode({

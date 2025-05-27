@@ -407,7 +407,7 @@ class _CartScreenState extends State<CartScreen> {
       mealType: mealType,
       hasBreakfastInCart: hasBreakfastInCart,
       hasLunchInCart: hasLunchInCart,
-      // Pass individual delivery modes
+      // // Pass individual delivery modes
       breakfastDeliveryMode: breakfastDeliveryModeToSave,
       lunchDeliveryMode: lunchDeliveryModeToSave,
     );

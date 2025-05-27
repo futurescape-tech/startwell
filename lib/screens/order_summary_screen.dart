@@ -1337,22 +1337,25 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
     // Get meal name and determine which meal selection to use
     final String mealName;
     final mealType = title == "Breakfast Plan" ? 'breakfast' : 'lunch';
+
     if (title == "Breakfast Plan" &&
         widget.breakfastSelectedMeals != null &&
         widget.breakfastSelectedMeals!.isNotEmpty) {
-      mealName = normalizeMealName(
-          widget.breakfastSelectedMeals!.first.name, mealType);
+      mealName = widget.breakfastSelectedMeals!.first.name;
     } else if (title == "Lunch Plan" &&
         widget.lunchSelectedMeals != null &&
         widget.lunchSelectedMeals!.isNotEmpty) {
-      mealName =
-          normalizeMealName(widget.lunchSelectedMeals!.first.name, mealType);
+      mealName = widget.lunchSelectedMeals!.first.name;
     } else if (widget.selectedMeals.isNotEmpty) {
-      mealName = normalizeMealName(widget.selectedMeals.first.name, mealType);
+      final selectedMeal = widget.selectedMeals.firstWhere(
+          (meal) => meal.categories.contains(mealType == 'breakfast'
+              ? MealCategory.breakfast
+              : MealCategory.lunch),
+          orElse: () => widget.selectedMeals.first);
+      mealName = selectedMeal.name;
     } else {
-      mealName = mealType == 'breakfast'
-          ? MealNames.breakfastOfTheDay
-          : MealNames.lunchOfTheDay;
+      mealName =
+          mealType == 'breakfast' ? 'Breakfast of the Day' : 'Lunch of the Day';
     }
 
     return Column(

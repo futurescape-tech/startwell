@@ -15,6 +15,7 @@ import 'package:startwell/utils/meal_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/widgets/common/gradient_button.dart';
 import 'package:startwell/widgets/common/student_selector_dropdown.dart';
+import 'dart:convert';
 
 class RemainingMealDetailsPage extends StatefulWidget {
   final String studentId;
@@ -147,6 +148,15 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
       _activePlans = await subscriptionService
           .getActiveSubscriptionsForStudent(_currentStudentId);
 
+      // Get stored plan details
+      final prefs = await SharedPreferences.getInstance();
+      final planDetailsKey = 'selected_plan_details';
+      final String? storedPlanDetails = prefs.getString(planDetailsKey);
+      Map<String, dynamic>? planDetails;
+      if (storedPlanDetails != null) {
+        planDetails = json.decode(storedPlanDetails);
+      }
+
       // Fetch all meals for this student
       final mealService = MealService();
       final allMeals =
@@ -176,20 +186,42 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
               _calculateConsumedFromStorage(subscription);
 
           // Fixed calculation for consumed meals
-          // For express plans, count as 1 if any meal is consumed
-          // For regular plans, subtract cancelled meals from consumed count
           final int actualConsumedMeals = (subscription.planType == 'express')
               ? (consumedFromStorage > 0 ? 1 : 0)
               : math.max(0, consumedFromStorage - cancelledCount);
+
+          // Get plan type and dates based on meal type
+          String planType;
+          DateTime? startDate;
+          DateTime? endDate;
+
+          if (subscription.planType == 'breakfast') {
+            planType =
+                planDetails?['breakfastPlanType'] ?? subscription.planType;
+            startDate = planDetails?['breakfastStartDate'] != null
+                ? DateTime.parse(planDetails!['breakfastStartDate'])
+                : subscription.startDate;
+            endDate = planDetails?['breakfastEndDate'] != null
+                ? DateTime.parse(planDetails!['breakfastEndDate'])
+                : subscription.endDate;
+          } else {
+            planType = planDetails?['lunchPlanType'] ?? subscription.planType;
+            startDate = planDetails?['lunchStartDate'] != null
+                ? DateTime.parse(planDetails!['lunchStartDate'])
+                : subscription.startDate;
+            endDate = planDetails?['lunchEndDate'] != null
+                ? DateTime.parse(planDetails!['lunchEndDate'])
+                : subscription.endDate;
+          }
 
           _planSummaries.add({
             'subscription': subscription,
             'totalMeals': totalMeals,
             'consumed': actualConsumedMeals,
             'remaining': totalMeals - actualConsumedMeals,
-            'planType': _getPlanTypeDisplay(subscription),
-            'startDate': subscription.startDate,
-            'endDate': subscription.endDate,
+            'planType': planType,
+            'startDate': startDate,
+            'endDate': endDate,
           });
         }
 

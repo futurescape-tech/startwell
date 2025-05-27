@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:startwell/models/meal_model.dart';
+import 'package:startwell/screens/manage_student_profile_screen.dart';
 import 'package:startwell/services/meal_selection_manager.dart';
 import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/common/gradient_app_bar.dart';
-import 'package:startwell/screens/manage_student_profile_screen.dart';
 
 class AddedSubscriptionPlansScreen extends StatelessWidget {
   final MealSelectionManager selectionManager;
@@ -17,7 +16,7 @@ class AddedSubscriptionPlansScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: GradientAppBar(
+      appBar: const GradientAppBar(
         titleText: 'Added Subscription Plans',
       ),
       body: AnimatedBuilder(
@@ -145,7 +144,7 @@ class AddedSubscriptionPlansScreen extends StatelessWidget {
                               },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppTheme.purple,
-                                side: BorderSide(color: AppTheme.purple),
+                                side: const BorderSide(color: AppTheme.purple),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(50),
                                 ),

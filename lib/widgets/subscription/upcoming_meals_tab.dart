@@ -133,126 +133,206 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Get all keys that contain combined plans
-      final combinedPlanKeys = prefs
-          .getKeys()
-          .where((key) => key.startsWith('combined_subscription_'))
-          .toList();
+      // Get all subscription data keys
+      final allKeys = prefs.getKeys();
+      final subscriptionKeys =
+          allKeys.where((key) => key.startsWith('subscription_data_')).toList();
 
-      log('[upcoming_meals] Found ${combinedPlanKeys.length} combined subscription plans');
+      log('[upcoming_meals] Found ${subscriptionKeys.length} subscription data keys');
 
-      for (final key in combinedPlanKeys) {
-        final combinedJson = prefs.getString(key);
-        if (combinedJson != null) {
-          final combinedData = jsonDecode(combinedJson);
+      // Group subscriptions by student
+      final Map<String, List<Map<String, dynamic>>> combinedSubscriptions = {};
 
-          // Extract student ID to check if this combined plan belongs to the selected student
-          final String studentId = combinedData['studentId'];
+      for (final key in subscriptionKeys) {
+        try {
+          final String? subscriptionJson = prefs.getString(key);
+          if (subscriptionJson != null) {
+            final Map<String, dynamic> subscriptionData =
+                json.decode(subscriptionJson);
+            final String studentId = subscriptionData['studentId'];
 
-          // Only process if this is for the currently selected student
+            // Only include active subscriptions
+            if (subscriptionData['isActive'] == true) {
+              if (!combinedSubscriptions.containsKey(studentId)) {
+                combinedSubscriptions[studentId] = [];
+              }
+
+              // Convert stored data to subscription format
+              final subscriptionMap = {
+                'startDate': subscriptionData['startDate'],
+                'endDate': subscriptionData['endDate'],
+                'planType': subscriptionData['planType'],
+                'planDisplayName': subscriptionData['planDisplayName'],
+                'deliveryMode': subscriptionData['deliveryMode'],
+                'selectedWeekdays': subscriptionData['selectedWeekdays'],
+                'mealPreference': subscriptionData['mealPreference'],
+                'subscriptionId': subscriptionData['subscriptionId'],
+                'totalAmount': subscriptionData['totalAmount'],
+              };
+
+              combinedSubscriptions[studentId]!.add(subscriptionMap);
+              log('[upcoming_meals] Added subscription for student $studentId: ${subscriptionData['planType']}');
+            }
+          }
+        } catch (e) {
+          log('[upcoming_meals] Error parsing subscription data for key $key: $e');
+        }
+      }
+
+      // If no subscription data found, fall back to the old method
+      if (combinedSubscriptions.isEmpty) {
+        log('[upcoming_meals] No subscription data found, falling back to old method');
+        await _loadCombinedSubscriptionsOldMethod();
+        return;
+      }
+
+      // Process combined subscriptions
+      for (final studentId in combinedSubscriptions.keys) {
+        final subscriptions = combinedSubscriptions[studentId]!;
+
+        // Process each subscription
+        for (final subscription in subscriptions) {
           if (_selectedStudentId == null || _selectedStudentId == studentId) {
-            log('[upcoming_meals] Processing combined plan for student $studentId');
+            log('[upcoming_meals] Processing subscription for student $studentId');
 
             // Extract plan details
             final DateTime startDate =
-                DateTime.parse(combinedData['startDate']);
-            final DateTime endDate = DateTime.parse(combinedData['endDate']);
-            final String breakfastPlanType = combinedData['breakfastPlanType'];
-            final String lunchPlanType = combinedData['lunchPlanType'];
-            final String planId = combinedData['planId'];
-            final String? mealPreference = combinedData['mealPreference'];
+                DateTime.parse(subscription['startDate']);
+            final DateTime endDate = DateTime.parse(subscription['endDate']);
+            final String planType = subscription['planType'];
+            final String planId = subscription['subscriptionId'];
+            final List<int> selectedWeekdays =
+                List<int>.from(subscription['selectedWeekdays'] ?? []);
+            final String mealPreference =
+                subscription['mealPreference'] ?? 'Meal of the Day';
+            final String planDisplayName =
+                subscription['planDisplayName'] ?? 'Monthly Plan';
 
-            // Find the student object
-            final student = _studentsWithMealPlans.firstWhere(
-              (s) => s.id == studentId,
-              orElse: () =>
-                  Student.empty(), // Use an empty student as a fallback
+            // Create subscription object
+            final Subscription subscriptionObj = Subscription(
+              id: planId,
+              studentId: studentId,
+              planType: planType,
+              startDate: startDate,
+              endDate: endDate,
+              selectedWeekdays: selectedWeekdays,
+              mealName: mealPreference,
+              status: SubscriptionStatus.active,
+              duration: SubscriptionDuration.monthly,
+              isBreakfastPlan: planType == 'breakfast',
+              isLunchPlan: planType == 'lunch',
             );
 
-            if (student.id.isNotEmpty) {
-              // Create breakfast subscription
-              final breakfastSubscription = Subscription(
-                id: 'breakfast_$planId',
-                studentId: studentId,
-                planType: breakfastPlanType,
-                startDate: startDate,
-                endDate: endDate,
-                status: SubscriptionStatus.active,
-                mealName: _getMealServiceNameFromPreference(
-                    'breakfast', mealPreference),
-                isBreakfastPlan: true,
-                isLunchPlan: false,
-              );
-
-              // Create lunch subscription
-              final lunchSubscription = Subscription(
-                id: 'lunch_$planId',
-                studentId: studentId,
-                planType: lunchPlanType,
-                startDate: startDate,
-                endDate: endDate,
-                status: SubscriptionStatus.active,
-                mealName:
-                    _getMealServiceNameFromPreference('lunch', mealPreference),
-                isBreakfastPlan: false,
-                isLunchPlan: true,
-              );
-
-              // Add both subscriptions to active subscriptions list if not already present
-              bool breakfastExists = _activeSubscriptions.any((s) =>
-                  s.id == breakfastSubscription.id ||
-                  (s.studentId == studentId && s.isBreakfastPlan));
-
-              bool lunchExists = _activeSubscriptions.any((s) =>
-                  s.id == lunchSubscription.id ||
-                  (s.studentId == studentId && s.isLunchPlan));
-
-              if (!breakfastExists) {
-                _activeSubscriptions.add(breakfastSubscription);
-                log('[upcoming_meals] Added breakfast subscription for student $studentId');
-              }
-
-              if (!lunchExists) {
-                _activeSubscriptions.add(lunchSubscription);
-                log('[upcoming_meals] Added lunch subscription for student $studentId');
-              }
-
-              // Subscriptions are now in _activeSubscriptions and will be processed by _loadData
-            }
+            _activeSubscriptions.add(subscriptionObj);
+            log('[upcoming_meals] Added ${planType} subscription for student $studentId');
           }
         }
       }
 
-      // Update UI
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      log('[upcoming_meals] Total active subscriptions loaded: ${_activeSubscriptions.length}');
     } catch (e) {
       log('[upcoming_meals] Error loading combined subscriptions: $e');
+      // Fall back to old method if there's an error
+      await _loadCombinedSubscriptionsOldMethod();
     }
   }
 
-  // Helper method to get meal name from preference
-  String _getMealServiceNameFromPreference(
-      String mealType, String? preference) {
-    if (preference == null) {
-      return mealType == 'breakfast'
-          ? 'Breakfast of the Day'
-          : 'Lunch of the Day';
+  // Fallback method using the old approach
+  Future<void> _loadCombinedSubscriptionsOldMethod() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final planDetailsKey = 'selected_plan_details';
+      final String? storedPlanDetails = prefs.getString(planDetailsKey);
+      Map<String, dynamic>? planDetails;
+      if (storedPlanDetails != null) {
+        planDetails = json.decode(storedPlanDetails);
+      }
+
+      // Get all active subscriptions
+      final subscriptionService = service.SubscriptionService();
+      final allSubscriptions = await subscriptionService
+          .getActiveSubscriptionsForStudent(_selectedStudentId!);
+
+      // Group subscriptions by student
+      final Map<String, List<Map<String, dynamic>>> combinedSubscriptions = {};
+
+      for (final subscription in allSubscriptions) {
+        final studentId = subscription.studentId;
+        final planType = subscription.planType;
+
+        // Get stored dates and plan type based on meal type
+        DateTime startDate;
+        DateTime endDate;
+        String planTypeToUse;
+
+        if (planType == 'breakfast') {
+          startDate = planDetails?['breakfastStartDate'] != null
+              ? DateTime.parse(planDetails!['breakfastStartDate'])
+              : subscription.startDate;
+          endDate = planDetails?['breakfastEndDate'] != null
+              ? DateTime.parse(planDetails!['breakfastEndDate'])
+              : subscription.endDate;
+          planTypeToUse =
+              planDetails?['breakfastPlanType'] ?? subscription.planType;
+        } else {
+          startDate = planDetails?['lunchStartDate'] != null
+              ? DateTime.parse(planDetails!['lunchStartDate'])
+              : subscription.startDate;
+          endDate = planDetails?['lunchEndDate'] != null
+              ? DateTime.parse(planDetails!['lunchEndDate'])
+              : subscription.endDate;
+          planTypeToUse =
+              planDetails?['lunchPlanType'] ?? subscription.planType;
+        }
+
+        if (!combinedSubscriptions.containsKey(studentId)) {
+          combinedSubscriptions[studentId] = [];
+        }
+
+        combinedSubscriptions[studentId]!.add({
+          'startDate': startDate.toIso8601String(),
+          'endDate': endDate.toIso8601String(),
+          'planType': planTypeToUse,
+          'selectedWeekdays': subscription.selectedWeekdays,
+          'planId': subscription.id,
+        });
+      }
+
+      // Process combined subscriptions using old logic
+      for (final studentId in combinedSubscriptions.keys) {
+        final subscriptions = combinedSubscriptions[studentId]!;
+
+        for (final subscription in subscriptions) {
+          if (_selectedStudentId == null || _selectedStudentId == studentId) {
+            final DateTime startDate =
+                DateTime.parse(subscription['startDate']);
+            final DateTime endDate = DateTime.parse(subscription['endDate']);
+            final String planType = subscription['planType'];
+            final String planId = subscription['planId'];
+            final List<int> selectedWeekdays =
+                List<int>.from(subscription['selectedWeekdays']);
+
+            final Subscription subscriptionObj = Subscription(
+              id: planId,
+              studentId: studentId,
+              planType: planType,
+              startDate: startDate,
+              endDate: endDate,
+              selectedWeekdays: selectedWeekdays,
+              mealName: 'Meal of the Day',
+              status: SubscriptionStatus.active,
+              duration: SubscriptionDuration.monthly,
+              isBreakfastPlan: planType == 'breakfast',
+              isLunchPlan: planType == 'lunch',
+            );
+
+            _activeSubscriptions.add(subscriptionObj);
+          }
+        }
+      }
+    } catch (e) {
+      log('[upcoming_meals] Error in fallback method: $e');
     }
-    final lowerPref = preference.trim().toLowerCase();
-    if (mealType == 'breakfast' && lowerPref.endsWith('breakfast')) {
-      return preference.trim();
-    }
-    if (mealType == 'lunch' && lowerPref.endsWith('lunch')) {
-      return preference.trim();
-    }
-    return preference.trim() +
-        ' ' +
-        mealType.substring(0, 1).toUpperCase() +
-        mealType.substring(1);
   }
 
   // Enhance meal card to show subscription type more clearly
@@ -670,7 +750,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
         }
       } else {
         // Create a temporary SubscriptionService from the model
-        final modelService = SubscriptionService();
+        final modelService = service.SubscriptionService();
 
         _activeSubscriptions =
             await modelService.getActiveSubscriptionsForStudent(studentId);

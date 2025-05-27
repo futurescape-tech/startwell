@@ -1,12 +1,12 @@
+import 'dart:async';
+import 'dart:developer' as dev;
+
 import 'package:intl/intl.dart';
-import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/models/student_model.dart';
+import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/utils/date_utils.dart';
 import 'package:startwell/utils/meal_names.dart';
-import 'dart:async';
-import 'dart:convert';
-import 'dart:developer' as dev;
-import 'dart:math';
+import 'package:startwell/utils/plan_type_debugger.dart';
 
 enum SubscriptionStatus { active, paused, cancelled, expired }
 
@@ -186,31 +186,65 @@ class Subscription {
 
   // Get a display name for the plan type and duration
   String get planDisplayName {
-    // For Express 1-Day plans, always display a specific name
-    if (planType == 'express') {
-      return 'Express 1-Day Plan';
-    }
+    // Import the debugger utility
+    try {
+      // For Express 1-Day plans, always display a specific name
+      if (planType == 'express') {
+        dev.log(
+            '📋 Express plan detected, setting fixed display name: Express 1-Day Plan');
+        return 'Express 1-Day Plan';
+      }
 
-    // Get the meal type display name (Breakfast or Lunch)
-    String planTypeDisplay = '';
-    switch (planType) {
-      case 'breakfast':
-        planTypeDisplay = 'Breakfast';
-        break;
-      case 'lunch':
-        planTypeDisplay = 'Lunch';
-        break;
-      default:
-        planTypeDisplay = 'Meal';
-    }
+      // Get the meal type display name (Breakfast or Lunch)
+      String planTypeDisplay = '';
+      switch (planType) {
+        case 'breakfast':
+          planTypeDisplay = 'Breakfast';
+          break;
+        case 'lunch':
+          planTypeDisplay = 'Lunch';
+          break;
+        default:
+          planTypeDisplay = 'Meal';
+      }
 
-    // For custom delivery plans with specific weekdays, mention it's a custom plan
-    if (selectedWeekdays.isNotEmpty && selectedWeekdays.length < 5) {
-      return 'Custom $durationDisplayName $planTypeDisplay Plan';
-    }
+      // Add enhanced detailed logging using stack trace to identify call sites
+      StackTrace stackTrace = StackTrace.current;
+      dev.log('📋 PLAN DISPLAY NAME CALCULATION - DETAILS:',
+          stackTrace: stackTrace);
+      dev.log('📋 Subscription ID: $id');
+      dev.log('📋 Plan type: $planType');
+      dev.log('📋 Duration enum: $duration (index: ${duration.index})');
+      dev.log('📋 Duration display name: $durationDisplayName');
+      dev.log('📋 Start date: ${DateFormat('yyyy-MM-dd').format(startDate)}');
+      dev.log('📋 End date: ${DateFormat('yyyy-MM-dd').format(endDate)}');
+      dev.log('📋 Days difference: ${endDate.difference(startDate).inDays}');
+      dev.log('📋 Selected weekdays: $selectedWeekdays');
 
-    // Standard format: "Monthly Breakfast Plan", "Weekly Lunch Plan", etc.
-    return '$durationDisplayName $planTypeDisplay Plan';
+      // For custom delivery plans with specific weekdays, mention it's a custom plan
+      if (selectedWeekdays.isNotEmpty && selectedWeekdays.length < 5) {
+        final result = 'Custom $durationDisplayName $planTypeDisplay Plan';
+        dev.log(
+            '📋 Generated custom plan name: $result (Custom plan with specific weekdays)');
+        return result;
+      }
+
+      // Standard format: "Monthly Breakfast Plan", "Weekly Lunch Plan", etc.
+      final result = '$durationDisplayName $planTypeDisplay Plan';
+      dev.log('📋 Generated standard plan name: $result');
+      return result;
+    } catch (e) {
+      // If any error occurs during calculation, log the error and provide a fallback
+      dev.log('📋 ERROR calculating plan display name: $e');
+
+      // Construct a fallback name based on what we know is safe
+      String fallbackPlanType = 'Plan';
+      if (planType == 'breakfast') fallbackPlanType = 'Breakfast Plan';
+      if (planType == 'lunch') fallbackPlanType = 'Lunch Plan';
+      if (planType == 'express') return 'Express Plan';
+
+      return fallbackPlanType;
+    }
   }
 
   // Get the subscription type (duration) for display
@@ -266,7 +300,7 @@ class Subscription {
   // Override toString for better logging
   @override
   String toString() {
-    final String dateFormat = 'MM/dd';
+    const String dateFormat = 'MM/dd';
     final String formattedStart = DateFormat(dateFormat).format(startDate);
     final String formattedEnd = DateFormat(dateFormat).format(endDate);
     final String weekdays = selectedWeekdays.isEmpty
@@ -314,17 +348,15 @@ class Subscription {
         studentId = subscriptionId.split('-').sublist(1).join('-');
         dev.log("[meal swap logic] Extracted student ID: $studentId");
 
-        if (studentId != null) {
-          // Store the swapped meal for this specific date
-          _swappedMeals[normalizedDate] = newMealName;
+        // Store the swapped meal for this specific date
+        _swappedMeals[normalizedDate] = newMealName;
 
-          dev.log(
-              "[meal swap logic] Stored swapped meal for date ${DateFormat('yyyy-MM-dd').format(normalizedDate)}: $newMealName");
+        dev.log(
+            "[meal swap logic] Stored swapped meal for date ${DateFormat('yyyy-MM-dd').format(normalizedDate)}: $newMealName");
 
-          // In a real implementation, you would save this to the database
-          // For now, return true to indicate success
-          return true;
-        }
+        // In a real implementation, you would save this to the database
+        // For now, return true to indicate success
+        return true;
       }
 
       dev.log("[meal swap logic] Meal swap completed successfully");
@@ -360,22 +392,83 @@ class SubscriptionService {
       DateTime startDate, DateTime endDate) {
     final int days = endDate.difference(startDate).inDays;
 
-    // Log for debugging purposes
-    dev.log('Calculating duration: days between start and end: $days');
+    // Enhanced logging with start and end dates and stack trace to identify call sites
+    StackTrace stackTrace = StackTrace.current;
+    dev.log('🔍 DURATION CALCULATION - DETAILS:', stackTrace: stackTrace);
+    dev.log('🔍 Start date: ${DateFormat('yyyy-MM-dd').format(startDate)}');
+    dev.log('🔍 End date: ${DateFormat('yyyy-MM-dd').format(endDate)}');
+    dev.log('🔍 Days difference: $days');
 
+    SubscriptionDuration result;
+    String durationName;
+
+    // Use a more accurate day range to determine plan type
     if (days <= 1) {
-      return SubscriptionDuration.singleDay;
+      result = SubscriptionDuration.singleDay;
+      durationName = 'Single Day';
+      dev.log(
+          '🔍 Determined duration: $durationName (duration value: ${result.index})');
     } else if (days <= 7) {
-      return SubscriptionDuration.weekly;
+      result = SubscriptionDuration.weekly;
+      durationName = 'Weekly';
+      dev.log(
+          '🔍 Determined duration: $durationName (duration value: ${result.index})');
     } else if (days <= 31) {
-      return SubscriptionDuration.monthly;
-    } else if (days <= 90) {
-      return SubscriptionDuration.quarterly;
-    } else if (days <= 180) {
-      return SubscriptionDuration.halfYearly;
+      result = SubscriptionDuration.monthly;
+      durationName = 'Monthly';
+      dev.log(
+          '🔍 Determined duration: $durationName (duration value: ${result.index})');
+    } else if (days <= 100) {
+      // Adjusted from 90 to 100 for better accuracy
+      result = SubscriptionDuration.quarterly;
+      durationName = 'Quarterly';
+      dev.log(
+          '🔍 Determined duration: $durationName (duration value: ${result.index})');
+    } else if (days <= 190) {
+      // Adjusted from 180 to 190 for better accuracy
+      result = SubscriptionDuration.halfYearly;
+      durationName = 'Half-Yearly';
+      dev.log(
+          '🔍 Determined duration: $durationName (duration value: ${result.index})');
     } else {
-      return SubscriptionDuration.annual;
+      result = SubscriptionDuration.annual;
+      durationName = 'Annual';
+      dev.log(
+          '🔍 Determined duration: $durationName (duration value: ${result.index})');
     }
+
+    // Additional context about the calling function to help with debugging
+    try {
+      dev.log(
+          '🔍 Duration calculation performed for a $days-day subscription (${DateFormat('yyyy-MM-dd').format(startDate)} to ${DateFormat('yyyy-MM-dd').format(endDate)})');
+
+      // This will help identify if we're consistently within a certain range that's causing issues
+      if (days > 180 && days < 200) {
+        dev.log(
+            '⚠️ POTENTIAL ANNUAL MISCLASSIFICATION: Day count ($days) is close to the half-yearly/annual boundary');
+      }
+      if (days > 90 && days < 110) {
+        dev.log(
+            '⚠️ POTENTIAL QUARTERLY MISCLASSIFICATION: Day count ($days) is close to the quarterly/half-yearly boundary');
+      }
+
+      // Track duration patterns using the plan type debugger
+      final tmpSubscription = Subscription(
+        id: 'temp-${DateTime.now().millisecondsSinceEpoch}',
+        studentId: 'temp',
+        planType: 'tracking',
+        startDate: startDate,
+        endDate: endDate,
+        duration: result,
+      );
+
+      // Use the debugger to validate this duration calculation
+      PlanTypeDebugger().validateDuration(tmpSubscription);
+    } catch (e) {
+      dev.log('🔍 Error during additional duration logging: $e');
+    }
+
+    return result;
   }
 
   // Get meal name based on plan type and preferences with more detailed options
@@ -532,7 +625,7 @@ class SubscriptionService {
       dev.log('Lunch/Express weekdays: $lunchWeekdays');
 
       dev.log(
-          '${planType} Subscription Start Date: $subscriptionStartDate, End Date: ${student.lunchPlanEndDate}, Duration: $duration');
+          '$planType Subscription Start Date: $subscriptionStartDate, End Date: ${student.lunchPlanEndDate}, Duration: $duration');
 
       final subscription = Subscription(
         id: '$planType-${student.id}',
@@ -548,7 +641,7 @@ class SubscriptionService {
       );
 
       dev.log(
-          'Adding ${planType} subscription: ${subscription.id}, start: ${subscription.startDate}, end: ${subscription.endDate}');
+          'Adding $planType subscription: ${subscription.id}, start: ${subscription.startDate}, end: ${subscription.endDate}');
       subscriptions.add(subscription);
     }
 
@@ -574,39 +667,87 @@ class SubscriptionService {
 
   // Helper method to fix any incorrect durations in subscriptions
   void _fixSubscriptionDurations(List<Subscription> subscriptions) {
+    dev.log(
+        '🔄 Starting _fixSubscriptionDurations for ${subscriptions.length} subscriptions');
+
+    // Use the plan type debugger to track statistics
+    final debugger = PlanTypeDebugger();
+    int fixedCount = 0;
+
     for (int i = 0; i < subscriptions.length; i++) {
       final subscription = subscriptions[i];
+
+      dev.log(
+          '🔄 Checking subscription ${subscription.id} (${subscription.planType})');
+      dev.log('🔄 Current duration value: ${subscription.duration}');
+      dev.log(
+          '🔄 Start date: ${DateFormat('yyyy-MM-dd').format(subscription.startDate)}');
+      dev.log(
+          '🔄 End date: ${DateFormat('yyyy-MM-dd').format(subscription.endDate)}');
+
+      // Log the subscription details using the debugger
+      debugger.logSubscription(subscription, context: 'before_fix');
 
       // Recalculate the correct duration based on actual dates
       final int days =
           subscription.endDate.difference(subscription.startDate).inDays;
+
+      dev.log('🔄 Days difference: $days');
+
       SubscriptionDuration correctDuration;
 
       if (days <= 1) {
         correctDuration = SubscriptionDuration.singleDay;
+        dev.log('🔄 Correct duration should be: Single Day');
       } else if (days <= 7) {
         correctDuration = SubscriptionDuration.weekly;
+        dev.log('🔄 Correct duration should be: Weekly');
       } else if (days <= 31) {
         correctDuration = SubscriptionDuration.monthly;
-      } else if (days <= 90) {
+        dev.log('🔄 Correct duration should be: Monthly');
+      } else if (days <= 100) {
+        // Adjusted from 90 to 100 for better accuracy
         correctDuration = SubscriptionDuration.quarterly;
-      } else if (days <= 180) {
+        dev.log('🔄 Correct duration should be: Quarterly');
+      } else if (days <= 190) {
+        // Adjusted from 180 to 190 for better accuracy
         correctDuration = SubscriptionDuration.halfYearly;
+        dev.log('🔄 Correct duration should be: Half-Yearly');
       } else {
         correctDuration = SubscriptionDuration.annual;
+        dev.log('🔄 Correct duration should be: Annual');
       }
 
       // If duration is wrong, fix it by creating a new subscription
       if (subscription.duration != correctDuration) {
         dev.log(
-            '🔄 Fixing incorrect duration for subscription ${subscription.id}');
+            '🔄 FIXING INCORRECT DURATION for subscription ${subscription.id}');
         dev.log(
             '🔄 Original duration: ${subscription.duration}, Correct duration: $correctDuration');
+        dev.log('🔄 Original display name: ${subscription.planDisplayName}');
 
         // Create copy with corrected duration
         subscriptions[i] = subscription.copyWith(duration: correctDuration);
+
+        // Log the updated display name after correction
+        dev.log('🔄 Updated display name: ${subscriptions[i].planDisplayName}');
+
+        // Validate the fix with the debugger
+        debugger.logSubscription(subscriptions[i], context: 'after_fix');
+        fixedCount++;
+      } else {
+        dev.log(
+            '✅ Duration is already correct for subscription ${subscription.id}');
       }
     }
+
+    // Print overall statistics
+    dev.log('🔄 Completed _fixSubscriptionDurations process');
+    dev.log(
+        '🔄 Fixed $fixedCount out of ${subscriptions.length} subscriptions');
+
+    // Print plan type statistics
+    debugger.printPlanTypeStatistics();
   }
 
   // Helper method to create demo subscriptions
@@ -632,7 +773,7 @@ class SubscriptionService {
         !studentId.endsWith('2') && !studentId.endsWith('3')) {
       // Scenario 1: Student has both Breakfast and Lunch plans
       subscriptions.add(Subscription(
-        id: '1-${studentId}',
+        id: '1-$studentId',
         studentId: studentId,
         planType: 'breakfast',
         mealName: 'Indian Breakfast',
@@ -645,7 +786,7 @@ class SubscriptionService {
       ));
 
       subscriptions.add(Subscription(
-        id: '2-${studentId}',
+        id: '2-$studentId',
         studentId: studentId,
         planType: 'lunch',
         mealName: 'Jain Lunch',
@@ -659,7 +800,7 @@ class SubscriptionService {
     } else if (studentId.endsWith('2')) {
       // Scenario 2: Student has only Express plan
       subscriptions.add(Subscription(
-        id: '3-${studentId}',
+        id: '3-$studentId',
         studentId: studentId,
         planType: 'express',
         mealName: 'Express Lunch',
@@ -672,7 +813,7 @@ class SubscriptionService {
     } else {
       // Scenario 3: Student has only Breakfast plan
       subscriptions.add(Subscription(
-        id: '4-${studentId}',
+        id: '4-$studentId',
         studentId: studentId,
         planType: 'breakfast',
         mealName: 'International Breakfast',
@@ -743,8 +884,7 @@ class SubscriptionService {
       // Try to get student profile information
       Student? studentProfile;
       try {
-        studentProfile =
-            await StudentProfileService().getStudentById(finalStudentId);
+        studentProfile = StudentProfileService().getStudentById(finalStudentId);
         dev.log(
             'Found student profile: ${studentProfile?.name ?? "Not found"}');
       } catch (e) {
