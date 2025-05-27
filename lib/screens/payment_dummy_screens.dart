@@ -239,21 +239,21 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
           widget.breakfastPreOrderDate ??
               widget.lunchPreOrderDate ??
               widget.startDate,
-        widget.selectedStudent.id,
-        planType,
+          widget.selectedStudent.id,
+          planType,
           widget.preOrderEndDate ?? widget.endDate,
-        mealPreference: mealPreference,
+          mealPreference: mealPreference,
           selectedWeekdays: (widget.breakfastSelectedWeekdays?.cast<int>()) ??
               (widget.lunchSelectedWeekdays?.cast<int>()) ??
               (widget.isCustomPlan
-            ? widget.selectedWeekdays
-                .asMap()
-                .entries
-                .where((entry) => entry.value)
+                  ? widget.selectedWeekdays
+                      .asMap()
+                      .entries
+                      .where((entry) => entry.value)
                       .map((entry) => entry.key + 1)
-                .toList()
+                      .toList()
                   : null),
-      );
+        );
       }
 
       // Close loading dialog
@@ -353,7 +353,7 @@ class _PhonePeDummyScreenState extends State<PhonePeDummyScreen> {
                 'selectedWeekdays': _selectedWeekdaysToIndices(
                     widget.lunchSelectedWeekdays ?? widget.selectedWeekdays),
               }));
-      } else {
+        } else {
           String planId =
               (widget.planType == 'breakfast' || widget.mealType == 'breakfast')
                   ? 'breakfast-$studentId'
@@ -1048,12 +1048,12 @@ class _StartwellWalletDummyScreenState
         selectedWeekdays: (widget.breakfastSelectedWeekdays?.cast<int>()) ??
             (widget.lunchSelectedWeekdays?.cast<int>()) ??
             (widget.isCustomPlan
-            ? widget.selectedWeekdays
-                .asMap()
-                .entries
-                .where((entry) => entry.value)
+                ? widget.selectedWeekdays
+                    .asMap()
+                    .entries
+                    .where((entry) => entry.value)
                     .map((entry) => entry.key + 1)
-                .toList()
+                    .toList()
                 : null),
       );
 

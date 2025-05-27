@@ -13,6 +13,8 @@ class SubscriptionPlanStorageService {
     String? mealType,
     bool hasBreakfastInCart = false,
     bool hasLunchInCart = false,
+    String? breakfastDeliveryMode,
+    String? lunchDeliveryMode,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -23,6 +25,8 @@ class SubscriptionPlanStorageService {
       'hasBreakfastInCart': hasBreakfastInCart,
       'hasLunchInCart': hasLunchInCart,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'breakfastDeliveryMode': breakfastDeliveryMode,
+      'lunchDeliveryMode': lunchDeliveryMode,
     };
 
     // Save as JSON string
@@ -141,6 +145,8 @@ class SubscriptionPlanStorageService {
         'mealType': decodedDetails['mealType'],
         'hasBreakfastInCart': decodedDetails['hasBreakfastInCart'] ?? false,
         'hasLunchInCart': decodedDetails['hasLunchInCart'] ?? false,
+        'breakfastDeliveryMode': decodedDetails['breakfastDeliveryMode'],
+        'lunchDeliveryMode': decodedDetails['lunchDeliveryMode'],
       };
     } catch (e) {
       print('ERROR: Failed to parse plan details: $e');

@@ -365,13 +365,51 @@ class _CartScreenState extends State<CartScreen> {
       print('DEBUG: lunch end date: ${lunchEndDate!.toString()}');
     }
 
+    // Determine individual delivery modes for saving
+    String? breakfastDeliveryModeToSave;
+    String? lunchDeliveryModeToSave;
+
+    if (hasBreakfastInCart) {
+      final breakfastItem =
+          _cartItems.firstWhere((item) => item['mealType'] == 'breakfast');
+      // Get the actual delivery days from the breakfast item
+      List<bool> breakfastWeekdays = breakfastItem['selectedWeekdays'];
+      List<String> weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      List<String> selectedDays = [];
+      for (int i = 0; i < breakfastWeekdays.length; i++) {
+        if (breakfastWeekdays[i]) {
+          selectedDays.add(weekdayNames[i]);
+        }
+      }
+      breakfastDeliveryModeToSave = selectedDays.join(', ');
+    }
+
+    if (hasLunchInCart) {
+      final lunchItem =
+          _cartItems.firstWhere((item) => item['mealType'] == 'lunch');
+      // Get the actual delivery days from the lunch item
+      List<bool> lunchWeekdays = lunchItem['selectedWeekdays'];
+      List<String> weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      List<String> selectedDays = [];
+      for (int i = 0; i < lunchWeekdays.length; i++) {
+        if (lunchWeekdays[i]) {
+          selectedDays.add(weekdayNames[i]);
+        }
+      }
+      lunchDeliveryModeToSave = selectedDays.join(', ');
+    }
+
     // Save plan details to storage with all meal information
     await SubscriptionPlanStorageService.savePlanDetails(
       selectedPlanType: planType,
-      deliveryMode: deliveryMode,
+      deliveryMode:
+          deliveryMode, // Save the combined delivery mode for backward compatibility if needed elsewhere
       mealType: mealType,
       hasBreakfastInCart: hasBreakfastInCart,
       hasLunchInCart: hasLunchInCart,
+      // Pass individual delivery modes
+      breakfastDeliveryMode: breakfastDeliveryModeToSave,
+      lunchDeliveryMode: lunchDeliveryModeToSave,
     );
 
     // Clear cart items as they are being processed
@@ -402,12 +440,16 @@ class _CartScreenState extends State<CartScreen> {
           breakfastSelectedMeals: breakfastMeals,
           breakfastAmount: breakfastAmount,
           breakfastPlanType: breakfastPlanType,
+          breakfastDeliveryMode:
+              breakfastDeliveryModeToSave, // Pass the breakfast delivery mode
           lunchStartDate: lunchStartDate,
           lunchEndDate: lunchEndDate,
           lunchMealDates: lunchMealDates,
           lunchSelectedMeals: lunchMeals,
           lunchAmount: lunchAmount,
           lunchPlanType: lunchPlanType,
+          lunchDeliveryMode:
+              lunchDeliveryModeToSave, // Pass the lunch delivery mode
         ),
       ),
     );

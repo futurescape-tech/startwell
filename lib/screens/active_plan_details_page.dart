@@ -511,7 +511,8 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      _getPlanTypeDisplay(plan),
+                      // Include meal type in the plan display name for clarity
+                      '${isBreakfastPlan ? 'Breakfast' : 'Lunch'} Plan - ${_getPlanTypeDisplay(plan)}',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,

@@ -1123,14 +1123,12 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 Icons.restaurant_menu_outlined,
               ),
 
-              // Delivery Mode (if custom plan)
-              if (widget.isCustomPlan)
-                _buildDetailRow(
-                  "Delivery Mode",
-                  widget.deliveryMode ??
-                      'Not Specified', // Use the general delivery mode for single custom plans
-                  Icons.calendar_view_week_outlined,
-                ),
+              // Delivery Mode - Show for all plans, not just custom plans
+              _buildDetailRow(
+                "Delivery Mode",
+                _getDeliveryModeForSinglePlan(),
+                Icons.calendar_view_week_outlined,
+              ),
 
               // Start and End Dates side by side
               if (!widget.isPreOrder ||
@@ -1421,20 +1419,18 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         ),
         const SizedBox(height: 12),
 
-        // Delivery Mode (if custom plan)
-        if (widget
-            .isCustomPlan) // Keep this condition to only show for custom plans overall
-          _buildDetailRow(
-            "Delivery Mode",
-            // Use the specific delivery mode passed, or calculate from specific weekdays if available
-            // Fallback to general delivery mode if neither is provided
-            specificDeliveryMode ??
-                (specificSelectedWeekdays != null
-                    ? _getDeliveryModeForWeekdays(specificSelectedWeekdays)
-                    : widget.deliveryMode ?? 'Not Specified'),
-            Icons.calendar_view_week_outlined,
-            indent: true,
-          ),
+        // Delivery Mode - Show for all plans, not just custom plans
+        _buildDetailRow(
+          "Delivery Mode",
+          // Use the specific delivery mode passed, or calculate from specific weekdays if available
+          // Fallback to general delivery mode if neither is provided
+          specificDeliveryMode ??
+              (specificSelectedWeekdays != null
+                  ? _getDeliveryModeForWeekdays(specificSelectedWeekdays)
+                  : widget.deliveryMode ?? 'Monday to Friday'),
+          Icons.calendar_view_week_outlined,
+          indent: true,
+        ),
 
         // Start and End Dates side by side
         if (!isPreOrder || (isPreOrder && widget.preOrderStartDate == null))
@@ -1575,6 +1571,32 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
     }
 
     return PreOrderDateCalculator.getDeliveryModeText(selectedWeekdays);
+  }
+
+  // Helper method to get delivery mode for single meal plans
+  String _getDeliveryModeForSinglePlan() {
+    // First try to use the specific delivery mode based on meal type
+    if (widget.mealType == 'breakfast' &&
+        widget.breakfastDeliveryMode != null) {
+      return widget.breakfastDeliveryMode!;
+    }
+    if (widget.mealType == 'lunch' && widget.lunchDeliveryMode != null) {
+      return widget.lunchDeliveryMode!;
+    }
+
+    // Then try the general delivery mode
+    if (widget.deliveryMode != null) {
+      return widget.deliveryMode!;
+    }
+
+    // Calculate from selected weekdays if available
+    if (widget.selectedWeekdays.isNotEmpty) {
+      return PreOrderDateCalculator.getDeliveryModeText(
+          widget.selectedWeekdays);
+    }
+
+    // Default fallback
+    return 'Monday to Friday';
   }
 
   // Helper method to build detail rows with optional indentation
