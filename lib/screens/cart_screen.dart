@@ -261,7 +261,7 @@ class _CartScreenState extends State<CartScreen> {
 
       // Use plan type from one of the items (should be the same)
       planType = breakfastItem!['planType'];
-      isCustomPlan = breakfastItem['isCustomPlan'];
+      isCustomPlan = breakfastItem!['isCustomPlan'];
 
       // Store breakfast-specific data
       breakfastStartDate = breakfastItem['startDate'];
@@ -281,12 +281,12 @@ class _CartScreenState extends State<CartScreen> {
 
       // For the combined display, use outer boundaries
       startDate = breakfastStartDate!.isBefore(lunchStartDate!)
-          ? breakfastStartDate
-          : lunchStartDate;
+          ? breakfastStartDate!
+          : lunchStartDate!;
 
       endDate = breakfastEndDate!.isAfter(lunchEndDate!)
-          ? breakfastEndDate
-          : lunchEndDate;
+          ? breakfastEndDate!
+          : lunchEndDate!;
 
       // Combine weekdays if custom plan
       selectedWeekdays = List.generate(
@@ -296,10 +296,10 @@ class _CartScreenState extends State<CartScreen> {
               lunchItem!['selectedWeekdays'][index]);
 
       // Combine meal dates and remove duplicates
-      mealDates = <dynamic>{
+      mealDates = [
         ...breakfastItem['mealDates'] as List<DateTime>,
         ...lunchItem['mealDates'] as List<DateTime>
-      }.toList().cast<DateTime>();
+      ].toSet().toList();
 
       // Total amount is sum of both subscription costs
       totalAmount = breakfastItem['totalAmount'] + lunchItem['totalAmount'];
@@ -365,13 +365,51 @@ class _CartScreenState extends State<CartScreen> {
       print('DEBUG: lunch end date: ${lunchEndDate!.toString()}');
     }
 
+    // Determine individual delivery modes for saving
+    String? breakfastDeliveryModeToSave;
+    String? lunchDeliveryModeToSave;
+
+    if (hasBreakfastInCart) {
+      final breakfastItem =
+          _cartItems.firstWhere((item) => item['mealType'] == 'breakfast');
+      // Get the actual delivery days from the breakfast item
+      List<bool> breakfastWeekdays = breakfastItem['selectedWeekdays'];
+      List<String> weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      List<String> selectedDays = [];
+      for (int i = 0; i < breakfastWeekdays.length; i++) {
+        if (breakfastWeekdays[i]) {
+          selectedDays.add(weekdayNames[i]);
+        }
+      }
+      breakfastDeliveryModeToSave = selectedDays.join(', ');
+    }
+
+    if (hasLunchInCart) {
+      final lunchItem =
+          _cartItems.firstWhere((item) => item['mealType'] == 'lunch');
+      // Get the actual delivery days from the lunch item
+      List<bool> lunchWeekdays = lunchItem['selectedWeekdays'];
+      List<String> weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      List<String> selectedDays = [];
+      for (int i = 0; i < lunchWeekdays.length; i++) {
+        if (lunchWeekdays[i]) {
+          selectedDays.add(weekdayNames[i]);
+        }
+      }
+      lunchDeliveryModeToSave = selectedDays.join(', ');
+    }
+
     // Save plan details to storage with all meal information
     await SubscriptionPlanStorageService.savePlanDetails(
       selectedPlanType: planType,
-      deliveryMode: deliveryMode,
+      deliveryMode:
+          deliveryMode, // Save the combined delivery mode for backward compatibility if needed elsewhere
       mealType: mealType,
       hasBreakfastInCart: hasBreakfastInCart,
       hasLunchInCart: hasLunchInCart,
+      // // Pass individual delivery modes
+      breakfastDeliveryMode: breakfastDeliveryModeToSave,
+      lunchDeliveryMode: lunchDeliveryModeToSave,
     );
 
     // Clear cart items as they are being processed
@@ -402,12 +440,16 @@ class _CartScreenState extends State<CartScreen> {
           breakfastSelectedMeals: breakfastMeals,
           breakfastAmount: breakfastAmount,
           breakfastPlanType: breakfastPlanType,
+          breakfastDeliveryMode:
+              breakfastDeliveryModeToSave, // Pass the breakfast delivery mode
           lunchStartDate: lunchStartDate,
           lunchEndDate: lunchEndDate,
           lunchMealDates: lunchMealDates,
           lunchSelectedMeals: lunchMeals,
           lunchAmount: lunchAmount,
           lunchPlanType: lunchPlanType,
+          lunchDeliveryMode:
+              lunchDeliveryModeToSave, // Pass the lunch delivery mode
         ),
       ),
     );
@@ -440,7 +482,7 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const GradientAppBar(
+      appBar: GradientAppBar(
         titleText: 'Your Cart',
       ),
       body: Column(
@@ -591,7 +633,7 @@ class _CartScreenState extends State<CartScreen> {
                 (route) => false,
               );
             },
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back,
               color: AppTheme.purple,
             ),
@@ -705,7 +747,7 @@ class _CartScreenState extends State<CartScreen> {
     // Get primary meal (first in list)
     final Meal primaryMeal = meals.isNotEmpty
         ? meals.first
-        : const Meal(
+        : Meal(
             id: '',
             name: '',
             description: '',

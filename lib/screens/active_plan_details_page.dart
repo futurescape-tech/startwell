@@ -428,21 +428,32 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
     final bool isBreakfastPlan = plan.planType == 'breakfast';
     final bool hasStoredSummary = planSummary['hasStoredSummary'] ?? false;
 
-    // Use stored plan dates if available
+    // Get stored plan dates based on meal type
     final stored = _storedPlanDates[plan.id];
-    final DateTime startDate = stored?['startDate'] ?? plan.startDate;
-    final DateTime endDate = stored?['endDate'] ?? plan.endDate;
-    final List<int> selectedWeekdays =
-        stored?['selectedWeekdays'] ?? plan.selectedWeekdays;
-    final String deliveryMode = _getDeliveryDaysText(plan);
+    DateTime startDate;
+    DateTime endDate;
+    String deliveryMode;
+
+    if (isBreakfastPlan) {
+      startDate = stored?['breakfastStartDate'] ?? plan.startDate;
+      endDate = stored?['breakfastEndDate'] ?? plan.endDate;
+      deliveryMode =
+          stored?['breakfastDeliveryMode'] ?? _getDeliveryDaysText(plan);
+    } else {
+      startDate = stored?['lunchStartDate'] ?? plan.startDate;
+      endDate = stored?['lunchEndDate'] ?? plan.endDate;
+      deliveryMode = stored?['lunchDeliveryMode'] ?? _getDeliveryDaysText(plan);
+    }
 
     // Ensure consumed meals is never negative
     final int consumed =
         planSummary['consumed'] < 0 ? 0 : planSummary['consumed'];
     final int remaining = planSummary['totalMeals'] - consumed;
 
-    // Get plan period description
-    final String planPeriod = _getPlanPeriodDescription(plan);
+    // Get plan period description based on meal type
+    final String planPeriod = isBreakfastPlan
+        ? _getPlanPeriodDescription(plan, stored?['breakfastPlanType'])
+        : _getPlanPeriodDescription(plan, stored?['lunchPlanType']);
 
     // Format the price per meal
     final String pricePerMeal = '₹${planSummary['pricePerMeal']}';
@@ -511,7 +522,8 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      _getPlanTypeDisplay(plan),
+                      // Include meal type in the plan display name for clarity
+                      '${isBreakfastPlan ? 'Breakfast' : 'Lunch'} Plan - ${_getPlanTypeDisplay(plan)}',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -831,7 +843,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
   }
 
   // New helper method for calculating plan period description
-  String _getPlanPeriodDescription(Subscription plan) {
+  String _getPlanPeriodDescription(Subscription plan, String? planType) {
     final int days = plan.endDate.difference(plan.startDate).inDays + 1;
 
     if (plan.selectedWeekdays.isNotEmpty) {

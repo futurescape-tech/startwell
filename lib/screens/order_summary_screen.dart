@@ -1,26 +1,29 @@
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:startwell/models/meal_model.dart';
 import 'package:startwell/models/student_model.dart';
-import 'package:startwell/screens/payment_method_screen.dart';
-import 'package:startwell/themes/app_theme.dart';
-import 'package:startwell/utils/meal_names.dart';
+import 'package:startwell/services/student_profile_service.dart';
 import 'package:startwell/utils/meal_plan_validator.dart';
-import 'package:startwell/utils/pre_order_date_calculator.dart';
-import 'package:startwell/widgets/common/gradient_app_bar.dart';
+import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/common/info_banner.dart';
+import 'package:startwell/screens/payment_method_screen.dart';
 import 'package:startwell/widgets/common/veg_icon.dart';
+import 'package:startwell/widgets/common/gradient_app_bar.dart';
+import 'package:startwell/widgets/common/gradient_button.dart';
+import 'package:startwell/utils/pre_order_date_calculator.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:startwell/utils/meal_names.dart';
 
 // Extension to add capitalize method to String
 extension StringExtension on String {
   String capitalize() {
-    if (isEmpty) return this;
-    return "${this[0].toUpperCase()}${substring(1)}";
+    if (this.isEmpty) return this;
+    return "${this[0].toUpperCase()}${this.substring(1)}";
   }
 }
 
@@ -264,7 +267,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
     } else {
       // Single plan
       await prefs.setString(
-        'order_summary_${student.id}_$planType-${student.id}',
+        'order_summary_${student.id}_${planType}-${student.id}',
         jsonEncode({
           'startDate': widget.startDate.toIso8601String(),
           'endDate': widget.endDate.toIso8601String(),
@@ -316,9 +319,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         ),
       ),
     );
-    log(
-      "navigating to the next screen witht the following data: $planType, ${widget.isCustomPlan}, ${widget.selectedWeekdays}, ${widget.startDate}, ${widget.endDate}, ${widget.mealDates}, ${widget.totalAmount}, ${widget.selectedMeals}, ${widget.isExpressOrder}, ${widget.selectedStudent}, ${widget.mealType}, ${widget.breakfastPreOrderDate}, ${widget.lunchPreOrderDate}, ${widget.isPreOrder}, ${widget.selectedPlanType}, ${widget.deliveryMode}, ${widget.breakfastDeliveryMode}, ${widget.lunchDeliveryMode}, ${widget.breakfastStartDate}, ${widget.breakfastEndDate}, ${widget.breakfastMealDates}, ${widget.breakfastSelectedMeals}, ${widget.breakfastAmount}, ${widget.breakfastPlanType}, ${widget.breakfastSelectedWeekdays}, ${widget.lunchStartDate}, ${widget.lunchEndDate}, ${widget.lunchMealDates}, ${widget.lunchSelectedMeals}, ${widget.lunchAmount}, ${widget.lunchPlanType}, ${widget.lunchSelectedWeekdays}, ${widget.promoCode}, ${widget.promoDiscount}, ${widget.preOrderStartDate}, ${widget.preOrderEndDate}",
-    );
+    log("navigating to the next screen witht the following data: $planType, ${widget.isCustomPlan}, ${widget.selectedWeekdays}, ${widget.startDate}, ${widget.endDate}, ${widget.mealDates}, ${widget.totalAmount}, ${widget.selectedMeals}, ${widget.isExpressOrder}, ${widget.selectedStudent}, ${widget.mealType}, ${widget.breakfastPreOrderDate}, ${widget.lunchPreOrderDate}, ${widget.isPreOrder}, ${widget.selectedPlanType}, ${widget.deliveryMode}, ${widget.breakfastDeliveryMode}, ${widget.lunchDeliveryMode}, ${widget.breakfastStartDate}, ${widget.breakfastEndDate}, ${widget.breakfastMealDates}, ${widget.breakfastSelectedMeals}, ${widget.breakfastAmount}, ${widget.breakfastPlanType}, ${widget.breakfastSelectedWeekdays}, ${widget.lunchStartDate}, ${widget.lunchEndDate}, ${widget.lunchMealDates}, ${widget.lunchSelectedMeals}, ${widget.lunchAmount}, ${widget.lunchPlanType}, ${widget.lunchSelectedWeekdays}, ${widget.promoCode}, ${widget.promoDiscount}, ${widget.preOrderStartDate}, ${widget.preOrderEndDate}");
   }
 
   @override
@@ -328,7 +329,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         widget.planType == 'Annual';
 
     return Scaffold(
-      appBar: const GradientAppBar(
+      appBar: GradientAppBar(
         titleText: 'Order Summary',
       ),
       backgroundColor: AppTheme.offWhite,
@@ -431,7 +432,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
 
                       // Single Day Plan Info Banner (if applicable)
                       if (widget.planType == 'Single Day')
-                        const Column(
+                        Column(
                           children: [
                             InfoBanner(
                               title: "Single Day Plan",
@@ -439,7 +440,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                                   "This plan does not repeat. It is meant for one-time delivery on your selected date.",
                               type: InfoBannerType.info,
                             ),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                           ],
                         ),
 
@@ -534,7 +535,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       foreground: Paint()
-                                        ..shader = const LinearGradient(
+                                        ..shader = LinearGradient(
                                           colors: [
                                             AppTheme.purple,
                                             AppTheme.deepPurple,
@@ -1019,7 +1020,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         foreground: Paint()
-                          ..shader = const LinearGradient(
+                          ..shader = LinearGradient(
                             colors: [
                               AppTheme.purple,
                               AppTheme.deepPurple,
@@ -1122,20 +1123,18 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 Icons.restaurant_menu_outlined,
               ),
 
-              // Delivery Mode (if custom plan)
-              if (widget.isCustomPlan)
-                _buildDetailRow(
-                  "Delivery Mode",
-                  widget.deliveryMode ??
-                      'Not Specified', // Use the general delivery mode for single custom plans
-                  Icons.calendar_view_week_outlined,
-                ),
+              // Delivery Mode - Show for all plans, not just custom plans
+              _buildDetailRow(
+                "Delivery Mode",
+                _getDeliveryModeForSinglePlan(),
+                Icons.calendar_view_week_outlined,
+              ),
 
               // Start and End Dates side by side
               if (!widget.isPreOrder ||
                   (widget.isPreOrder && widget.preOrderStartDate == null))
                 Padding(
-                  padding: const EdgeInsets.only(
+                  padding: EdgeInsets.only(
                     bottom: 12,
                     left: 8,
                   ),
@@ -1290,7 +1289,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         foreground: Paint()
-                          ..shader = const LinearGradient(
+                          ..shader = LinearGradient(
                             colors: [
                               AppTheme.purple,
                               AppTheme.deepPurple,
@@ -1338,22 +1337,25 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
     // Get meal name and determine which meal selection to use
     final String mealName;
     final mealType = title == "Breakfast Plan" ? 'breakfast' : 'lunch';
+
     if (title == "Breakfast Plan" &&
         widget.breakfastSelectedMeals != null &&
         widget.breakfastSelectedMeals!.isNotEmpty) {
-      mealName = normalizeMealName(
-          widget.breakfastSelectedMeals!.first.name, mealType);
+      mealName = widget.breakfastSelectedMeals!.first.name;
     } else if (title == "Lunch Plan" &&
         widget.lunchSelectedMeals != null &&
         widget.lunchSelectedMeals!.isNotEmpty) {
-      mealName =
-          normalizeMealName(widget.lunchSelectedMeals!.first.name, mealType);
+      mealName = widget.lunchSelectedMeals!.first.name;
     } else if (widget.selectedMeals.isNotEmpty) {
-      mealName = normalizeMealName(widget.selectedMeals.first.name, mealType);
+      final selectedMeal = widget.selectedMeals.firstWhere(
+          (meal) => meal.categories.contains(mealType == 'breakfast'
+              ? MealCategory.breakfast
+              : MealCategory.lunch),
+          orElse: () => widget.selectedMeals.first);
+      mealName = selectedMeal.name;
     } else {
-      mealName = mealType == 'breakfast'
-          ? MealNames.breakfastOfTheDay
-          : MealNames.lunchOfTheDay;
+      mealName =
+          mealType == 'breakfast' ? 'Breakfast of the Day' : 'Lunch of the Day';
     }
 
     return Column(
@@ -1420,25 +1422,23 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         ),
         const SizedBox(height: 12),
 
-        // Delivery Mode (if custom plan)
-        if (widget
-            .isCustomPlan) // Keep this condition to only show for custom plans overall
-          _buildDetailRow(
-            "Delivery Mode",
-            // Use the specific delivery mode passed, or calculate from specific weekdays if available
-            // Fallback to general delivery mode if neither is provided
-            specificDeliveryMode ??
-                (specificSelectedWeekdays != null
-                    ? _getDeliveryModeForWeekdays(specificSelectedWeekdays)
-                    : widget.deliveryMode ?? 'Not Specified'),
-            Icons.calendar_view_week_outlined,
-            indent: true,
-          ),
+        // Delivery Mode - Show for all plans, not just custom plans
+        _buildDetailRow(
+          "Delivery Mode",
+          // Use the specific delivery mode passed, or calculate from specific weekdays if available
+          // Fallback to general delivery mode if neither is provided
+          specificDeliveryMode ??
+              (specificSelectedWeekdays != null
+                  ? _getDeliveryModeForWeekdays(specificSelectedWeekdays)
+                  : widget.deliveryMode ?? 'Monday to Friday'),
+          Icons.calendar_view_week_outlined,
+          indent: true,
+        ),
 
         // Start and End Dates side by side
         if (!isPreOrder || (isPreOrder && widget.preOrderStartDate == null))
           Padding(
-            padding: const EdgeInsets.only(
+            padding: EdgeInsets.only(
               bottom: 12,
               left: 8,
             ),
@@ -1449,7 +1449,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.date_range_outlined,
                         size: 18,
                         color: Colors.purple,
@@ -1488,7 +1488,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.event_outlined,
                         size: 18,
                         color: Colors.purple,
@@ -1574,6 +1574,32 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
     }
 
     return PreOrderDateCalculator.getDeliveryModeText(selectedWeekdays);
+  }
+
+  // Helper method to get delivery mode for single meal plans
+  String _getDeliveryModeForSinglePlan() {
+    // First try to use the specific delivery mode based on meal type
+    if (widget.mealType == 'breakfast' &&
+        widget.breakfastDeliveryMode != null) {
+      return widget.breakfastDeliveryMode!;
+    }
+    if (widget.mealType == 'lunch' && widget.lunchDeliveryMode != null) {
+      return widget.lunchDeliveryMode!;
+    }
+
+    // Then try the general delivery mode
+    if (widget.deliveryMode != null) {
+      return widget.deliveryMode!;
+    }
+
+    // Calculate from selected weekdays if available
+    if (widget.selectedWeekdays.isNotEmpty) {
+      return PreOrderDateCalculator.getDeliveryModeText(
+          widget.selectedWeekdays);
+    }
+
+    // Default fallback
+    return 'Monday to Friday';
   }
 
   // Helper method to build detail rows with optional indentation
@@ -1875,7 +1901,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                       elevation: 0,
                     ),
                     child: _isValidatingPromo
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -2121,7 +2147,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           foreground: Paint()
-                            ..shader = const LinearGradient(
+                            ..shader = LinearGradient(
                               colors: [
                                 AppTheme.purple,
                                 AppTheme.deepPurple,
@@ -2275,7 +2301,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                   child: Container(
                     height: 90,
                     width: 90,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: Colors.white,
                     ),
                     child: meal.imageUrl.isNotEmpty
@@ -2353,7 +2379,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 // Meal type
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.restaurant,
                       size: 14,
                       color: AppTheme.purple,

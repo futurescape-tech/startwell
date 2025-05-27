@@ -20,6 +20,8 @@ class SubscriptionPlanStorageService {
     String? mealType,
     bool hasBreakfastInCart = false,
     bool hasLunchInCart = false,
+    String? breakfastDeliveryMode,
+    String? lunchDeliveryMode,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final studentKey = '$_studentPlansKeyPrefix$studentId';
@@ -47,6 +49,8 @@ class SubscriptionPlanStorageService {
       'mealType': mealType,
       'hasBreakfastInCart': hasBreakfastInCart,
       'hasLunchInCart': hasLunchInCart,
+      'breakfastDeliveryMode': breakfastDeliveryMode,
+      'lunchDeliveryMode': lunchDeliveryMode,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
       // Consider adding a unique ID to each plan if needed for updates/deletions later
       // 'planId': UniqueKey().toString(),
@@ -168,6 +172,7 @@ class SubscriptionPlanStorageService {
       final List<Map<String, dynamic>> studentPlans = decodedList
           .map((item) => Map<String, dynamic>.from(item as Map))
           .toList();
+
       print(
           'DEBUG: Loaded ${studentPlans.length} plan details for student $studentId from SharedPreferences: $studentPlans');
       return studentPlans;

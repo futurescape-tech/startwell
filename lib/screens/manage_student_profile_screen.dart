@@ -41,6 +41,7 @@ class ManageStudentProfileScreen extends StatefulWidget {
   final double? breakfastAmount;
   final String? breakfastPlanType;
   final List<bool>? breakfastSelectedWeekdays;
+  final String? breakfastDeliveryMode;
 
   // Lunch specific data
   final DateTime? lunchStartDate;
@@ -50,6 +51,7 @@ class ManageStudentProfileScreen extends StatefulWidget {
   final double? lunchAmount;
   final String? lunchPlanType;
   final List<bool>? lunchSelectedWeekdays;
+  final String? lunchDeliveryMode;
 
   const ManageStudentProfileScreen({
     Key? key,
@@ -73,6 +75,7 @@ class ManageStudentProfileScreen extends StatefulWidget {
     this.breakfastAmount,
     this.breakfastPlanType,
     this.breakfastSelectedWeekdays,
+    this.breakfastDeliveryMode,
     this.lunchStartDate,
     this.lunchEndDate,
     this.lunchMealDates,
@@ -80,6 +83,7 @@ class ManageStudentProfileScreen extends StatefulWidget {
     this.lunchAmount,
     this.lunchPlanType,
     this.lunchSelectedWeekdays,
+    this.lunchDeliveryMode,
   }) : super(key: key);
 
   @override
@@ -1208,18 +1212,24 @@ class _ManageStudentProfileScreenState
     }
 
     // Calculate delivery modes for breakfast and lunch if custom plan
-    String? breakfastDeliveryMode;
-    String? lunchDeliveryMode;
+    String? breakfastDeliveryMode = widget.breakfastDeliveryMode;
+    String? lunchDeliveryMode = widget.lunchDeliveryMode;
 
-    if (widget.isCustomPlan == true) {
+    // Only calculate delivery modes if they weren't passed from Cart screen
+    if ((breakfastDeliveryMode == null || lunchDeliveryMode == null) &&
+        widget.isCustomPlan == true) {
       // For breakfast, use breakfast-specific weekdays if available, otherwise fallback to general
-      if (widget.breakfastSelectedWeekdays != null && isSelectingBreakfast) {
+      if (widget.breakfastSelectedWeekdays != null &&
+          isSelectingBreakfast &&
+          breakfastDeliveryMode == null) {
         breakfastDeliveryMode = PreOrderDateCalculator.getDeliveryModeText(
           widget.breakfastSelectedWeekdays!,
         );
         print(
             'DEBUG: Using breakfast-specific weekdays for delivery mode: ${widget.breakfastSelectedWeekdays}');
-      } else if (widget.selectedWeekdays != null && isSelectingBreakfast) {
+      } else if (widget.selectedWeekdays != null &&
+          isSelectingBreakfast &&
+          breakfastDeliveryMode == null) {
         breakfastDeliveryMode = PreOrderDateCalculator.getDeliveryModeText(
           widget.selectedWeekdays!,
         );
@@ -1228,23 +1238,27 @@ class _ManageStudentProfileScreenState
       }
 
       // For lunch, use lunch-specific weekdays if available, otherwise fallback to general
-      if (widget.lunchSelectedWeekdays != null && isSelectingLunch) {
+      if (widget.lunchSelectedWeekdays != null &&
+          isSelectingLunch &&
+          lunchDeliveryMode == null) {
         lunchDeliveryMode = PreOrderDateCalculator.getDeliveryModeText(
           widget.lunchSelectedWeekdays!,
         );
         print(
             'DEBUG: Using lunch-specific weekdays for delivery mode: ${widget.lunchSelectedWeekdays}');
-      } else if (widget.selectedWeekdays != null && isSelectingLunch) {
+      } else if (widget.selectedWeekdays != null &&
+          isSelectingLunch &&
+          lunchDeliveryMode == null) {
         lunchDeliveryMode = PreOrderDateCalculator.getDeliveryModeText(
           widget.selectedWeekdays!,
         );
         print(
             'DEBUG: Using general weekdays for lunch delivery mode: ${widget.selectedWeekdays}');
       }
-    } else {
-      // For regular plans, use Monday to Friday format
-      breakfastDeliveryMode = "Monday to Friday";
-      lunchDeliveryMode = "Monday to Friday";
+    } else if (breakfastDeliveryMode == null || lunchDeliveryMode == null) {
+      // For regular plans, use Monday to Friday format if not passed from Cart
+      breakfastDeliveryMode = breakfastDeliveryMode ?? "Monday to Friday";
+      lunchDeliveryMode = lunchDeliveryMode ?? "Monday to Friday";
       print('DEBUG: Using Monday to Friday for regular plan delivery modes');
     }
 
