@@ -2519,7 +2519,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
                             _buildInfoRow(
                               Icons.restaurant_menu_rounded,
                               "Plan Type",
-                              meal.displayPlanType,
+                              meal.name,
                               planIconColor,
                             ),
                             // HIDE items row
@@ -3774,6 +3774,7 @@ class _UpcomingMealsTabState extends State<UpcomingMealsTab> {
               const SizedBox(height: 2),
               Text(
                 value,
+                maxLines: 2,
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: AppTheme.textDark,

@@ -27,7 +27,16 @@ class MealNames {
 String normalizeMealName(String name, String mealType) {
   String cleanedName = name.trim().toLowerCase();
 
-  // Remove redundant suffixes based on mealType
+  // If the name already matches one of our meal types exactly, return it
+  if (mealType == 'breakfast' &&
+      MealNames.breakfastMeals.contains(cleanedName)) {
+    return cleanedName;
+  }
+  if (mealType == 'lunch' && MealNames.lunchMeals.contains(cleanedName)) {
+    return cleanedName;
+  }
+
+  // Handle cases where the meal type is appended
   if (mealType == 'breakfast' && cleanedName.endsWith(' breakfast')) {
     cleanedName =
         cleanedName.substring(0, cleanedName.length - ' breakfast'.length);
@@ -36,13 +45,24 @@ String normalizeMealName(String name, String mealType) {
         cleanedName.substring(0, cleanedName.length - ' lunch'.length);
   }
 
-  final n = cleanedName;
-  if (mealType == 'breakfast' && MealNames.breakfastMeals.contains(n)) return n;
-  if (mealType == 'lunch' && MealNames.lunchMeals.contains(n)) return n;
-  // fallback
+  // Add the meal type suffix if not present
+  if (!cleanedName.endsWith(' breakfast') && !cleanedName.endsWith(' lunch')) {
+    cleanedName = cleanedName + ' ' + mealType;
+  }
+
+  // If the normalized name is a valid meal name, return it
+  if (mealType == 'breakfast' &&
+      MealNames.breakfastMeals.contains(cleanedName)) {
+    return cleanedName;
+  }
+  if (mealType == 'lunch' && MealNames.lunchMeals.contains(cleanedName)) {
+    return cleanedName;
+  }
+
+  // If we still don't have a valid meal name, return the appropriate international meal type
   return mealType == 'breakfast'
-      ? MealNames.breakfastOfTheDay
-      : MealNames.lunchOfTheDay;
+      ? MealNames.internationalBreakfast
+      : MealNames.internationalLunch;
 }
 
 // Strict asset mapping for meal images

@@ -498,22 +498,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                               children: [
                                 SectionTitle(
                                   title: 'Your Subscriptions',
-                                  actionText:
-                                      _hasActivePlans ? 'See All' : null,
-                                  onActionPressed: _hasActivePlans
-                                      ? () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  AllStudentSubscriptionPage(
-                                                students: _students,
-                                                studentPlans: _studentPlans,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      : null,
+                                  actionText: null,
+                                  onActionPressed: null,
                                 ),
                                 SizedBox(height: isSmall ? 8 : 15),
 

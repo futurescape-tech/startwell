@@ -1079,11 +1079,22 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    gradient: AppTheme.purpleToDeepPurple,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.purple.withOpacity(0.15),
+                        AppTheme.purple.withOpacity(0.15),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.purple.withOpacity(0.3),
+                      width: 1,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.deepPurple.withOpacity(0.2),
+                        color: AppTheme.deepPurple.withOpacity(0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -1095,15 +1106,15 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                       const Icon(
                         Icons.person_outline,
                         size: 14,
-                        color: Colors.white,
+                        color: AppTheme.purple,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         widget.selectedStudent!.name,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.purple,
                         ),
                       ),
                     ],
@@ -1335,25 +1346,29 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         specificPlanType ?? widget.selectedPlanType ?? widget.planType;
 
     // Get meal name and determine which meal selection to use
-    final String mealName;
+    String mealName;
     final mealType = title == "Breakfast Plan" ? 'breakfast' : 'lunch';
+
+    // First try to get the meal name from the specific selected meals
     if (title == "Breakfast Plan" &&
         widget.breakfastSelectedMeals != null &&
         widget.breakfastSelectedMeals!.isNotEmpty) {
-      mealName = normalizeMealName(
-          widget.breakfastSelectedMeals!.first.name, mealType);
+      mealName = widget.breakfastSelectedMeals!.first.name;
     } else if (title == "Lunch Plan" &&
         widget.lunchSelectedMeals != null &&
         widget.lunchSelectedMeals!.isNotEmpty) {
-      mealName =
-          normalizeMealName(widget.lunchSelectedMeals!.first.name, mealType);
+      mealName = widget.lunchSelectedMeals!.first.name;
     } else if (widget.selectedMeals.isNotEmpty) {
-      mealName = normalizeMealName(widget.selectedMeals.first.name, mealType);
+      mealName = widget.selectedMeals.first.name;
     } else {
+      // Fallback to default meal names
       mealName = mealType == 'breakfast'
-          ? MealNames.breakfastOfTheDay
-          : MealNames.lunchOfTheDay;
+          ? MealNames.internationalBreakfast
+          : MealNames.internationalLunch;
     }
+
+    // Normalize the meal name
+    mealName = normalizeMealName(mealName, mealType);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1391,25 +1406,80 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    hideMealTitle
-                        ? (title == "Breakfast Plan" ? "Breakfast" : "Lunch")
-                        : "Selected Meal",
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textDark,
-                    ),
-                  ),
                   Text(
                     mealName,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.textDark,
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          title == "Breakfast Plan"
+                              ? Colors.pink.withOpacity(0.15)
+                              : Colors.green.withOpacity(0.15),
+                          title == "Breakfast Plan"
+                              ? Colors.pink.withOpacity(0.15)
+                              : Colors.green.withOpacity(0.15),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: title == "Breakfast Plan"
+                            ? Colors.pink.withOpacity(0.3)
+                            : Colors.green.withOpacity(0.3),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (title == "Breakfast Plan"
+                                  ? Colors.pink
+                                  : Colors.green)
+                              .withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          title == "Breakfast Plan"
+                              ? Icons.ramen_dining
+                              : Icons.flatware,
+                          size: 14,
+                          color: title == "Breakfast Plan"
+                              ? Colors.pink
+                              : Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          hideMealTitle
+                              ? (title == "Breakfast Plan"
+                                  ? "Breakfast"
+                                  : "Lunch")
+                              : "Selected Meal",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: title == "Breakfast Plan"
+                                ? Colors.pink
+                                : Colors.green,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
