@@ -323,7 +323,8 @@ class _MealPlanScreenState extends State<MealPlanScreen>
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.purple.shade50),
+                  border:
+                      Border.all(color: const Color.fromRGBO(243, 229, 245, 1)),
                 ),
                 child: TabBar(
                   controller: _tabController,
@@ -502,29 +503,29 @@ class _MealPlanScreenState extends State<MealPlanScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Description card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.pink.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.pink.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.ramen_dining, color: Colors.pink, size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Nutritious breakfast delivered to your child before school starts.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.all(16),
+          //   decoration: BoxDecoration(
+          //     color: Colors.pink.withOpacity(0.1),
+          //     borderRadius: BorderRadius.circular(16),
+          //     border: Border.all(color: Colors.pink.withOpacity(0.2)),
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       Icon(Icons.ramen_dining, color: Colors.pink, size: 24),
+          //       const SizedBox(width: 12),
+          //       Expanded(
+          //         child: Text(
+          //           'Nutritious breakfast delivered to your child before school starts.',
+          //           style: GoogleFonts.poppins(
+          //             fontSize: 14,
+          //             color: Colors.grey.shade700,
+          //           ),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           const SizedBox(height: 24),
 
           // Meal Selection Cards
@@ -580,29 +581,29 @@ class _MealPlanScreenState extends State<MealPlanScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Description card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.flatware, color: Colors.green, size: 24),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Nutritious lunch delivered to your child during school lunch hours.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.all(16),
+          //   decoration: BoxDecoration(
+          //     color: Colors.green.withOpacity(0.1),
+          //     borderRadius: BorderRadius.circular(16),
+          //     border: Border.all(color: Colors.green.withOpacity(0.2)),
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       Icon(Icons.flatware, color: Colors.green, size: 24),
+          //       const SizedBox(width: 12),
+          //       Expanded(
+          //         child: Text(
+          //           'Nutritious lunch delivered to your child during school lunch hours.',
+          //           style: GoogleFonts.poppins(
+          //             fontSize: 14,
+          //             color: Colors.grey.shade700,
+          //           ),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           const SizedBox(height: 24),
 
           // Meal Selection Cards
@@ -632,12 +633,6 @@ class _MealPlanScreenState extends State<MealPlanScreen>
     required Color tabColor,
     bool isExpressTab = false,
   }) {
-    // Check if it's the most recommended meal to highlight it
-    final bool shouldShowRecommendedTag = _shouldShowMostRecommendedTag(
-      mealType,
-      name,
-    );
-
     // Create meal data map for detail page and selection
     final mealData = {
       'name': name,
@@ -659,18 +654,25 @@ class _MealPlanScreenState extends State<MealPlanScreen>
         mealType == 'breakfast' ? 'Breakfast Meal' : 'Lunch Meal';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: Colors.grey.shade50,
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: tabColor.withOpacity(0.12),
+        //     blurRadius: 15,
+        //     spreadRadius: 2,
+        //     offset: const Offset(0, 5),
+        //   ),
+        //   BoxShadow(
+        //     color: Colors.white,
+        //     blurRadius: 5,
+        //     spreadRadius: 1,
+        //     offset: const Offset(0, -1),
+        //   ),
+        // ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -683,308 +685,341 @@ class _MealPlanScreenState extends State<MealPlanScreen>
               _showExpressTimeMessage(context);
               return;
             }
-
-            // Navigate to meal detail page
-            // Temporarily commented out to hide meal details page
-            // Navigator.push(
-            //   context,
-            //   MaterialPageRoute(
-            //     builder: (_) => MealDetailPage(
-            //       meal: mealData,
-            //       sourceTab: mealType,
-            //       isExpressTab: isExpressTab,
-            //     ),
-            //   ),
-            // );
           },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Meal image with tag
-              Stack(
-                children: [
-                  // Image
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                    child: Image.asset(
-                      imageUrl,
-                      height: 220,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 220,
-                          width: double.infinity,
-                          color: Colors.grey.shade200,
-                          child: Icon(
-                            mealType == 'breakfast'
-                                ? Icons.ramen_dining
-                                : Icons.flatware,
-                            size: 60,
-                            color: tabColor.withOpacity(0.5),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // Selected meal badge
-                  if (shouldShowRecommendedTag)
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppTheme.orange, Colors.purple],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(12),
-                            bottomLeft: Radius.circular(12),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Top Pick',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-
-              // Meal details section
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Meal image with recommended tag
+                Stack(
                   children: [
-                    // Meal name row with veg icon
-                    Row(
-                      children: [
-                        // Veg icon instead of checkbox
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            // shape: BoxShape.circle,
-                          ),
-                          child: const VegIcon(),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Meal name
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.purple.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Text(
-                            '₹$price',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepPurple,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                      ],
-                    ),
-
-                    const SizedBox(height: 0),
-
-                    // Price and meal info row
-                    Row(
-                        // children: [
-                        //   Icon(
-                        //     isVeg ? Icons.restaurant_menu : Icons.food_bank,
-                        //     color: Colors.green,
-                        //     size: 20,
+                    // Image container with shadow
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        // boxShadow: [
+                        //   BoxShadow(
+                        //     color: tabColor.withOpacity(0.2),
+                        //     blurRadius: 10,
+                        //     spreadRadius: 1,
+                        //     offset: const Offset(0, 4),
                         //   ),
-                        // const SizedBox(width: 8),
-                        // Expanded(
-                        //   child: Text(
-                        //     mealDescription,
-                        //     style: GoogleFonts.poppins(
-                        //       fontSize: 16,
-                        //       color: Colors.grey.shade700,
-                        //     ),
-                        //   ),// ),
-                        // Price with tab color
                         // ],
-                        ),
-
-                    // Annual offer section - for all tabs except Express
-                    if (!isExpressTab)
-                      Container(
-                        margin: const EdgeInsets.only(top: 16),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 0,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.purple.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.deepOrange.withOpacity(0.2),
-                                  width: 1,
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.savings_rounded,
-                                color: Colors.purple,
-                                size: 16,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: ShaderMask(
-                                shaderCallback: (bounds) =>
-                                    const LinearGradient(
-                                  colors: [
-                                    Colors.purple,
-                                    Colors.deepOrange,
-                                  ],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ).createShader(bounds),
-                                child: Text(
-                                  'Save 20% on Annual - 200 days',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors
-                                        .white, // This will be masked by the gradient
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
-
-                    // Add some space before the button
-                    const SizedBox(height: 0),
-
-                    // Choose plan button - for all cards
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: SizedBox(
-                        width: double.infinity,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          decoration: BoxDecoration(
-                            gradient: AppTheme.purpleToDeepPurple,
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              // Create a meal with proper name and image
-                              final mealCategory = mealType == 'breakfast'
-                                  ? MealCategory.breakfast
-                                  : MealCategory.lunch;
-                              final dummyMeal = Meal(
-                                id: 'dummy',
-                                name: name,
-                                description: 'Your selected meal',
-                                price: price.toDouble(),
-                                type: MealType.veg,
-                                categories: [mealCategory],
-                                imageUrl: imageUrl,
-                                ingredients: [],
-                                nutritionalInfo: {},
-                                allergyInfo: [],
-                              );
-
-                              // Create an empty selection manager
-                              final selectionManager = MealSelectionManager();
-
-                              // Navigate to subscription selection screen
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      SubscriptionSelectionScreen(
-                                    selectionManager: selectionManager,
-                                    selectedMeals: [dummyMeal],
-                                    totalMealCost: price.toDouble(),
-                                    mealType: mealType,
-                                  ),
+                          height: 80,
+                          width: 80,
+                          color: Colors.white,
+                          child: Image.asset(
+                            imageUrl,
+                            height: 80,
+                            width: 80,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 80,
+                                width: 80,
+                                color: Colors.grey.shade100,
+                                child: Icon(
+                                  mealType == 'breakfast'
+                                      ? Icons.ramen_dining
+                                      : Icons.flatware,
+                                  size: 35,
+                                  color: tabColor.withOpacity(0.5),
                                 ),
                               );
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                            ),
-                            child: Text(
-                              'Choose Plan',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+
+                // Content spacing
+                const SizedBox(width: 16),
+
+                // Right side content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Title row with price
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Veg icon and meal name in same row
+                          Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                // Veg icon
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                      // color: Colors.green.withOpacity(0.1),
+                                      // borderRadius: BorderRadius.circular(4),
+                                      // border: Border.all(
+                                      //   color: Colors.green.withOpacity(0.2),
+                                      //   width: 1,
+                                      // ),
+                                      ),
+                                  child: const VegIcon(),
+                                ),
+                                const SizedBox(width: 10),
+
+                                // Meal name
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // const SizedBox(width: 8),
+
+                          // Price at top right
+                          // Container(
+                          //   padding: const EdgeInsets.symmetric(
+                          //     horizontal: 10,
+                          //     vertical: 6,
+                          //   ),
+                          //   decoration: BoxDecoration(
+                          //     gradient: LinearGradient(
+                          //       colors: [
+                          //         AppTheme.purple.withOpacity(0.7),
+                          //         AppTheme.deepPurple.withOpacity(0.7),
+                          //       ],
+                          //       begin: Alignment.topLeft,
+                          //       end: Alignment.bottomRight,
+                          //     ),
+                          //     borderRadius: BorderRadius.circular(10),
+                          //     boxShadow: [
+                          //       BoxShadow(
+                          //         color: AppTheme.purple.withOpacity(0.3),
+                          //         blurRadius: 4,
+                          //         spreadRadius: 0,
+                          //         offset: const Offset(0, 2),
+                          //       ),
+                          //     ],
+                          //   ),
+                          //   child: Text(
+                          //     '₹$price',
+                          //     style: GoogleFonts.poppins(
+                          //       fontSize: 15,
+                          //       fontWeight: FontWeight.bold,
+                          //       color: Colors.white,
+                          //     ),
+                          //   ),
+                          // ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Annual offer badge
+                      if (!isExpressTab)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4, bottom: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.orange.withOpacity(0.1),
+                                Colors.deepOrange.withOpacity(0.2),
+                              ],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.deepOrange.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.savings_rounded,
+                                color: Colors.deepOrange,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Save 20% on Annual',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.deepOrange,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Add space before button
+                      const SizedBox(height: 8),
+
+                      // Choose Plan button
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Rupee price indicator on left side
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.grey.shade50,
+                                    Colors.grey.shade100,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.15),
+                                    blurRadius: 4,
+                                    spreadRadius: 0,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.currency_rupee,
+                                    size: 14,
+                                    color: AppTheme.purple,
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '$price',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '/meal',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const Spacer(),
+
+                            // Choose Plan button
+                            Container(
+                              width: MediaQuery.of(context).size.width * 0.28,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.purpleToDeepPurple,
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  // Create a meal with proper name and image
+                                  final mealCategory = mealType == 'breakfast'
+                                      ? MealCategory.breakfast
+                                      : MealCategory.lunch;
+                                  final dummyMeal = Meal(
+                                    id: 'dummy',
+                                    name: name,
+                                    description: 'Your selected meal',
+                                    price: price.toDouble(),
+                                    type: MealType.veg,
+                                    categories: [mealCategory],
+                                    imageUrl: imageUrl,
+                                    ingredients: [],
+                                    nutritionalInfo: {},
+                                    allergyInfo: [],
+                                  );
+
+                                  // Create an empty selection manager
+                                  final selectionManager =
+                                      MealSelectionManager();
+
+                                  // Navigate to subscription selection screen
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          SubscriptionSelectionScreen(
+                                        selectionManager: selectionManager,
+                                        selectedMeals: [dummyMeal],
+                                        totalMealCost: price.toDouble(),
+                                        mealType: mealType,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  shadowColor: Colors.transparent,
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Choose Plan',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1088,28 +1123,6 @@ class _MealPlanScreenState extends State<MealPlanScreen>
     } else {
       _showExpressTimeMessage(context);
     }
-  }
-
-  bool _shouldShowMostRecommendedTag(String mealType, String name) {
-    final String lowerName = name.toLowerCase();
-
-    // For breakfast tab - show tag on "Breakfast of the Day"
-    if (mealType == 'breakfast' && lowerName == 'breakfast of the day') {
-      return true;
-    }
-
-    // For lunch tab - show tag on "Lunch of the Day"
-    if (mealType == 'lunch' && lowerName == 'lunch of the day') {
-      return true;
-    }
-
-    // For express tab - show tag on "Lunch of the Day"
-    if (mealType == 'express 1 day lunch' && lowerName == 'lunch of the day') {
-      return true;
-    }
-
-    // Default case - don't show tag
-    return false;
   }
 
   Widget _buildDisabledTabContent(String mealType) {

@@ -153,6 +153,10 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
           await mealService.getUpcomingMealsForStudent(_currentStudentId);
       final now = DateTime.now();
 
+      // Get all cancelled meals for this student
+      final cancelledMeals =
+          await subscriptionService.getCancelledMeals(_currentStudentId);
+
       // Auto-mark today's and past meals as consumed
       for (final meal in allMeals) {
         if (meal.date.isBefore(now) || isSameDay(meal.date, now)) {
@@ -163,10 +167,10 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
       if (_activePlans.isNotEmpty) {
         // For each subscription, calculate meal summary
         for (var subscription in _activePlans) {
-          // Get all cancelled meals
-          final cancelledMeals =
-              await subscriptionService.getCancelledMeals(_currentStudentId);
-          final int cancelledCount = cancelledMeals.length;
+          // Count cancelled meals for this specific subscription
+          final cancelledForThisSubscription = cancelledMeals
+              .where((meal) => meal.subscriptionId == subscription.id)
+              .length;
 
           // Calculate meal summary based on the subscription
           final int totalMeals = _calculateTotalMeals(subscription);
@@ -180,13 +184,15 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
           // For regular plans, subtract cancelled meals from consumed count
           final int actualConsumedMeals = (subscription.planType == 'express')
               ? (consumedFromStorage > 0 ? 1 : 0)
-              : math.max(0, consumedFromStorage - cancelledCount);
+              : math.max(0, consumedFromStorage);
 
           _planSummaries.add({
             'subscription': subscription,
             'totalMeals': totalMeals,
             'consumed': actualConsumedMeals,
-            'remaining': totalMeals - actualConsumedMeals,
+            'cancelled': cancelledForThisSubscription,
+            'remaining':
+                totalMeals - actualConsumedMeals - cancelledForThisSubscription,
             'planType': _getPlanTypeDisplay(subscription),
             'startDate': subscription.startDate,
             'endDate': subscription.endDate,
@@ -231,6 +237,32 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
               'mealType': meal.planType == 'breakfast' ? 'Breakfast' : 'Lunch'
             };
           }).toList();
+
+          // Add cancelled meals to the recent history
+          final recentCancelled = cancelledMeals
+              .where((meal) =>
+                  meal.cancellationDate.isAfter(earliestStartDate) ||
+                  meal.cancellationDate.isAtSameMomentAs(earliestStartDate))
+              .take(5) // Take at most 5 cancelled meals
+              .map((meal) => {
+                    'date': meal.cancellationDate,
+                    'studentName': meal.studentName,
+                    'mealName': meal.mealName,
+                    'status': 'Cancelled',
+                    'mealType':
+                        meal.planType == 'breakfast' ? 'Breakfast' : 'Lunch'
+                  })
+              .toList();
+
+          // Combine and sort by date
+          _recentConsumption.addAll(recentCancelled);
+          _recentConsumption.sort((a, b) =>
+              (b['date'] as DateTime).compareTo(a['date'] as DateTime));
+
+          // Limit to 5 entries
+          if (_recentConsumption.length > 5) {
+            _recentConsumption = _recentConsumption.sublist(0, 5);
+          }
         } else {
           // No subscriptions have started yet
           _recentConsumption = [];
@@ -421,14 +453,41 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
   }
 
   Widget _buildPlanSummaryCard(Map<String, dynamic> planSummary, int index) {
-    // Calculate progress percentage for the progress bar
+    // Get subscription and service for cancelled meals
+    final Subscription subscription = planSummary['subscription'];
+    final services.SubscriptionService subscriptionService =
+        services.SubscriptionService();
+
+    // Calculate meal statistics
     final int total = planSummary['totalMeals'];
     final int consumed = planSummary['consumed'];
-    // Clamp progress percentage between 0 and 1
-    final double progressPercent =
-        total > 0 ? (consumed / total).clamp(0.0, 1.0) : 0.0;
+    final int remaining = planSummary['remaining'];
 
-    final Subscription subscription = planSummary['subscription'];
+    // Get cancelled meals count for this subscription
+    int cancelledCount = 0;
+    subscriptionService
+        .getCancelledMeals(subscription.studentId)
+        .then((cancelledMeals) {
+      if (mounted) {
+        setState(() {
+          // Filter by this subscription
+          cancelledCount = cancelledMeals
+              .where((meal) => meal.subscriptionId == subscription.id)
+              .length;
+
+          // Update plan summary with cancelled count
+          planSummary['cancelled'] = cancelledCount;
+        });
+      }
+    });
+
+    // If cancelled count hasn't been fetched yet, use 0
+    cancelledCount = planSummary['cancelled'] ?? 0;
+
+    // Calculate percentages for progress bar segments
+    final double consumedPercent = total > 0 ? consumed / total : 0.0;
+    final double cancelledPercent = total > 0 ? cancelledCount / total : 0.0;
+
     final bool isBreakfastPlan = subscription.planType == 'breakfast';
 
     // Use MealConstants for consistent styling with Plan Details page
@@ -466,7 +525,7 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
           children: [
             // Plan Type Header (Enhanced with icon)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               decoration: BoxDecoration(
                 color: planBgColor,
                 borderRadius: const BorderRadius.only(
@@ -477,8 +536,8 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
               child: Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 80,
+                    height: 80,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -488,7 +547,7 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
                       child: _getMealImageForPlan(subscription),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Text(
                       planSummary['planType'],
@@ -539,79 +598,25 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Section 2: Meal Statistics
-                  // _buildSectionHeader('Meal Statistics'),
-                  // const SizedBox(height: 16),
-
                   // Meal consumption metrics
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildMetric("Total", planSummary['totalMeals'],
-                          Colors.green, Icons.calendar_month),
-                      _buildMetric("Consumed", planSummary['consumed'],
-                          Colors.orange, Icons.restaurant),
-                      _buildMetric("Remaining", planSummary['remaining'],
-                          Colors.blue, Icons.inventory),
+                      _buildMetric(
+                          "Total", total, Colors.indigo, Icons.calendar_month),
+                      _buildMetric("Consumed", consumed, Colors.orange,
+                          Icons.restaurant),
+                      _buildMetric("Cancelled", cancelledCount, Colors.red,
+                          Icons.cancel_outlined),
+                      _buildMetric(
+                          "Remaining", remaining, Colors.blue, Icons.inventory),
                     ],
                   ),
 
                   const SizedBox(height: 24),
 
-                  // Progress section
-                  // _buildSectionHeader("Consumption Progress"),
-                  // const SizedBox(height: 16),
-
-                  // Progress bar with percentage
-                  Column(
-                    children: [
-                      LinearProgressIndicator(
-                        value: progressPercent,
-                        minHeight: 10,
-                        backgroundColor: Colors.grey.shade200,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          progressPercent > 0
-                              ? Colors.orange
-                              : Colors.redAccent,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (progressPercent <= 0)
-                            Text(
-                              "No meals consumed yet",
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.redAccent,
-                              ),
-                            )
-                          else
-                            Text(
-                              "${planSummary['consumed']} of ${planSummary['totalMeals']} meals consumed",
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textMedium,
-                              ),
-                            ),
-                          Text(
-                            "${(progressPercent * 100).toInt()}% Consumed",
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: progressPercent > 0
-                                  ? Colors.green.shade700
-                                  : Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  // Progress bars and legends are hidden
+                  // Intentionally left blank
                 ],
               ),
             ),
@@ -647,8 +652,8 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
     return Column(
       children: [
         Container(
-          width: 60,
-          height: 60,
+          width: 64,
+          height: 64,
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             shape: BoxShape.circle,
@@ -663,7 +668,7 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 16),
+              Icon(icon, color: color, size: 18),
               const SizedBox(height: 4),
               Text(
                 value.toString(),
@@ -832,8 +837,8 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 6),
                               leading: Container(
-                                width: 48,
-                                height: 48,
+                                width: 64,
+                                height: 64,
                                 decoration: BoxDecoration(
                                   color: isConsumed
                                       ? Colors.green.withOpacity(0.1)
@@ -847,43 +852,15 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
                                   color: isConsumed
                                       ? Colors.green
                                       : MealConstants.lunchIconColor,
+                                  size: 28,
                                 ),
                               ),
-                              title: Row(
-                                children: [
-                                  Text(
-                                    consumption['mealName'],
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.textDark,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          consumption['mealType'] == 'Breakfast'
-                                              ? MealConstants.breakfastIconColor
-                                                  .withOpacity(0.1)
-                                              : MealConstants.lunchIconColor
-                                                  .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      consumption['mealType'] ?? 'Lunch',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                        color: consumption['mealType'] ==
-                                                'Breakfast'
-                                            ? MealConstants.breakfastIconColor
-                                            : MealConstants.lunchIconColor,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              title: Text(
+                                consumption['mealName'],
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textDark,
+                                ),
                               ),
                               subtitle: Text(
                                 DateFormat('MMM dd, yyyy')
@@ -942,36 +919,36 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
         name == 'breakfast of the day') {
       return Image.asset(
           'assets/images/breakfast/breakfast of the day (most recommended).png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'indian breakfast') {
       return Image.asset('assets/images/breakfast/Indian Breakfast.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'international breakfast') {
       return Image.asset('assets/images/breakfast/International Breakfast.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'jain breakfast') {
       return Image.asset('assets/images/breakfast/Jain Breakfast.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'lunch of the day lunch' || name == 'lunch of the day') {
       return Image.asset(
           'assets/images/lunch/lunch of the day (most recommended).png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'indian lunch') {
       return Image.asset('assets/images/lunch/Indian Lunch.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'international lunch') {
       return Image.asset('assets/images/lunch/International Lunch.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'jain lunch') {
       return Image.asset('assets/images/lunch/Jain Lunch.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     // fallback to icon
     return Icon(

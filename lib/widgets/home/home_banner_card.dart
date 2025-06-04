@@ -130,62 +130,7 @@ class _HomeBannerCardState extends State<HomeBannerCard>
                     alignment: WrapAlignment.spaceBetween,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const MenuPage()),
-                            );
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isVerySmall ? 12 : 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.menu_book_rounded,
-                                  color: Colors.white,
-                                  size: subtitleFontSize * 1.2,
-                                ),
-                                SizedBox(width: isVerySmall ? 6 : 8),
-                                Text(
-                                  'Weekly Menu',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: subtitleFontSize,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                                SizedBox(width: isVerySmall ? 2 : 4),
-                                Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  color: Colors.white,
-                                  size: subtitleFontSize,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      _buildExploreButton(
-                        fontSize: buttonFontSize,
-                        height: buttonHeight,
-                      ),
+                      // Removed the _buildExploreButton to hide Order Meals button
                     ],
                   );
                 },
@@ -239,7 +184,7 @@ class _HomeBannerCardState extends State<HomeBannerCard>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'View Meals',
+                  'Order Meals',
                   style: GoogleFonts.poppins(
                     fontSize: fontSize,
                     fontWeight: FontWeight.w600,

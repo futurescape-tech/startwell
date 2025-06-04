@@ -5,9 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:startwell/models/user_profile.dart';
 import 'package:startwell/services/user_profile_service.dart';
 import 'package:startwell/themes/app_theme.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:startwell/screens/faq_page.dart';
@@ -18,7 +15,6 @@ import 'package:startwell/screens/startwell_location_page.dart';
 import 'package:startwell/screens/login_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:startwell/widgets/profile_avatar.dart';
 import 'package:startwell/utils/routes.dart';
 import 'package:flutter/rendering.dart';
 import 'package:startwell/screens/startwell_wallet_page.dart';
@@ -104,40 +100,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   }
 
   Future<void> _selectImage() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? pickedImage = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 90,
-        maxWidth: 600,
-        maxHeight: 600,
-      );
-
-      if (pickedImage == null) return;
-
-      // Save the image to app documents directory
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedImagePath = path.join(directory.path, fileName);
-
-      // Copy the file
-      final File imageFile = File(pickedImage.path);
-      await imageFile.copy(savedImagePath);
-
-      setState(() {
-        _tempProfileImagePath = savedImagePath;
-      });
-
-      // Update profile with the new image path
-      await _userProfileService.updateProfile(
-        profileImageUrl: savedImagePath,
-      );
-
-      // Reload profile
-      await _loadUserProfile();
-    } catch (e) {
-      _showErrorSnackBar('Error updating profile picture: $e');
-    }
+    // Image selection functionality has been disabled
+    return;
   }
 
   Future<void> _updateProfile() async {
@@ -761,65 +725,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         ),
         child: Column(
           children: [
-            // Profile avatar with edit button
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 10,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: ProfileAvatar(
-                    userProfile: _userProfile,
-                    radius: 50,
-                    showEditIcon: false,
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.7),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.deepPurple.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.8),
-                      width: 2,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.camera_alt,
-                          color: AppTheme.deepPurple,
-                          size: 16,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
-                        ),
-                        padding: const EdgeInsets.all(2),
-                        onPressed: _selectImage,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
             // User role badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

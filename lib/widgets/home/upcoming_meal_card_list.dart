@@ -502,7 +502,7 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
     );
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmall = screenWidth < 350;
-    final imageSize = isSmall ? 36.0 : 48.0;
+    final imageSize = isSmall ? 48.0 : 64.0;
     final titleFontSize = isSmall ? 13.0 : 16.0;
     final subtitleFontSize = isSmall ? 11.0 : 14.0;
     final dateFontSize = isSmall ? 10.0 : 13.0;
@@ -549,18 +549,27 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                             // Meal image instead of icon
                             if (asset.isNotEmpty)
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 child: Container(
-                                  width: imageSize,
-                                  height: imageSize,
-                                  color: Colors.white,
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    // boxShadow: [
+                                    //   BoxShadow(
+                                    //     color: Colors.grey.withOpacity(0.2),
+                                    //     blurRadius: 4,
+                                    //     offset: const Offset(0, 2),
+                                    //   ),
+                                    // ],
+                                  ),
                                   child: Image.asset(
                                     asset,
                                     fit: BoxFit.contain,
                                     errorBuilder: (context, error, stackTrace) {
                                       return Icon(Icons.restaurant,
                                           color: Colors.grey,
-                                          size: imageSize * 0.5);
+                                          size: imageSize * 0.6);
                                     },
                                   ),
                                 ),
@@ -568,10 +577,12 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                             else
                               Container(
                                 padding: EdgeInsets.all(imageSize * 0.2),
+                                width: imageSize,
+                                height: imageSize,
                                 decoration: BoxDecoration(
                                   color: MealConstants.getBgColor(
                                       meal.subscription.planType),
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
                                       color: MealConstants.getIconColor(
@@ -587,10 +598,10 @@ class _UpcomingMealCardListState extends State<UpcomingMealCardList> {
                                       meal.subscription.planType),
                                   color: MealConstants.getIconColor(
                                       meal.subscription.planType),
-                                  size: imageSize * 0.5,
+                                  size: imageSize * 0.6,
                                 ),
                               ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 16),
 
                             // Meal details
                             Expanded(

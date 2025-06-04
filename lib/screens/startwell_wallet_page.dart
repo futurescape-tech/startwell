@@ -517,7 +517,7 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  'Wallet Balance',
+                  'Usable Balance',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -528,7 +528,7 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
             ),
             const SizedBox(height: 20),
             Text(
-              _formatAmount(_totalBalance),
+              _formatAmount(_usableBalance),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 32,
@@ -541,8 +541,8 @@ class _StartwellWalletPageState extends State<StartwellWalletPage> {
               children: [
                 Expanded(
                   child: _buildBalanceInfo(
-                    'Usable Balance',
-                    _formatAmount(_usableBalance),
+                    'Total Wallet Balance',
+                    _formatAmount(_totalBalance),
                   ),
                 ),
                 const SizedBox(width: 10),

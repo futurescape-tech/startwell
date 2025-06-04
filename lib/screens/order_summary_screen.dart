@@ -220,13 +220,13 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
   // Navigate to Payment Methods screen
   void _navigateToPaymentMethods(BuildContext context, String planType) async {
     print("Navigating to payment screen for $planType...");
-    log("endDate: \\${widget.endDate}");
-    log("startDate: \\${widget.startDate}");
+    log("endDate: ${widget.endDate}");
+    log("startDate: ${widget.startDate}");
 
     // Create a default student if none is selected
     final student = widget.selectedStudent ??
         Student(
-          id: 'default_\${DateTime.now().millisecondsSinceEpoch}',
+          id: 'default_${DateTime.now().millisecondsSinceEpoch}',
           name: 'Guest Student',
           schoolName: 'Not Specified',
           className: 'Not Specified',
@@ -238,43 +238,127 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
           profileImageUrl: '',
         );
 
+    // Log student information for debugging
+    log("[DEBUG] Selected student details:");
+    log("  - ID: ${student.id}");
+    log("  - Name: ${student.name}");
+    log("  - School: ${student.schoolName}");
+    log("  - Class: ${student.className}");
+    log("  - Is Pre-order: ${widget.isPreOrder}");
+    if (widget.isPreOrder) {
+      log("  - Pre-order Start Date: ${widget.preOrderStartDate}");
+      log("  - Pre-order End Date: ${widget.preOrderEndDate}");
+    }
+
     // Store order summary data in SharedPreferences for each plan
     final prefs = await SharedPreferences.getInstance();
     if (_hasBothMealTypes) {
       // Store breakfast
       if (widget.breakfastStartDate != null &&
           widget.breakfastEndDate != null) {
+        final breakfastData = {
+          'studentId': student.id,
+          'startDate': widget.breakfastStartDate!.toIso8601String(),
+          'endDate': widget.breakfastEndDate!.toIso8601String(),
+          'deliveryMode': widget.breakfastDeliveryMode ?? 'Mon to Fri',
+          'isPreOrder': widget.isPreOrder,
+          'preOrderStartDate': widget.preOrderStartDate?.toIso8601String(),
+          'preOrderEndDate': widget.preOrderEndDate?.toIso8601String(),
+        };
         await prefs.setString(
           'order_summary_${student.id}_breakfast-${student.id}',
-          jsonEncode({
-            'startDate': widget.breakfastStartDate!.toIso8601String(),
-            'endDate': widget.breakfastEndDate!.toIso8601String(),
-            'deliveryMode': widget.breakfastDeliveryMode ?? 'Mon to Fri',
-          }),
+          jsonEncode(breakfastData),
         );
+        log("[DEBUG] Stored breakfast data: ${jsonEncode(breakfastData)}");
+
+        // Store student profile for upcoming meals tab
+        await prefs.setString(
+          'student_profile_${student.id}',
+          jsonEncode(student.toJson()),
+        );
+        log("[DEBUG] Stored student profile for ID: ${student.id}");
+
+        // Store student ID in recently active students list
+        List<String> recentStudentIds = [];
+        final recentStudentsKey = 'recently_active_students';
+        if (prefs.containsKey(recentStudentsKey)) {
+          final recentStudentsJson = prefs.getString(recentStudentsKey) ?? '[]';
+          recentStudentIds = List<String>.from(jsonDecode(recentStudentsJson));
+        }
+        if (!recentStudentIds.contains(student.id)) {
+          recentStudentIds.insert(0, student.id);
+          await prefs.setString(
+              recentStudentsKey, jsonEncode(recentStudentIds));
+          log("[DEBUG] Added student to recent list: ${student.id}");
+        }
       }
       // Store lunch
       if (widget.lunchStartDate != null && widget.lunchEndDate != null) {
+        final lunchData = {
+          'studentId': student.id,
+          'startDate': widget.lunchStartDate!.toIso8601String(),
+          'endDate': widget.lunchEndDate!.toIso8601String(),
+          'deliveryMode': widget.lunchDeliveryMode ?? 'Mon to Fri',
+          'isPreOrder': widget.isPreOrder,
+          'preOrderStartDate': widget.preOrderStartDate?.toIso8601String(),
+          'preOrderEndDate': widget.preOrderEndDate?.toIso8601String(),
+        };
         await prefs.setString(
           'order_summary_${student.id}_lunch-${student.id}',
-          jsonEncode({
-            'startDate': widget.lunchStartDate!.toIso8601String(),
-            'endDate': widget.lunchEndDate!.toIso8601String(),
-            'deliveryMode': widget.lunchDeliveryMode ?? 'Mon to Fri',
-          }),
+          jsonEncode(lunchData),
         );
+        log("[DEBUG] Stored lunch data: ${jsonEncode(lunchData)}");
+
+        // Store student profile for upcoming meals tab if not already stored
+        if (!prefs.containsKey('student_profile_${student.id}')) {
+          await prefs.setString(
+            'student_profile_${student.id}',
+            jsonEncode(student.toJson()),
+          );
+          log("[DEBUG] Stored student profile for ID: ${student.id}");
+        }
       }
     } else {
       // Single plan
+      final planData = {
+        'studentId': student.id,
+        'startDate': widget.startDate.toIso8601String(),
+        'endDate': widget.endDate.toIso8601String(),
+        'deliveryMode': widget.deliveryMode ?? 'Mon to Fri',
+        'isPreOrder': widget.isPreOrder,
+        'preOrderStartDate': widget.preOrderStartDate?.toIso8601String(),
+        'preOrderEndDate': widget.preOrderEndDate?.toIso8601String(),
+      };
       await prefs.setString(
         'order_summary_${student.id}_${planType}-${student.id}',
-        jsonEncode({
-          'startDate': widget.startDate.toIso8601String(),
-          'endDate': widget.endDate.toIso8601String(),
-          'deliveryMode': widget.deliveryMode ?? 'Mon to Fri',
-        }),
+        jsonEncode(planData),
       );
+      log("[DEBUG] Stored single plan data: ${jsonEncode(planData)}");
+
+      // Store student profile for upcoming meals tab
+      await prefs.setString(
+        'student_profile_${student.id}',
+        jsonEncode(student.toJson()),
+      );
+      log("[DEBUG] Stored student profile for ID: ${student.id}");
+
+      // Store student ID in recently active students list
+      List<String> recentStudentIds = [];
+      final recentStudentsKey = 'recently_active_students';
+      if (prefs.containsKey(recentStudentsKey)) {
+        final recentStudentsJson = prefs.getString(recentStudentsKey) ?? '[]';
+        recentStudentIds = List<String>.from(jsonDecode(recentStudentsJson));
+      }
+      if (!recentStudentIds.contains(student.id)) {
+        recentStudentIds.insert(0, student.id);
+        await prefs.setString(recentStudentsKey, jsonEncode(recentStudentIds));
+        log("[DEBUG] Added student to recent list: ${student.id}");
+      }
     }
+
+    // Store the last selected student ID
+    await prefs.setString('last_selected_student_id', student.id);
+    log("[DEBUG] Stored last selected student ID: ${student.id}");
 
     // Calculate final amount after promo discount, GST, and delivery charges
     double finalAmount = widget.totalAmount;
@@ -295,7 +379,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
           startDate: widget.startDate,
           endDate: widget.endDate,
           mealDates: widget.mealDates,
-          totalAmount: finalAmount, // Pass the calculated final amount
+          totalAmount: finalAmount,
           selectedMeals: widget.selectedMeals,
           isExpressOrder: widget.isExpressOrder,
           selectedStudent: student,
@@ -305,21 +389,18 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
           isPreOrder: widget.isPreOrder,
           selectedPlanType: widget.selectedPlanType,
           deliveryMode: widget.deliveryMode,
-          promoCode: _appliedPromoCode, // Pass the applied promo code
-          promoDiscount: _promoDiscount, // Pass the promo discount amount
-          // Pass specific delivery modes for breakfast and lunch
+          promoCode: _appliedPromoCode,
+          promoDiscount: _promoDiscount,
           breakfastDeliveryMode: widget.breakfastDeliveryMode,
           lunchDeliveryMode: widget.lunchDeliveryMode,
-          // Pass pre-order start and end dates
           preOrderStartDate: widget.preOrderStartDate,
           preOrderEndDate: widget.preOrderEndDate,
-          // Pass specific weekday selections for both meal types
           breakfastSelectedWeekdays: widget.breakfastSelectedWeekdays,
           lunchSelectedWeekdays: widget.lunchSelectedWeekdays,
         ),
       ),
     );
-    log("navigating to the next screen witht the following data: $planType, ${widget.isCustomPlan}, ${widget.selectedWeekdays}, ${widget.startDate}, ${widget.endDate}, ${widget.mealDates}, ${widget.totalAmount}, ${widget.selectedMeals}, ${widget.isExpressOrder}, ${widget.selectedStudent}, ${widget.mealType}, ${widget.breakfastPreOrderDate}, ${widget.lunchPreOrderDate}, ${widget.isPreOrder}, ${widget.selectedPlanType}, ${widget.deliveryMode}, ${widget.breakfastDeliveryMode}, ${widget.lunchDeliveryMode}, ${widget.breakfastStartDate}, ${widget.breakfastEndDate}, ${widget.breakfastMealDates}, ${widget.breakfastSelectedMeals}, ${widget.breakfastAmount}, ${widget.breakfastPlanType}, ${widget.breakfastSelectedWeekdays}, ${widget.lunchStartDate}, ${widget.lunchEndDate}, ${widget.lunchMealDates}, ${widget.lunchSelectedMeals}, ${widget.lunchAmount}, ${widget.lunchPlanType}, ${widget.lunchSelectedWeekdays}, ${widget.promoCode}, ${widget.promoDiscount}, ${widget.preOrderStartDate}, ${widget.preOrderEndDate}");
+    log("[DEBUG] Navigating to payment screen with student ID: ${student.id}");
   }
 
   @override
@@ -674,18 +755,32 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                                   ),
                                 ),
                               ),
-                              if (widget.breakfastPreOrderDate != null)
+                              if (widget.breakfastPreOrderDate != null) ...[
                                 _buildOrderInformationRow(
                                   'Breakfast Pre-order Start',
                                   DateFormat('dd MMM yyyy')
                                       .format(widget.breakfastPreOrderDate!),
                                 ),
-                              if (widget.lunchPreOrderDate != null)
+                                if (widget.breakfastEndDate != null)
+                                  _buildOrderInformationRow(
+                                    'Breakfast Pre-order End',
+                                    DateFormat('dd MMM yyyy')
+                                        .format(widget.breakfastEndDate!),
+                                  ),
+                              ],
+                              if (widget.lunchPreOrderDate != null) ...[
                                 _buildOrderInformationRow(
                                   'Lunch Pre-order Start',
                                   DateFormat('dd MMM yyyy')
                                       .format(widget.lunchPreOrderDate!),
                                 ),
+                                if (widget.lunchEndDate != null)
+                                  _buildOrderInformationRow(
+                                    'Lunch Pre-order End',
+                                    DateFormat('dd MMM yyyy')
+                                        .format(widget.lunchEndDate!),
+                                  ),
+                              ],
                             ],
                           ],
                         ),
@@ -960,8 +1055,14 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 preOrderDate: widget.breakfastPreOrderDate,
                 icon: Icons.breakfast_dining_outlined,
                 iconColor: Colors.amber,
-                specificStartDate: widget.breakfastStartDate,
-                specificEndDate: widget.breakfastEndDate,
+                specificStartDate:
+                    widget.isPreOrder && widget.breakfastPreOrderDate != null
+                        ? widget.breakfastPreOrderDate
+                        : widget.breakfastStartDate,
+                specificEndDate:
+                    widget.isPreOrder && widget.breakfastEndDate != null
+                        ? widget.breakfastEndDate
+                        : widget.breakfastEndDate,
                 specificMealDates: widget.breakfastMealDates,
                 specificAmount: widget.breakfastAmount,
                 specificPlanType: widget.breakfastPlanType,
@@ -981,8 +1082,14 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                 preOrderDate: widget.lunchPreOrderDate,
                 icon: Icons.lunch_dining_outlined,
                 iconColor: AppTheme.purple,
-                specificStartDate: widget.lunchStartDate,
-                specificEndDate: widget.lunchEndDate,
+                specificStartDate:
+                    widget.isPreOrder && widget.lunchPreOrderDate != null
+                        ? widget.lunchPreOrderDate
+                        : widget.lunchStartDate,
+                specificEndDate:
+                    widget.isPreOrder && widget.lunchEndDate != null
+                        ? widget.lunchEndDate
+                        : widget.lunchEndDate,
                 specificMealDates: widget.lunchMealDates,
                 specificAmount: widget.lunchAmount,
                 specificPlanType: widget.lunchPlanType,
@@ -1065,7 +1172,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
                         ? "Express Delivery"
                         : "Subscription Plan",
                     style: GoogleFonts.poppins(
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textDark,
                     ),
@@ -1142,134 +1249,64 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
               ),
 
               // Start and End Dates side by side
-              if (!widget.isPreOrder ||
-                  (widget.isPreOrder && widget.preOrderStartDate == null))
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: 12,
-                    left: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      // Start Date
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.date_range_outlined,
-                              size: 18,
-                              color: AppTheme.purple.withOpacity(0.7),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Start Date",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: AppTheme.textMedium,
-                                    ),
-                                  ),
-                                  Text(
-                                    DateFormat('d MMM yyyy')
-                                        .format(widget.startDate),
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textDark,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+              if (!widget.isPreOrder)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildDetailRow(
+                        "Start Date",
+                        DateFormat('d MMMM yyyy').format(
+                          widget.startDate,
                         ),
+                        Icons.event_available_outlined,
                       ),
-
-                      const SizedBox(width: 12),
-
-                      // End Date
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.event_outlined,
-                              size: 18,
-                              color: AppTheme.purple.withOpacity(0.7),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "End Date",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: AppTheme.textMedium,
-                                    ),
-                                  ),
-                                  Text(
-                                    DateFormat('d MMM yyyy')
-                                        .format(widget.endDate),
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textDark,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                    ),
+                    Expanded(
+                      child: _buildDetailRow(
+                        "End Date",
+                        DateFormat('d MMMM yyyy').format(
+                          widget.endDate,
                         ),
+                        Icons.event_available_outlined,
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+
+              // Pre-order dates
+              if (widget.isPreOrder) ...[
+                if (widget.breakfastPreOrderDate != null) ...[
+                  _buildDetailRow(
+                    "Pre-order From",
+                    DateFormat('d MMMM yyyy')
+                        .format(widget.breakfastPreOrderDate!),
+                    Icons.event_available_outlined,
+                    color: Colors.amber,
                   ),
-                ),
-
-              // Pre-order start and end dates (if applicable)
-              if (widget.isPreOrder && widget.preOrderStartDate != null)
-                _buildDetailRow(
-                  "Pre-order Start Date",
-                  DateFormat('d MMMM yyyy').format(widget.preOrderStartDate!),
-                  Icons.event_available_outlined,
-                  color: AppTheme.purple,
-                ),
-
-              if (widget.isPreOrder && widget.preOrderEndDate != null)
-                _buildDetailRow(
-                  "Pre-order End Date",
-                  DateFormat('d MMMM yyyy').format(widget.preOrderEndDate!),
-                  Icons.event_available_outlined,
-                  color: AppTheme.purple,
-                ),
-
-              // Pre-order date (if applicable)
-              if (widget.isPreOrder &&
-                  widget.breakfastPreOrderDate != null &&
-                  widget.preOrderStartDate == null)
-                _buildDetailRow(
-                  "Start Pre-order Date",
-                  DateFormat('d MMMM yyyy')
-                      .format(widget.breakfastPreOrderDate!),
-                  Icons.breakfast_dining_outlined,
-                  color: Colors.amber,
-                ),
-
-              if (widget.isPreOrder &&
-                  widget.lunchPreOrderDate != null &&
-                  widget.preOrderStartDate == null)
-                _buildDetailRow(
-                  "Start Pre-order Date",
-                  DateFormat('d MMMM yyyy').format(widget.lunchPreOrderDate!),
-                  Icons.lunch_dining_outlined,
-                  color: AppTheme.purple,
-                ),
+                  if (widget.breakfastEndDate != null)
+                    _buildDetailRow(
+                      "Pre-order To",
+                      DateFormat('d MMMM yyyy')
+                          .format(widget.breakfastEndDate!),
+                      Icons.event_available_outlined,
+                      color: Colors.amber,
+                    ),
+                ] else if (widget.lunchPreOrderDate != null) ...[
+                  _buildDetailRow(
+                    "Pre-order From",
+                    DateFormat('d MMMM yyyy').format(widget.lunchPreOrderDate!),
+                    Icons.event_available_outlined,
+                    color: AppTheme.purple,
+                  ),
+                  if (widget.lunchEndDate != null)
+                    _buildDetailRow(
+                      "Pre-order To",
+                      DateFormat('d MMMM yyyy').format(widget.lunchEndDate!),
+                      Icons.event_available_outlined,
+                      color: AppTheme.purple,
+                    ),
+                ],
+              ],
 
               // Total price
               Container(
@@ -1337,9 +1374,13 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
     List<bool>? specificSelectedWeekdays,
     bool hideMealTitle = false,
   }) {
-    // Use specific dates if provided, otherwise use generic ones
-    final startDate = specificStartDate ?? widget.startDate;
-    final endDate = specificEndDate ?? widget.endDate;
+    // Use pre-order dates if available in pre-order scenarios, otherwise use specific dates or generic ones
+    final startDate = isPreOrder && preOrderDate != null
+        ? preOrderDate
+        : (specificStartDate ?? widget.startDate);
+    final endDate = isPreOrder && specificEndDate != null
+        ? specificEndDate
+        : (widget.preOrderEndDate ?? widget.endDate);
     final mealDates = specificMealDates?.length ?? widget.mealDates.length;
     final totalAmount = specificAmount ?? widget.totalAmount;
     final planType =
@@ -1400,10 +1441,10 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
           children: [
             Image.asset(
               getMealImageAsset(mealName, mealType),
-              width: 48,
-              height: 48,
+              width: 80,
+              height: 80,
               fit: BoxFit.contain,
-            ),
+            ),            
             const SizedBox(width: 12),
             Expanded(
               child: Row(
@@ -1503,7 +1544,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         ),
 
         // Start and End Dates side by side
-        if (!isPreOrder || (isPreOrder && widget.preOrderStartDate == null))
+        if (!isPreOrder)
           Padding(
             padding: EdgeInsets.only(
               bottom: 12,
@@ -1593,7 +1634,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         // Pre-order start and end dates (if applicable)
         if (isPreOrder && widget.preOrderStartDate != null)
           _buildDetailRow(
-            "Pre-order Start Date",
+            "Pre-order From",
             DateFormat('d MMMM yyyy').format(widget.preOrderStartDate!),
             Icons.event_available_outlined,
             indent: true,
@@ -1602,7 +1643,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
 
         if (isPreOrder && widget.preOrderEndDate != null)
           _buildDetailRow(
-            "Pre-order End Date",
+            "Pre-order To",
             DateFormat('d MMMM yyyy').format(widget.preOrderEndDate!),
             Icons.event_available_outlined,
             indent: true,
@@ -1622,7 +1663,8 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
         // Pre-order date (if applicable)
         if (isPreOrder &&
             preOrderDate != null &&
-            widget.preOrderStartDate == null)
+            widget.preOrderStartDate == null &&
+            widget.preOrderEndDate == null) ...[
           _buildDetailRow(
             "Start Pre-order Date",
             DateFormat('d MMMM yyyy').format(preOrderDate),
@@ -1630,6 +1672,15 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen>
             indent: true,
             color: iconColor,
           ),
+          if (specificEndDate != null)
+            _buildDetailRow(
+              "End Pre-order Date",
+              DateFormat('d MMMM yyyy').format(specificEndDate),
+              Icons.event_available_outlined,
+              indent: true,
+              color: iconColor,
+            ),
+        ],
       ],
     );
   }

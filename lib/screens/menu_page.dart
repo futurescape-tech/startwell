@@ -4,7 +4,71 @@ import 'package:startwell/themes/app_theme.dart';
 import 'package:startwell/widgets/home/section_title.dart';
 
 class MenuPage extends StatelessWidget {
-  const MenuPage({Key? key}) : super(key: key);
+  final bool isDialogMode;
+  const MenuPage({Key? key, this.isDialogMode = false}) : super(key: key);
+
+  // Static method to show the menu as a dialog
+  static void showAsDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: double.maxFinite,
+            constraints: const BoxConstraints(maxHeight: 700),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  decoration: const BoxDecoration(
+                    gradient: AppTheme.purpleToDeepPurple,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Weekly Menu',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Expanded(
+                  child: MenuPage(isDialogMode: true),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +82,7 @@ class MenuPage extends StatelessWidget {
       [
         _MenuItem('Poha', isMealOfDay: true),
         _MenuItem('Upma'),
-        _MenuItem('NEW', isNew: true),
+        _MenuItem('NEW'),
       ],
       [
         _MenuItem('Idli Sambhar'),
@@ -33,7 +97,7 @@ class MenuPage extends StatelessWidget {
       [
         _MenuItem('Dhokla'),
         _MenuItem('Waffles', isMealOfDay: true),
-        _MenuItem('NEW', isNew: true),
+        _MenuItem('NEW'),
       ],
       [
         _MenuItem('Thepla', isMealOfDay: true),
@@ -68,10 +132,244 @@ class MenuPage extends StatelessWidget {
         _MenuItem('Fruit Cup'),
       ],
     ];
+
+    // Build the content widget
+    Widget contentWidget = SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Date display
+          Container(
+            margin: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: AppTheme.purple.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.purple.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.calendar_today_rounded,
+                  size: 20,
+                  color: AppTheme.purple,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '21st to 25th April',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.purple,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Breakfast Section
+          Container(
+            margin: const EdgeInsets.only(bottom: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section header
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: AppTheme.purple,
+                        width: 4,
+                      ),
+                    ),
+                  ),
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.ramen_dining,
+                        color: Colors.pink,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Breakfast',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _EnhancedMenuTable(
+                  days: days,
+                  sectionTitles: const [
+                    'Indian Breakfast',
+                    'International Breakfast',
+                    'Side',
+                  ],
+                  menu: breakfastMenu,
+                  highlightColor: orange,
+                ),
+              ],
+            ),
+          ),
+
+          // Lunch Section
+          Container(
+            margin: const EdgeInsets.only(bottom: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section header
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: AppTheme.purple,
+                        width: 4,
+                      ),
+                    ),
+                  ),
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.flatware_rounded,
+                        color: Colors.green,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Lunch',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _EnhancedMenuTable(
+                  days: days,
+                  sectionTitles: const [
+                    'Indian Lunch',
+                    'International Lunch',
+                    'Side',
+                  ],
+                  menu: lunchMenu,
+                  highlightColor: orange,
+                ),
+              ],
+            ),
+          ),
+
+          // Jain Menu Section
+          Container(
+            margin: const EdgeInsets.only(bottom: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Section header
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: BorderSide(
+                        color: AppTheme.purple,
+                        width: 4,
+                      ),
+                    ),
+                  ),
+                  padding: const EdgeInsets.only(left: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.spa_outlined,
+                        color: Colors.deepPurple,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Jain Menu',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _EnhancedMenuTable(
+                  days: days,
+                  sectionTitles: const [
+                    'Jain Breakfast',
+                    'Jain Lunch',
+                    'Side',
+                  ],
+                  menu: [
+                    [
+                      _MenuItem('Jain Poha', isMealOfDay: true),
+                      _MenuItem('Jain Dal Rice'),
+                      _MenuItem('Fruit'),
+                    ],
+                    [
+                      _MenuItem('Idli'),
+                      _MenuItem('Jain Rajma', isMealOfDay: true),
+                      _MenuItem('Salad'),
+                    ],
+                    [
+                      _MenuItem('Plain Paratha', isMealOfDay: true),
+                      _MenuItem('Jain Paneer'),
+                      _MenuItem('Yogurt'),
+                    ],
+                    [
+                      _MenuItem('Jain Dhokla'),
+                      _MenuItem('Jain Chole', isMealOfDay: true),
+                      _MenuItem('Fruit Salad'),
+                    ],
+                    [
+                      _MenuItem('Thepla', isMealOfDay: true),
+                      _MenuItem('Jain Biryani'),
+                      _MenuItem('Fresh Juice'),
+                    ],
+                  ],
+                  highlightColor: AppTheme.deepPurple,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // If in dialog mode, just return the content widget
+    if (isDialogMode) {
+      return contentWidget;
+    }
+
+    // Otherwise, return the full page
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Menu',
+          'Weekly Menu',
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -92,276 +390,12 @@ class MenuPage extends StatelessWidget {
         shadowColor: AppTheme.deepPurple.withOpacity(0.3),
       ),
       backgroundColor: AppTheme.white,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top card with title and date range
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.deepPurple.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.restaurant_menu_rounded,
-                        size: 24,
-                        color: AppTheme.purple,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Weekly Menu',
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.purple.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 16,
-                          color: AppTheme.purple,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '21st to 25th April',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.purple,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: orange.withOpacity(0.2),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.star_rounded,
-                          color: orange,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Options in Orange represent meal of the day!',
-                            style: GoogleFonts.poppins(
-                              color: orange,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Breakfast Section
-            Container(
-              margin: const EdgeInsets.only(bottom: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section header
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: AppTheme.purple,
-                          width: 4,
-                        ),
-                      ),
-                    ),
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.ramen_dining,
-                          color: Colors.pink,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Breakfast',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textDark,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: _EnhancedMenuTable(
-                      days: days,
-                      sectionTitles: const [
-                        'Indian Breakfast',
-                        'International Breakfast',
-                        'Side',
-                      ],
-                      menu: breakfastMenu,
-                      highlightColor: orange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Lunch Section
-            Container(
-              margin: const EdgeInsets.only(bottom: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section header
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: AppTheme.purple,
-                          width: 4,
-                        ),
-                      ),
-                    ),
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.flatware_rounded,
-                          color: Colors.green,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Lunch',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textDark,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: _EnhancedMenuTable(
-                      days: days,
-                      sectionTitles: const [
-                        'Indian Lunch',
-                        'International Lunch',
-                        'Side',
-                      ],
-                      menu: lunchMenu,
-                      highlightColor: orange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Footer Info Banner
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: AppTheme.purple.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppTheme.purple.withOpacity(0.1),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.purple.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'JAIN OPTIONS AVAILABLE',
-                      style: GoogleFonts.poppins(
-                        color: AppTheme.purple,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Both Indian and International meals include the standard side dish',
-                    style: GoogleFonts.poppins(
-                      color: AppTheme.textMedium,
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: contentWidget,
     );
   }
 }
 
-// Enhanced Menu Table (now horizontally scrollable)
+// Enhanced Menu Table (with fixed first column)
 class _EnhancedMenuTable extends StatelessWidget {
   final List<String> days;
   final List<String> sectionTitles;
@@ -404,134 +438,200 @@ class _EnhancedMenuTable extends StatelessWidget {
           ),
         ],
       ),
-      child: Table(
-        columnWidths: {
-          0: const FixedColumnWidth(140),
-          1: const FixedColumnWidth(120),
-          2: const FixedColumnWidth(120),
-          3: const FixedColumnWidth(120),
-          4: const FixedColumnWidth(120),
-          5: const FixedColumnWidth(120),
-        },
-        border: TableBorder(
-          horizontalInside: BorderSide(color: Colors.grey.shade200),
-          verticalInside: BorderSide(color: Colors.grey.shade100),
-          top: BorderSide(color: Colors.grey.shade200),
-          bottom: BorderSide(color: Colors.grey.shade200),
-        ),
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          TableRow(
+          // Fixed First Column (Menu Types)
+          Container(
+            width: 140,
             decoration: BoxDecoration(
-              color: AppTheme.purple.withOpacity(0.05),
+              border: Border(
+                right: BorderSide(color: Colors.grey.shade200),
+              ),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12),
+                bottomLeft: Radius.circular(12),
+              ),
+              color: Colors.white,
             ),
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                child: Text(
-                  'Menu Type',
-                  style: headerTextStyle,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              ...days.map((d) => Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      d,
-                      style: headerTextStyle,
-                      textAlign: TextAlign.center,
-                    ),
-                  )),
-            ],
-          ),
-          ...List.generate(sectionTitles.length, (rowIdx) {
-            return TableRow(
-              decoration: BoxDecoration(
-                color: rowIdx % 2 == 0 ? Colors.white : Colors.grey.shade50,
-              ),
+            child: Column(
               children: [
+                // Header
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 12,
+                  height: 53, // Match the height defined for days header
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.purple.withOpacity(0.05),
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                    ),
                   ),
+                  alignment: Alignment.center,
                   child: Text(
-                    sectionTitles[rowIdx],
-                    style: labelTextStyle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    'Menu Type',
+                    style: headerTextStyle,
+                    textAlign: TextAlign.center,
                   ),
                 ),
-                ...List.generate(days.length, (colIdx) {
-                  final item = menu[colIdx][rowIdx];
+                // Section titles
+                ...List.generate(sectionTitles.length, (rowIdx) {
+                  final rowHeight =
+                      100.0; // Increase height to better fit content
                   return Container(
+                    height: rowHeight, // Fixed height to match content rows
                     padding: const EdgeInsets.symmetric(
                       vertical: 16,
-                      horizontal: 8,
+                      horizontal: 12,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          item.name,
-                          style: cellTextStyle.copyWith(
-                            fontWeight: item.isMealOfDay
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: item.isMealOfDay
-                                ? highlightColor
-                                : AppTheme.textDark,
-                          ),
-                          textAlign: TextAlign.center,
+                    decoration: BoxDecoration(
+                      color:
+                          rowIdx % 2 == 0 ? Colors.white : Colors.grey.shade50,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: rowIdx == sectionTitles.length - 1
+                              ? Colors.transparent
+                              : Colors.grey.shade200,
                         ),
-                        if (item.isNew || item.isMealOfDay)
-                          const SizedBox(height: 4),
-                        if (item.isNew)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'NEW',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ),
-                        if (item.isMealOfDay)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: highlightColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Meal of the Day',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ),
-                      ],
+                      ),
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      sectionTitles[rowIdx],
+                      style: labelTextStyle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   );
                 }),
               ],
-            );
-          }),
+            ),
+          ),
+
+          // Scrollable Content
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
+                width: days.length * 120, // Each day column is 120 wide
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(12),
+                    bottomRight: Radius.circular(12),
+                  ),
+                  color: Colors.white,
+                ),
+                child: Column(
+                  children: [
+                    // Header Row with days
+                    Container(
+                      height: 53, // Match the height of the Menu Type header
+                      decoration: BoxDecoration(
+                        color: AppTheme.purple.withOpacity(0.05),
+                        border: Border(
+                          bottom: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        children: days
+                            .map((day) => Container(
+                                  width: 120,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    day,
+                                    style: headerTextStyle,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+
+                    // Menu content rows
+                    ...List.generate(sectionTitles.length, (rowIdx) {
+                      final rowHeight =
+                          100.0; // Increase height to better fit content
+                      return Container(
+                        height: rowHeight,
+                        decoration: BoxDecoration(
+                          color: rowIdx % 2 == 0
+                              ? Colors.white
+                              : Colors.grey.shade50,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: rowIdx == sectionTitles.length - 1
+                                  ? Colors.transparent
+                                  : Colors.grey.shade200,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: List.generate(days.length, (colIdx) {
+                            final item = menu[colIdx][rowIdx];
+                            return Container(
+                              width: 120,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 8,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: cellTextStyle.copyWith(
+                                      fontWeight: item.isMealOfDay
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: item.isMealOfDay
+                                          ? highlightColor
+                                          : AppTheme.textDark,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (item.isMealOfDay)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: highlightColor,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Meal of the Day',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -541,6 +641,5 @@ class _EnhancedMenuTable extends StatelessWidget {
 class _MenuItem {
   final String name;
   final bool isMealOfDay;
-  final bool isNew;
-  _MenuItem(this.name, {this.isMealOfDay = false, this.isNew = false});
+  _MenuItem(this.name, {this.isMealOfDay = false});
 }

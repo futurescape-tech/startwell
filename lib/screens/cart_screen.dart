@@ -785,9 +785,9 @@ class _CartScreenState extends State<CartScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    width: 70,
-                    height: 70,
-                    color: Colors.grey[200],
+                    width: 80,
+                    height: 80,
+                    color: Colors.white,
                     child: _getMealImage(primaryMeal, mealType),
                   ),
                 ),
@@ -970,13 +970,17 @@ class _CartScreenState extends State<CartScreen> {
   Widget _getMealImage(Meal meal, String mealType) {
     // Try to use the meal's image if available
     if (meal.imageUrl.isNotEmpty) {
-      return Image.network(
-        meal.imageUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          // Fallback to default meal image based on type
-          return _getDefaultMealImage(mealType);
-        },
+      return Container(
+        color: Colors.white,
+        padding: const EdgeInsets.all(4),
+        child: Image.network(
+          meal.imageUrl,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback to default meal image based on type
+            return _getDefaultMealImage(mealType);
+          },
+        ),
       );
     }
 
@@ -990,22 +994,31 @@ class _CartScreenState extends State<CartScreen> {
         ? 'assets/images/breakfast/breakfast of the day (most recommended).png'
         : 'assets/images/lunch/lunch of the day (most recommended).png';
 
-    return Image.asset(
-      defaultImagePath,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        // Final fallback is the icon if asset image can't be loaded
-        return _buildMealPlaceholder(mealType);
-      },
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(4),
+      width: 80,
+      height: 80,
+      child: Image.asset(
+        defaultImagePath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          // Final fallback is the icon if asset image can't be loaded
+          return _buildMealPlaceholder(mealType);
+        },
+      ),
     );
   }
 
   Widget _buildMealPlaceholder(String mealType) {
     return Center(
-      child: Icon(
-        mealType == 'breakfast' ? Icons.ramen_dining : Icons.flatware_rounded,
-        color: AppTheme.purple,
-        size: 32,
+      child: Container(
+        color: Colors.white,
+        child: Icon(
+          mealType == 'breakfast' ? Icons.ramen_dining : Icons.flatware_rounded,
+          color: AppTheme.purple,
+          size: 36,
+        ),
       ),
     );
   }

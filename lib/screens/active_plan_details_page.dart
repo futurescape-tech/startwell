@@ -486,7 +486,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
           children: [
             // Plan Type Header (Enhanced with icon)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               decoration: BoxDecoration(
                 color: planBgColor,
                 borderRadius: const BorderRadius.only(
@@ -497,8 +497,8 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
               child: Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 80,
+                    height: 80,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
@@ -508,7 +508,7 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
                       child: _getMealImageForPlan(plan),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Text(
                       // Include meal type in the plan display name for clarity
@@ -927,36 +927,36 @@ class _ActivePlanDetailsPageState extends State<ActivePlanDetailsPage> {
         name == 'breakfast of the day') {
       return Image.asset(
           'assets/images/breakfast/breakfast of the day (most recommended).png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'indian breakfast') {
       return Image.asset('assets/images/breakfast/Indian Breakfast.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'international breakfast') {
       return Image.asset('assets/images/breakfast/International Breakfast.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'jain breakfast') {
       return Image.asset('assets/images/breakfast/Jain Breakfast.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'lunch of the day lunch' || name == 'lunch of the day') {
       return Image.asset(
           'assets/images/lunch/lunch of the day (most recommended).png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'indian lunch') {
       return Image.asset('assets/images/lunch/Indian Lunch.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'international lunch') {
       return Image.asset('assets/images/lunch/International Lunch.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     if (name == 'jain lunch') {
       return Image.asset('assets/images/lunch/Jain Lunch.png',
-          fit: BoxFit.cover);
+          fit: BoxFit.contain);
     }
     // fallback to icon
     return Icon(

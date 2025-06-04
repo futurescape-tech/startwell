@@ -26,6 +26,7 @@ import 'package:startwell/screens/all_student_subscription_page.dart';
 import 'package:startwell/services/meal_selection_manager.dart';
 import 'package:startwell/screens/meal_plan_screen.dart';
 import 'package:startwell/screens/menu_page.dart';
+import 'package:startwell/widgets/home/upcoming_meal_card_list.dart';
 
 class DashboardScreen extends StatefulWidget {
   final UserProfile? userProfile;
@@ -37,13 +38,14 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isLoading = true;
   bool _showFooter = false;
   final ScrollController _scrollController = ScrollController();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
+  late AnimationController _menuIconController;
   // UserProfile? userProfile;
 
   // Subscription data
@@ -60,6 +62,11 @@ class _DashboardScreenState extends State<DashboardScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
+
+    _menuIconController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -321,6 +328,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _animationController.dispose();
+    _menuIconController.dispose();
     super.dispose();
   }
 
@@ -387,51 +395,97 @@ class _DashboardScreenState extends State<DashboardScreen>
           ],
         ),
         actions: [
-          // Cart icon
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.shopping_cart_outlined,
-                  color: Colors.white,
-                  size: 26,
-                ),
-                onPressed: () {
-                  Navigator.pushNamed(context, Routes.cart);
+          // Weekly Menu icon with animation
+          GestureDetector(
+            onTap: () {
+              MenuPage.showAsDialog(context);
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.all(8),
+              child: AnimatedBuilder(
+                animation: _menuIconController,
+                builder: (context, child) {
+                  // Create a pulsing effect
+                  final scale = 0.9 + 0.1 * _menuIconController.value;
+                  final rotate =
+                      _menuIconController.value * 0.05; // Subtle rotation of 5%
+
+                  return Transform.rotate(
+                    angle: rotate,
+                    child: Transform.scale(
+                      scale: scale,
+                      child: ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return LinearGradient(
+                            colors: [
+                              AppTheme.yellow,
+                              Colors.orange,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(bounds);
+                        },
+                        child: Icon(
+                          Icons.menu_book_rounded,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                    ),
+                  );
                 },
               ),
-              if (MealSelectionManager.hasBreakfastInCart ||
-                  MealSelectionManager.hasLunchInCart)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 14,
-                      minHeight: 14,
-                    ),
-                    child: Text(
-                      '${(MealSelectionManager.hasBreakfastInCart ? 1 : 0) + (MealSelectionManager.hasLunchInCart ? 1 : 0)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+            ),
+          ),
+          // Cart icon
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                  onPressed: () {
+                    Navigator.pushNamed(context, Routes.cart);
+                  },
+                ),
+                if (MealSelectionManager.hasBreakfastInCart ||
+                    MealSelectionManager.hasLunchInCart)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
                       ),
-                      textAlign: TextAlign.center,
+                      constraints: const BoxConstraints(
+                        minWidth: 14,
+                        minHeight: 14,
+                      ),
+                      child: Text(
+                        '${(MealSelectionManager.hasBreakfastInCart ? 1 : 0) + (MealSelectionManager.hasLunchInCart ? 1 : 0)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
           // Profile avatar
           Padding(
-            padding: EdgeInsets.only(right: isSmall ? 8.0 : 16.0),
+            padding: EdgeInsets.only(right: isSmall ? 8.0 : 12.0, left: 4.0),
             child: ProfileAvatar(
               userProfile: widget.userProfile,
               radius: isSmall ? 14 : 18,
@@ -457,17 +511,36 @@ class _DashboardScreenState extends State<DashboardScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Top Banner
+                          if (false) // Hide the School Meals Done Right card
+                            _buildAnimatedSection(
+                              animation: _fadeAnimation,
+                              slideAnimation: _slideAnimation,
+                              delay: 0.1,
+                              child: HomeBannerCard(
+                                onExplorePressed: () {
+                                  _navigateToTab(3); // Meal Plan tab
+                                },
+                              ),
+                            ),
+                          // Remove height spacing as the banner is now hidden
+                          // SizedBox(height: isSmall ? 6 : 10),
+
+                          // Why Parents Choose Us Section - now first section without label
                           _buildAnimatedSection(
+                            margin: 0,
                             animation: _fadeAnimation,
                             slideAnimation: _slideAnimation,
-                            delay: 0.1,
-                            child: HomeBannerCard(
-                              onExplorePressed: () {
-                                _navigateToTab(3); // Meal Plan tab
-                              },
+                            delay: 0.2,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Removed the title/label "Why Parents Choose Us"
+                                const ValueCarousel(),
+                              ],
                             ),
                           ),
-                          SizedBox(height: isSmall ? 6 : 10),
+
+                          SizedBox(height: isSmall ? 15 : 25),
 
                           // Upcoming Meals Section
                           _buildAnimatedSection(
@@ -509,13 +582,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    elevation: 2,
+                                    elevation: 5,
                                     shadowColor:
                                         AppTheme.deepPurple.withOpacity(0.15),
                                     child: Ink(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(12),
-                                        color: AppTheme.offWhite,
+                                        color: Colors.grey[50],
                                       ),
                                       child: Padding(
                                         padding: EdgeInsets.all(cardPadding),
@@ -619,10 +692,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 borderRadius:
                                                     BorderRadius.circular(16),
                                               ),
-                                              elevation: 3,
+                                              elevation: 5,
                                               shadowColor: AppTheme.deepPurple
                                                   .withOpacity(0.1),
-                                              color: Color(0xFFF9F9F9),
+                                              color: Colors.grey[50],
                                               child: InkWell(
                                                 onTap: () {
                                                   Navigator.push(
@@ -715,10 +788,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                                                 borderRadius:
                                                     BorderRadius.circular(16),
                                               ),
-                                              elevation: 3,
+                                              elevation: 5,
                                               shadowColor: AppTheme.orange
                                                   .withOpacity(0.1),
-                                              color: Color(0xFFF9F9F9),
+                                              color: Colors.grey[50],
                                               child: InkWell(
                                                 onTap: () {
                                                   HapticFeedback.lightImpact();
@@ -808,23 +881,133 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
 
-                          // Why Parents Choose Us Section
+                          // Feature Highlights Section
                           _buildAnimatedSection(
-                            margin: 0,
                             animation: _fadeAnimation,
                             slideAnimation: _slideAnimation,
                             delay: 0.4,
-                            child: const Column(
+                            margin: isSmall ? 15 : 18,
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Padding(
-                                  padding: EdgeInsets.only(left: 20),
-                                  child: SectionTitle(
-                                    title: 'Why Parents Choose Us',
+                                SectionTitle(
+                                  title: 'About StartWell',
+                                  actionText: null,
+                                  onActionPressed: null,
+                                ),
+                                SizedBox(height: isSmall ? 8 : 12),
+                                Card(
+                                  elevation: 5,
+                                  shadowColor: Colors.grey.withOpacity(0.3),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: InkWell(
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      _showFeatureDetailsDialog(
+                                          context, isSmall);
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding:
+                                          EdgeInsets.all(isSmall ? 14 : 18),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[50],
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Row 1: First two features
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: _buildFeatureItem(
+                                                  icon:
+                                                      Icons.book_online_rounded,
+                                                  description:
+                                                      'Book, Swap or Cancel Orders',
+                                                  color: AppTheme.purple,
+                                                  isSmall: isSmall,
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                  width: isSmall ? 12 : 16),
+                                              Expanded(
+                                                child: _buildFeatureItem(
+                                                  icon: Icons.eco_rounded,
+                                                  description:
+                                                      '100% Natural and Fresh Ingredients',
+                                                  color: AppTheme.success,
+                                                  isSmall: isSmall,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(height: isSmall ? 12 : 16),
+
+                                          // Row 2: Next two features
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: _buildFeatureItem(
+                                                  icon: Icons.spa_rounded,
+                                                  description:
+                                                      '100% Veg Indian and International',
+                                                  color: Colors.green,
+                                                  isSmall: isSmall,
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                  width: isSmall ? 12 : 16),
+                                              Expanded(
+                                                child: _buildFeatureItem(
+                                                  icon: Icons
+                                                      .calendar_month_rounded,
+                                                  description:
+                                                      'Flexible Plans with Multiple Options',
+                                                  color: AppTheme.orange,
+                                                  isSmall: isSmall,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(height: isSmall ? 12 : 16),
+
+                                          // Row 3: Last two features
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: _buildFeatureItem(
+                                                  icon: Icons
+                                                      .health_and_safety_rounded,
+                                                  description:
+                                                      'Designed by Nutritionists',
+                                                  color: Colors.deepPurple,
+                                                  isSmall: isSmall,
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                  width: isSmall ? 12 : 16),
+                                              Expanded(
+                                                child: _buildFeatureItem(
+                                                  icon: Icons.verified_rounded,
+                                                  description:
+                                                      'FSSAI Certified Hygienic Kitchen',
+                                                  color: Colors.blue,
+                                                  isSmall: isSmall,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                SizedBox(height: 15),
-                                ValueCarousel(),
                               ],
                             ),
                           ),
@@ -839,7 +1022,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                               child: const FooterNote(),
                             ),
                           if (!_showFooter)
-                            SizedBox(height: isSmall ? 60 : 100),
+                            SizedBox(height: isSmall ? 80 : 120),
                         ],
                       ),
                     ),
@@ -933,7 +1116,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 4,
+      elevation: 5,
       shadowColor: AppTheme.purple.withOpacity(0.3),
       margin: const EdgeInsets.only(bottom: 20),
       child: InkWell(
@@ -951,7 +1134,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: AppTheme.offWhite,
+            color: Colors.grey[50],
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -963,13 +1146,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                   decoration: BoxDecoration(
                     color: Colors.green.withOpacity(0.1),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.green.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
                   child: const Icon(
                     Icons.restaurant,
@@ -1017,6 +1193,283 @@ class _DashboardScreenState extends State<DashboardScreen>
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem({
+    required IconData icon,
+    required String description,
+    required Color color,
+    required bool isSmall,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: EdgeInsets.all(isSmall ? 6 : 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: isSmall ? 16 : 18,
+          ),
+        ),
+        SizedBox(width: isSmall ? 10 : 12),
+        Expanded(
+          child: Text(
+            description,
+            style: GoogleFonts.poppins(
+              fontSize: isSmall ? 11 : 12,
+              height: 1.3,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textMedium,
+              letterSpacing: 0.1,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showFeatureDetailsDialog(BuildContext context, bool isSmall) {
+    final size = MediaQuery.of(context).size;
+    final maxHeight = size.height * 0.8; // Maximum 80% of screen height
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutQuad,
+            constraints: BoxConstraints(
+              maxHeight: maxHeight,
+              maxWidth: size.width * 0.9,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with gradient background
+                Container(
+                  padding: EdgeInsets.all(isSmall ? 16 : 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.purple.withOpacity(0.8),
+                        AppTheme.deepPurple.withOpacity(0.9),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.info_outline,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'About StartWell',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Feature list with scrollable content
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.all(isSmall ? 16 : 20),
+                    child: Column(
+                      children: [
+                        _buildDetailFeatureItem(
+                          icon: Icons.book_online_rounded,
+                          title: 'Online Order Management',
+                          description:
+                              'Book, swap, or cancel your orders online anytime until midnight. Our flexible system allows you to manage your meals conveniently.',
+                          color: AppTheme.purple,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDetailFeatureItem(
+                          icon: Icons.eco_rounded,
+                          title: 'Natural Ingredients',
+                          description:
+                              '100% natural and fresh ingredients sourced from trusted suppliers. We prioritize quality in every meal we prepare.',
+                          color: AppTheme.success,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDetailFeatureItem(
+                          icon: Icons.spa_rounded,
+                          title: 'Vegetarian Options',
+                          description:
+                              'We offer 100% vegetarian meals with both Indian and International cuisines to cater to diverse tastes and preferences.',
+                          color: Colors.green,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDetailFeatureItem(
+                          icon: Icons.calendar_month_rounded,
+                          title: 'Flexible Subscription Plans',
+                          description:
+                              'Choose from single-day, weekly, monthly, quarterly, and annual subscription options to fit your schedule and budget.',
+                          color: AppTheme.orange,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDetailFeatureItem(
+                          icon: Icons.health_and_safety_rounded,
+                          title: 'Expert Preparation',
+                          description:
+                              'Our meals are designed by professional nutritionists and prepared by skilled chefs with the care and attention of home cooking.',
+                          color: Colors.deepPurple,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDetailFeatureItem(
+                          icon: Icons.verified_rounded,
+                          title: 'Certified Quality',
+                          description:
+                              'FSSAI certified hygienic central kitchen facility ensures that all meals are prepared in a clean and safe environment.',
+                          color: Colors.blue,
+                        ),
+
+                        // Footer button with margin
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Container(
+                            width: double.infinity,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.purpleToDeepPurple,
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(25),
+                                ),
+                              ),
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text(
+                                'Close',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailFeatureItem({
+    required IconData icon,
+    required String title,
+    required String description,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      color: Colors.grey[50],
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    description,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: AppTheme.textMedium,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

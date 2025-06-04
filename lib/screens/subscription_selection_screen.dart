@@ -456,6 +456,16 @@ class _SubscriptionSelectionScreenState
 
     if (_selectedPlanIndex == 0) {
       // Single Day - Add just the start date
+      // Make sure we have a proper start date for single day plans
+      DateTime now = DateTime.now();
+      DateTime todayDate = DateTime(now.year, now.month, now.day);
+
+      // If start date hasn't been manually selected yet, set it to next available weekday
+      if (!_isStartDateSelected()) {
+        _startDate = _getNextWeekday(todayDate);
+        _focusedCalendarDate = _startDate;
+      }
+
       _mealDates.add(_startDate);
       _endDate = _startDate;
     } else {
@@ -651,6 +661,11 @@ class _SubscriptionSelectionScreenState
           selectedWeekdays: _getSelectedWeekdayIndexes(),
         );
         _focusedCalendarDate = _startDate;
+
+        // Also update the end date based on the selected plan
+        final int weeks =
+            _subscriptionPlans[_selectedPlanIndex]['weeks'] as int;
+        _calculatePlanEndDate(weeks);
       }
 
       // Recalculate meal dates with the new start date
@@ -779,34 +794,124 @@ class _SubscriptionSelectionScreenState
 
   // Update plan index and also check if we need to force it to Custom or Regular mode
   void _selectPlan(int index) {
+    final bool isSingleDay = _subscriptionPlans[index]['isSingleDay'] ?? false;
+    final int weeks = _subscriptionPlans[index]['weeks'] as int;
+
     setState(() {
       _selectedPlanIndex = index;
       // If Single Day or Express plan, force to Regular mode
       if (index == 0 || widget.isExpressOrder) {
         _isCustomPlan = false;
+
+        // For Single Day plan, always ensure start date is set
+        if (isSingleDay) {
+          DateTime now = DateTime.now();
+          DateTime todayDate = DateTime(now.year, now.month, now.day);
+
+          // Always ensure we have a good date for single day plans
+          if (!_isStartDateSelected()) {
+            _startDate = _getNextWeekday(todayDate);
+            _focusedCalendarDate = _startDate;
+          }
+          _endDate =
+              _startDate; // Single day plans have same start and end date
+        } else {
+          // For regular multi-day plans, ensure the start date is set to next available weekday
+          if (!_isStartDateSelected()) {
+            DateTime now = DateTime.now();
+            DateTime todayDate = DateTime(now.year, now.month, now.day);
+            _startDate = _getNextWeekday(todayDate);
+            _focusedCalendarDate = _startDate;
+          }
+
+          // Calculate and set the end date based on the plan's duration
+          _calculatePlanEndDate(weeks);
+        }
       }
-      // Calculate end date and meal dates
+      // Calculate meal dates and end dates
       _calculateMealDates();
     });
+  }
+
+  // Helper to calculate end date based on plan duration in weeks
+  void _calculatePlanEndDate(int weeks) {
+    if (weeks <= 0) {
+      // Single day plan
+      _endDate = _startDate;
+      return;
+    }
+
+    // Get the delivery weekdays (regular or custom)
+    List<int> deliveryWeekdays = _isCustomPlan
+        ? _getSelectedWeekdayIndexes()
+        : [1, 2, 3, 4, 5]; // Mon-Fri for regular
+
+    if (deliveryWeekdays.isEmpty) {
+      // If no weekdays selected in custom mode, use all weekdays
+      deliveryWeekdays = [1, 2, 3, 4, 5];
+    }
+
+    // Calculate number of days needed to get the required number of delivery days
+    int daysToAdd = 0;
+    int deliveryDaysFound = 0;
+    int mealsRequired = _subscriptionPlans[_selectedPlanIndex]['meals'] as int;
+    int safetyCounter = 0;
+
+    DateTime current = _startDate;
+
+    // Calculate end date by finding the day when we reach the total number of meals
+    while (deliveryDaysFound < mealsRequired && safetyCounter < 1000) {
+      daysToAdd++;
+      current = _startDate.add(Duration(days: daysToAdd));
+
+      if (deliveryWeekdays.contains(current.weekday)) {
+        deliveryDaysFound++;
+      }
+
+      safetyCounter++;
+    }
+
+    _endDate = current;
   }
 
   // Toggle custom plan mode
   void _toggleCustomMode() {
     if (_selectedPlanIndex != 0 && !widget.isExpressOrder) {
+      final int weeks = _subscriptionPlans[_selectedPlanIndex]['weeks'] as int;
+
       setState(() {
         _isCustomPlan = !_isCustomPlan;
 
         if (!_isCustomPlan) {
           // Switching to regular mode (Mon to Fri)
           _selectedWeekdays.fillRange(0, 5, true);
-          _startDate = _firstAvailableDate;
+
+          // Reset to next available weekday if no date selected yet
+          if (!_isStartDateSelected()) {
+            DateTime now = DateTime.now();
+            DateTime todayDate = DateTime(now.year, now.month, now.day);
+            _startDate = _getNextWeekday(todayDate);
+          }
         } else {
           // Switching to custom mode
+          // Start with only Monday selected
           _selectedWeekdays.fillRange(0, 5, false);
-          _startDate = _firstAvailableDate;
+          _selectedWeekdays[0] = true; // Select Monday
+
+          // Reset to next available Monday if no date selected yet
+          if (!_isStartDateSelected()) {
+            DateTime now = DateTime.now();
+            DateTime todayDate = DateTime(now.year, now.month, now.day);
+            _startDate = getNextWeekdayDate(todayDate, 1); // 1 is Monday
+          }
         }
 
         _focusedCalendarDate = _startDate;
+
+        // Calculate the end date based on current plan
+        _calculatePlanEndDate(weeks);
+
+        // Calculate meal dates
         _calculateMealDates();
       });
     }
@@ -1017,129 +1122,122 @@ class _SubscriptionSelectionScreenState
                             child:
                                 _buildExpressOnlyPlanCard(), // Show only Single Day plan for Express
                           )
-                        : LayoutBuilder(
-                            builder: (context, constraints) {
-                              // Calculate the number of columns based on screen width
-                              int crossAxisCount =
-                                  2; // Default 2 columns for phones
-                              if (constraints.maxWidth > 600) {
-                                // For tablets or larger screens
-                                crossAxisCount = 3;
-                              }
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics:
+                                const NeverScrollableScrollPhysics(), // Use parent's scroll
+                            padding: EdgeInsets.zero,
+                            itemCount: _subscriptionPlans.length,
+                            itemBuilder: (context, index) {
+                              final plan = _subscriptionPlans[index];
+                              final hasDiscount = plan['discount'] > 0;
 
-                              return GridView.builder(
-                                shrinkWrap: true,
-                                physics:
-                                    const NeverScrollableScrollPhysics(), // Use parent's scroll
-                                padding: EdgeInsets.zero,
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 16,
-                                  childAspectRatio:
-                                      constraints.maxWidth > 600 ? 1.2 : 1.1,
-                                ),
-                                itemCount: _subscriptionPlans.length,
-                                itemBuilder: (context, index) {
-                                  final plan = _subscriptionPlans[index];
-                                  final hasDiscount = plan['discount'] > 0;
-
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppTheme.deepPurple
-                                              .withOpacity(0.08),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          AppTheme.deepPurple.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
                                     ),
-                                    child: Card(
-                                      margin: EdgeInsets.zero,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        side: BorderSide(
-                                          color: _selectedPlanIndex == index
-                                              ? AppTheme.purple
-                                              : Colors.transparent,
-                                          width: _selectedPlanIndex == index
-                                              ? 1.5
-                                              : 0,
-                                        ),
+                                  ],
+                                ),
+                                child: Card(
+                                  margin: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color: _selectedPlanIndex == index
+                                          ? AppTheme.purple
+                                          : Colors.grey.shade300,
+                                      width: _selectedPlanIndex == index
+                                          ? 1.5
+                                          : 1.0,
+                                    ),
+                                  ),
+                                  elevation: 0,
+                                  child: InkWell(
+                                    onTap: () => _selectPlan(index),
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12.0),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        gradient: _selectedPlanIndex == index
+                                            ? LinearGradient(
+                                                colors: [
+                                                  AppTheme.purple
+                                                      .withOpacity(0.05),
+                                                  AppTheme.deepPurple
+                                                      .withOpacity(0.05),
+                                                ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              )
+                                            : null,
                                       ),
-                                      elevation: 0,
-                                      child: InkWell(
-                                        onTap: () => _selectPlan(index),
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(16.0),
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                            gradient: _selectedPlanIndex ==
-                                                    index
-                                                ? LinearGradient(
-                                                    colors: [
-                                                      AppTheme.purple
-                                                          .withOpacity(0.05),
-                                                      AppTheme.deepPurple
-                                                          .withOpacity(0.05),
-                                                    ],
-                                                    begin: Alignment.topLeft,
-                                                    end: Alignment.bottomRight,
-                                                  )
-                                                : null,
-                                            border: Border.all(
+                                      child: Row(
+                                        children: [
+                                          // Selection circle
+                                          Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
                                               color: _selectedPlanIndex == index
-                                                  ? AppTheme.purple
-                                                  : Colors.purple.shade100,
-                                              width: _selectedPlanIndex == index
-                                                  ? 1.5
-                                                  : 0,
+                                                  ? null
+                                                  : Colors.white,
+                                              gradient: _selectedPlanIndex ==
+                                                      index
+                                                  ? AppTheme.purpleToDeepPurple
+                                                  : null,
+                                              border: _selectedPlanIndex ==
+                                                      index
+                                                  ? null
+                                                  : Border.all(
+                                                      color:
+                                                          Colors.grey.shade400,
+                                                      width: 1.5),
+                                              boxShadow: _selectedPlanIndex ==
+                                                      index
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: AppTheme.purple
+                                                            .withOpacity(0.3),
+                                                        blurRadius: 4,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                            child: Center(
+                                              child: _selectedPlanIndex == index
+                                                  ? const Icon(
+                                                      Icons.check,
+                                                      color: Colors.white,
+                                                      size: 14,
+                                                    )
+                                                  : Container(), // Empty container instead of radio_button_unchecked
                                             ),
                                           ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    width: 24,
-                                                    height: 24,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color:
-                                                          _selectedPlanIndex ==
-                                                                  index
-                                                              ? null
-                                                              : Colors.grey
-                                                                  .shade100,
-                                                      gradient:
-                                                          _selectedPlanIndex ==
-                                                                  index
-                                                              ? AppTheme
-                                                                  .purpleToDeepPurple
-                                                              : null,
-                                                    ),
-                                                    child: Center(
-                                                      child:
-                                                          _selectedPlanIndex ==
-                                                                  index
-                                                              ? const Icon(
-                                                                  Icons.check,
-                                                                  color: Colors
-                                                                      .white,
-                                                                  size: 14,
-                                                                )
-                                                              : null,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(
-                                                    child: Text(
+                                          const SizedBox(width: 12),
+
+                                          // Plan details
+                                          Expanded(
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                // Plan name and info
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
                                                       plan['name'],
                                                       style:
                                                           GoogleFonts.poppins(
@@ -1149,131 +1247,117 @@ class _SubscriptionSelectionScreenState
                                                         color:
                                                             AppTheme.textDark,
                                                       ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                children: [
-                                                  Text(
-                                                    '${plan['duration']}',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 13,
-                                                      color:
-                                                          AppTheme.textMedium,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 5),
-                                                  Container(
-                                                    width: 4,
-                                                    height: 4,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      color: AppTheme.textMedium
-                                                          .withOpacity(0.5),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 5),
-                                                  Expanded(
-                                                    child: Text(
-                                                      '${plan['meals']} meals',
-                                                      style:
-                                                          GoogleFonts.poppins(
-                                                        fontSize: 13,
-                                                        color:
-                                                            AppTheme.textMedium,
-                                                      ),
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const Spacer(),
-                                              if (hasDiscount)
-                                                Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 3),
-                                                  decoration: BoxDecoration(
-                                                    gradient:
-                                                        const LinearGradient(
-                                                      colors: [
-                                                        Color(0xFF8E44AD),
-                                                        Color(0xFF9B59B6),
-                                                      ],
-                                                      begin: Alignment.topLeft,
-                                                      end:
-                                                          Alignment.bottomRight,
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            12),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: AppTheme
-                                                            .deepPurple
-                                                            .withOpacity(0.2),
-                                                        blurRadius: 4,
-                                                        offset:
-                                                            const Offset(0, 2),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: Text(
-                                                    '${(plan['discount'] * 100).toInt()}% OFF',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment: hasDiscount
-                                                    ? MainAxisAlignment
-                                                        .spaceBetween
-                                                    : MainAxisAlignment.end,
-                                                children: [
-                                                  if (hasDiscount)
+                                                    const SizedBox(height: 4),
                                                     Text(
-                                                      '₹${(widget.totalMealCost * plan['meals']).toStringAsFixed(0)}',
+                                                      '${plan['duration']} • ${plan['meals']} meals',
                                                       style:
                                                           GoogleFonts.poppins(
                                                         fontSize: 13,
-                                                        decoration:
-                                                            TextDecoration
-                                                                .lineThrough,
                                                         color:
                                                             AppTheme.textMedium,
                                                       ),
                                                     ),
-                                                  Text(
-                                                    '₹${(widget.totalMealCost * plan['meals'] * (1 - plan['discount'])).toStringAsFixed(0)}',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: hasDiscount
-                                                          ? AppTheme.success
-                                                          : AppTheme.purple,
+                                                  ],
+                                                ),
+
+                                                // Price and discount
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.end,
+                                                  children: [
+                                                    if (hasDiscount)
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 8,
+                                                                vertical: 3),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          gradient:
+                                                              const LinearGradient(
+                                                            colors: [
+                                                              Color(0xFF8E44AD),
+                                                              Color(0xFF9B59B6),
+                                                            ],
+                                                            begin: Alignment
+                                                                .topLeft,
+                                                            end: Alignment
+                                                                .bottomRight,
+                                                          ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(12),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: AppTheme
+                                                                  .deepPurple
+                                                                  .withOpacity(
+                                                                      0.2),
+                                                              blurRadius: 4,
+                                                              offset:
+                                                                  const Offset(
+                                                                      0, 2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Text(
+                                                          '${(plan['discount'] * 100).toInt()}% OFF',
+                                                          style: GoogleFonts
+                                                              .poppins(
+                                                            fontSize: 11,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    const SizedBox(height: 4),
+                                                    Row(
+                                                      children: [
+                                                        if (hasDiscount)
+                                                          Text(
+                                                            '₹${(widget.totalMealCost * plan['meals']).toStringAsFixed(0)}',
+                                                            style: GoogleFonts
+                                                                .poppins(
+                                                              fontSize: 13,
+                                                              decoration:
+                                                                  TextDecoration
+                                                                      .lineThrough,
+                                                              color: AppTheme
+                                                                  .textMedium,
+                                                            ),
+                                                          ),
+                                                        if (hasDiscount)
+                                                          const SizedBox(
+                                                              width: 6),
+                                                        Text(
+                                                          '₹${(widget.totalMealCost * plan['meals'] * (1 - plan['discount'])).toStringAsFixed(0)}',
+                                                          style: GoogleFonts
+                                                              .poppins(
+                                                            fontSize: 15,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: hasDiscount
+                                                                ? AppTheme
+                                                                    .success
+                                                                : AppTheme
+                                                                    .purple,
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
+                                        ],
                                       ),
                                     ),
-                                  );
-                                },
+                                  ),
+                                ),
                               );
                             },
                           ),
@@ -1344,6 +1428,12 @@ class _SubscriptionSelectionScreenState
                                                   const BorderRadius.horizontal(
                                                 left: Radius.circular(16),
                                               ),
+                                              border: Border.all(
+                                                color: !_isCustomPlan
+                                                    ? Colors.transparent
+                                                    : Colors.grey.shade300,
+                                                width: 1.0,
+                                              ),
                                               boxShadow: !_isCustomPlan
                                                   ? [
                                                       BoxShadow(
@@ -1412,6 +1502,12 @@ class _SubscriptionSelectionScreenState
                                               borderRadius:
                                                   const BorderRadius.horizontal(
                                                 right: Radius.circular(16),
+                                              ),
+                                              border: Border.all(
+                                                color: _isCustomPlan
+                                                    ? Colors.transparent
+                                                    : Colors.grey.shade300,
+                                                width: 1.0,
                                               ),
                                               boxShadow: _isCustomPlan
                                                   ? [
@@ -1687,7 +1783,7 @@ class _SubscriptionSelectionScreenState
                       ),
 
                     // Single Day Plan Info Banner
-                    if (_subscriptionPlans[_selectedPlanIndex]['isSingleDay'] ??
+                    /*if (_subscriptionPlans[_selectedPlanIndex]['isSingleDay'] ??
                         false)
                       Column(
                         children: [
@@ -1699,7 +1795,7 @@ class _SubscriptionSelectionScreenState
                           ),
                           const SizedBox(height: 16),
                         ],
-                      ),
+                      ),*/
 
                     const SizedBox(height: 16),
 

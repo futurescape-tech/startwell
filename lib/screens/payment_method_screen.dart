@@ -264,9 +264,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Selected Delivery Address Section
+            // Selected Delivery Address Section - Compact Version
             Container(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(12.0),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -286,10 +286,11 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Header with location icon, title and check icon - more compact
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -299,14 +300,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.deepPurple.withOpacity(0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
                           Icons.location_on_rounded,
@@ -314,7 +308,7 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Text(
                         'Delivery Address',
                         style: GoogleFonts.poppins(
@@ -323,199 +317,125 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                           color: AppTheme.textDark,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.check_circle,
+                        size: 16,
+                        color: AppTheme.success,
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // School and student info - combined in a more compact layout
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // School icon
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 4),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: AppTheme.success.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: AppTheme.success.withOpacity(0.3),
-                            width: 1,
-                          ),
+                          color: AppTheme.purple.withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
-                        child: Row(
+                        child: Icon(
+                          Icons.school_rounded,
+                          size: 16,
+                          color: AppTheme.purple,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // School and student details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.check_circle,
-                              size: 16,
-                              color: AppTheme.success,
+                            // School name
+                            Text(
+                              widget.selectedStudent.schoolName,
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: AppTheme.textDark,
+                              ),
                             ),
-                            // const SizedBox(width: 4),
-                            // Text(
-                            //   'Default',
-                            //   style: GoogleFonts.poppins(
-                            //     fontSize: 12,
-                            //     fontWeight: FontWeight.w500,
-                            //     color: AppTheme.success,
-                            //   ),
-                            // ),
+
+                            const SizedBox(height: 14),
+
+                            // Student name and class in a row
+                            Row(
+                              children: [
+                                // Student name badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.purple.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.person,
+                                        size: 12,
+                                        color: AppTheme.purple,
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        widget.selectedStudent.name,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppTheme.purple,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(width: 6),
+
+                                // Class badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.deepPurple.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.class_,
+                                        size: 12,
+                                        color: AppTheme.deepPurple,
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        "${widget.selectedStudent.className} ${widget.selectedStudent.section}",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppTheme.deepPurple,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.grey.shade200,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.purple.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.school_rounded,
-                                size: 20,
-                                color: AppTheme.purple,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                widget.selectedStudent.schoolName,
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                  color: AppTheme.textDark,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.purple.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.person,
-                                size: 14,
-                                color: AppTheme.purple,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                widget.selectedStudent.name,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppTheme.purple,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.deepPurple.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.class_,
-                                size: 14,
-                                color: AppTheme.deepPurple,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                "${widget.selectedStudent.className} ${widget.selectedStudent.section}",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppTheme.deepPurple,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Hide information message
-                  if (false)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.blue.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.blue.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Meals will be provided to your child at school during breakfast and lunch hours.',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.blue.shade700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),
-            const SizedBox(height: 0),
-
-            // Payment Details Section - Updated to show combined details for both plans
-            if (false)
-              _buildCardSection(
-                title: 'Payment Details',
-                icon: Icons.receipt_long_rounded,
-                children: [
-                  _buildPaymentDetails(),
-                ],
-              ),
-
-            const SizedBox(height: 24),
-
-            // Meal Plan Selection Section
-            if (false) // Hide Meal Plan section as it's moved to Order Summary screen
-              _buildCardSection(
-                title: 'Meal Plan',
-                icon: Icons.restaurant_menu_rounded,
-                children: [
-                  _buildMealPlanOptions(),
-                ],
-              ),
 
             const SizedBox(height: 24),
 
@@ -570,16 +490,25 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   Widget _buildPaymentMethodTile(
       int index, String title, String subtitle, String imagePath) {
+    final bool isSelected = _selectedPaymentMethod == index;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
+        color: Colors.white,
         border: Border.all(
-          color: _selectedPaymentMethod == index
-              ? AppTheme.purple
-              : Colors.grey.shade300,
-          width: _selectedPaymentMethod == index ? 2 : 1,
+          color: isSelected ? AppTheme.purple : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            blurRadius: 4,
+            spreadRadius: 0,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: InkWell(
         onTap: () {
@@ -592,19 +521,20 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
           padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: _selectedPaymentMethod == index
-                        ? AppTheme.purple
-                        : Colors.grey.shade400,
+                    color: isSelected ? AppTheme.purple : Colors.grey.shade400,
                     width: 2,
                   ),
+                  color: Colors.white,
+                  boxShadow: null,
                 ),
-                child: _selectedPaymentMethod == index
+                child: isSelected
                     ? Center(
                         child: Container(
                           width: 12,
@@ -626,8 +556,9 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       title,
                       style: GoogleFonts.poppins(
                         fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.textDark,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected ? AppTheme.purple : AppTheme.textDark,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -644,25 +575,39 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Image.asset(
-                imagePath,
-                width: 36,
-                height: 36,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (isSelected)
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.purple.withOpacity(0.05),
+                      ),
+                    ),
+                  Image.asset(
+                    imagePath,
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.deepPurple.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Icon(
-                      Icons.account_balance_wallet_rounded,
-                      size: 20,
-                      color: Colors.deepPurple,
-                    ),
-                  );
-                },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.account_balance_wallet_rounded,
+                          size: 20,
+                          color: Colors.deepPurple,
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -759,76 +704,92 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
           ),
         ],
       ),
-      child: Card(
-        margin: EdgeInsets.zero,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.purple.withOpacity(0.8),
-                            AppTheme.deepPurple.withOpacity(0.9),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.deepPurple.withOpacity(0.2),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        icon,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textDark,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ],
-                ),
+      // Using Stack to create gradient border effect
+      child: Stack(
+        children: [
+          // Gradient background for border effect
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.purple.withOpacity(0.7),
+                  AppTheme.deepPurple.withOpacity(0.7),
+                ],
               ),
-              const SizedBox(height: 24),
-              if (withoutPadding)
-                ...children
-              else
-                Padding(
-                  padding:
-                      const EdgeInsets.only(left: 24, right: 24, bottom: 24),
-                  child: Column(
-                    children: children,
-                  ),
-                ),
-            ],
+            ),
+            margin: EdgeInsets.zero,
           ),
-        ),
+          // White card with small margin to show gradient border
+          Card(
+            margin: const EdgeInsets.all(2), // This creates the border effect
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(18), // Slightly smaller to fit inside
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: Colors.white,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppTheme.purple.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.deepPurple.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            icon,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          title,
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textDark,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (withoutPadding)
+                    ...children
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 24, right: 24, bottom: 24),
+                      child: Column(
+                        children: children,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
