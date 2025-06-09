@@ -615,6 +615,74 @@ class _RemainingMealDetailsPageState extends State<RemainingMealDetailsPage> {
 
                   const SizedBox(height: 24),
 
+                  // Add date range information
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today,
+                                size: 16, color: AppTheme.textMedium),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Start Date:',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: AppTheme.textMedium,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormat('MMM dd, yyyy')
+                                  .format(subscription.startDate),
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_month,
+                                size: 16, color: AppTheme.textMedium),
+                            const SizedBox(width: 8),
+                            Text(
+                              'End Date:',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: AppTheme.textMedium,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormat('MMM dd, yyyy')
+                                  .format(subscription.endDate),
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // Progress bars and legends are hidden
                   // Intentionally left blank
                 ],

@@ -286,65 +286,23 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header with location icon, title and check icon - more compact
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.purple.withOpacity(0.8),
-                              AppTheme.deepPurple.withOpacity(0.9),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.location_on_rounded,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Delivery Address',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textDark,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.check_circle,
-                        size: 16,
-                        color: AppTheme.success,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
                   // School and student info - combined in a more compact layout
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // School icon
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.purple.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.school_rounded,
-                          size: 16,
-                          color: AppTheme.purple,
-                        ),
-                      ),
+                      // Container(
+                      //   padding: const EdgeInsets.all(6),
+                      //   decoration: BoxDecoration(
+                      //     color: AppTheme.purple.withOpacity(0.1),
+                      //     shape: BoxShape.circle,
+                      //   ),
+                      //   child: Icon(
+                      //     Icons.school_rounded,
+                      //     size: 16,
+                      //     color: AppTheme.purple,
+                      //   ),
+                      // ),
                       const SizedBox(width: 8),
 
                       // School and student details
@@ -352,21 +310,15 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // School name
-                            Text(
-                              widget.selectedStudent.schoolName,
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                                color: AppTheme.textDark,
-                              ),
-                            ),
-
-                            const SizedBox(height: 14),
-
-                            // Student name and class in a row
+                            // Student name with icon
                             Row(
                               children: [
+                                Icon(
+                                  Icons.person,
+                                  size: 22,
+                                  color: AppTheme.purple,
+                                ),
+                                const SizedBox(width: 4),
                                 // Student name badge
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -375,30 +327,52 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                                     color: AppTheme.purple.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.person,
-                                        size: 12,
-                                        color: AppTheme.purple,
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        widget.selectedStudent.name,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppTheme.purple,
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    widget.selectedStudent.name,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.purple,
+                                    ),
                                   ),
                                 ),
+                              ],
+                            ),
 
-                                const SizedBox(width: 6),
+                            const SizedBox(height: 8),
 
-                                // Class badge
+                            // School name with icon
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.school_rounded,
+                                  size: 22,
+                                  color: AppTheme.deepPurple,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  widget.selectedStudent.schoolName,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            // Grade and division with icon
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.class_,
+                                  size: 22,
+                                  color: AppTheme.deepPurple,
+                                ),
+                                const SizedBox(width: 4),
+                                // Grade and division badge
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 6, vertical: 2),
@@ -406,24 +380,13 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                                     color: AppTheme.deepPurple.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.class_,
-                                        size: 12,
-                                        color: AppTheme.deepPurple,
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        "${widget.selectedStudent.className} ${widget.selectedStudent.section}",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppTheme.deepPurple,
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    "${widget.selectedStudent.className} ${widget.selectedStudent.section}",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.deepPurple,
+                                    ),
                                   ),
                                 ),
                               ],

@@ -42,7 +42,7 @@ class MenuPage extends StatelessWidget {
                         child: Text(
                           'Weekly Menu',
                           style: GoogleFonts.poppins(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
@@ -166,7 +166,7 @@ class MenuPage extends StatelessWidget {
                 Text(
                   '21st to 25th April',
                   style: GoogleFonts.poppins(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.purple,
                   ),
@@ -204,7 +204,7 @@ class MenuPage extends StatelessWidget {
                       Text(
                         'Breakfast',
                         style: GoogleFonts.poppins(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textDark,
                           letterSpacing: 0.3,
@@ -256,7 +256,7 @@ class MenuPage extends StatelessWidget {
                       Text(
                         'Lunch',
                         style: GoogleFonts.poppins(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textDark,
                           letterSpacing: 0.3,
@@ -371,7 +371,7 @@ class MenuPage extends StatelessWidget {
         title: Text(
           'Weekly Menu',
           style: GoogleFonts.poppins(
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
@@ -411,19 +411,19 @@ class _EnhancedMenuTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cellTextStyle = GoogleFonts.poppins(
-      fontSize: 14,
+      fontSize: 12,
       color: AppTheme.textDark,
       height: 1.3,
     );
     final headerTextStyle = GoogleFonts.poppins(
       fontWeight: FontWeight.bold,
       color: AppTheme.purple,
-      fontSize: 15,
+      fontSize: 13,
     );
     final labelTextStyle = GoogleFonts.poppins(
       fontWeight: FontWeight.w600,
       color: AppTheme.purple,
-      fontSize: 14,
+      fontSize: 12,
     );
 
     return Container(

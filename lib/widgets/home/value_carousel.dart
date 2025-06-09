@@ -210,27 +210,27 @@ class _ValueCarouselState extends State<ValueCarousel> {
                       SizedBox(height: isSmallScreen ? 8 : 12),
 
                       // Title with responsive font size
-                      Text(
-                        title,
-                        style: GoogleFonts.poppins(
-                          fontSize: titleFontSize,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(height: isSmallScreen ? 4 : 6),
+                      // Text(
+                      //   title,
+                      //   style: GoogleFonts.poppins(
+                      //     fontSize: titleFontSize,
+                      //     fontWeight: FontWeight.bold,
+                      //     color: Colors.white,
+                      //   ),
+                      // ),
+                      // SizedBox(height: isSmallScreen ? 4 : 6),
 
-                      // Description - Trimmed and responsive
-                      Text(
-                        description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
-                          fontSize: descriptionFontSize,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
+                      // // Description - Trimmed and responsive
+                      // Text(
+                      //   description,
+                      //   maxLines: 2,
+                      //   overflow: TextOverflow.ellipsis,
+                      //   style: GoogleFonts.poppins(
+                      //     fontSize: descriptionFontSize,
+                      //     fontWeight: FontWeight.w500,
+                      //     color: Colors.white.withOpacity(0.9),
+                      //   ),
+                      // ),
                     ],
                   ),
 
