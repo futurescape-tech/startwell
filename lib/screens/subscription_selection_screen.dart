@@ -115,6 +115,10 @@ class _SubscriptionSelectionScreenState
   bool isPreOrder = false;
   DateTime? currentEndDate;
 
+  double _combinedPrice = 0.0;
+  double _breakfastPrice = 0.0;
+  double _lunchPrice = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -207,11 +211,27 @@ class _SubscriptionSelectionScreenState
 
     // Handle cart update if this is the same meal type - remove existing cart item first
     if (MealSelectionManager.hasBreakfastInCart &&
-            widget.mealType == 'breakfast' ||
-        MealSelectionManager.hasLunchInCart && widget.mealType == 'lunch') {
-      // Clear any existing cart items of the same meal type before adding the updated one
-      CartStorageService.removeCartItemsByMealType(widget.mealType);
+            (widget.mealType == 'breakfast' ||
+                widget.mealType == 'breakfast_and_lunch') ||
+        MealSelectionManager.hasLunchInCart &&
+            (widget.mealType == 'lunch' ||
+                widget.mealType == 'breakfast_and_lunch')) {
+      // If handling both meal types at once, clear both from cart
+      if (widget.mealType == 'breakfast_and_lunch') {
+        if (MealSelectionManager.hasBreakfastInCart) {
+          CartStorageService.removeCartItemsByMealType('breakfast');
+        }
+        if (MealSelectionManager.hasLunchInCart) {
+          CartStorageService.removeCartItemsByMealType('lunch');
+        }
+      } else {
+        // Clear any existing cart items of the same meal type before adding the updated one
+        CartStorageService.removeCartItemsByMealType(widget.mealType);
+      }
     }
+
+    // Calculate combined price for both breakfast and lunch if needed
+    final totalAmount = _getCombinedPrice();
 
     // Navigate to the Cart screen instead of directly to student profile
     Navigator.push(
@@ -224,10 +244,15 @@ class _SubscriptionSelectionScreenState
           startDate: _startDate,
           endDate: _endDate!,
           mealDates: _mealDates,
-          totalAmount: _calculatePrice(),
+          totalAmount: totalAmount,
           selectedMeals: widget.selectedMeals,
           isExpressOrder: widget.isExpressOrder,
           mealType: widget.mealType,
+          // Pass individual prices for breakfast and lunch when both are selected
+          breakfastPrice:
+              widget.mealType == 'breakfast_and_lunch' ? _breakfastPrice : null,
+          lunchPrice:
+              widget.mealType == 'breakfast_and_lunch' ? _lunchPrice : null,
         ),
       ),
     );
@@ -731,6 +756,71 @@ class _SubscriptionSelectionScreenState
     final totalPrice = baseCost * mealCount;
     final discountedPrice = totalPrice * (1 - discount);
 
+    // Store combined price for breakfast and lunch
+    if (widget.mealType == 'breakfast_and_lunch') {
+      _combinedPrice = discountedPrice;
+    }
+
+    return discountedPrice;
+  }
+
+  // Calculate combined price for both breakfast and lunch
+  double _getCombinedPrice() {
+    if (widget.mealType != 'breakfast_and_lunch') {
+      return _calculatePrice();
+    }
+
+    // For combined meal type, calculate combined meal quantity and pricing
+    List<Meal> breakfastMeals = [];
+    List<Meal> lunchMeals = [];
+
+    // Split meals by category
+    for (var meal in widget.selectedMeals) {
+      if (meal.categories.contains(MealCategory.breakfast)) {
+        breakfastMeals.add(meal);
+      } else if (meal.categories.contains(MealCategory.lunch)) {
+        lunchMeals.add(meal);
+      }
+    }
+
+    // Calculate individual base costs per meal
+    double breakfastBaseCost =
+        breakfastMeals.fold(0.0, (sum, meal) => sum + meal.price);
+    double lunchBaseCost =
+        lunchMeals.fold(0.0, (sum, meal) => sum + meal.price);
+
+    // Combined base cost per day
+    double combinedBaseCost = breakfastBaseCost + lunchBaseCost;
+
+    // Apply the same plan settings to the combined meal quantity
+    final isSingleDay =
+        _subscriptionPlans[_selectedPlanIndex]['isSingleDay'] ?? false;
+
+    // For single day plan, always use 1 meal set
+    final mealCount = isSingleDay
+        ? 1
+        : (_isCustomPlan
+            ? _mealDates.length
+            : _subscriptionPlans[_selectedPlanIndex]['meals']);
+
+    final discount = _subscriptionPlans[_selectedPlanIndex]['discount'];
+
+    // Calculate total price with combined quantity
+    final totalPrice = combinedBaseCost * mealCount;
+    final discountedPrice = totalPrice * (1 - discount);
+
+    // Calculate individual prices for cart display
+    final breakfastTotalPrice = breakfastBaseCost * mealCount;
+    final lunchTotalPrice = lunchBaseCost * mealCount;
+
+    final breakfastDiscountedPrice = breakfastTotalPrice * (1 - discount);
+    final lunchDiscountedPrice = lunchTotalPrice * (1 - discount);
+
+    // Store individual prices for later use in cart
+    _breakfastPrice = breakfastDiscountedPrice;
+    _lunchPrice = lunchDiscountedPrice;
+
+    // Return combined price
     return discountedPrice;
   }
 
@@ -1250,7 +1340,7 @@ class _SubscriptionSelectionScreenState
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Text(
-                                                      '${plan['duration']} • ${plan['meals']} meals',
+                                                      '${plan['duration']} • ${_getDisplayMealCount(plan['meals'])} meals',
                                                       style:
                                                           GoogleFonts.poppins(
                                                         fontSize: 13,
@@ -2279,9 +2369,6 @@ class _SubscriptionSelectionScreenState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Chips container - REMOVED
-                // _buildChipsContainer(),
-
                 // Continue button (Primary)
                 Container(
                   height: 60,
@@ -2592,7 +2679,7 @@ class _SubscriptionSelectionScreenState
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '1 Day • 1 meal',
+                        '1 Day • ${_getDisplayMealCount(1)} meal${_getDisplayMealCount(1) > 1 ? 's' : ''}',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           color: AppTheme.textMedium,
@@ -3180,5 +3267,13 @@ class _SubscriptionSelectionScreenState
     if (!_isStartDateSelected()) return false;
     if (_endDate == null) return false;
     return true;
+  }
+
+  // Get display meal count (multiply by 2 if both breakfast and lunch are selected)
+  int _getDisplayMealCount(int baseMealCount) {
+    if (widget.mealType == 'breakfast_and_lunch') {
+      return baseMealCount * 2;
+    }
+    return baseMealCount;
   }
 }

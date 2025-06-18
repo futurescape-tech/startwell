@@ -24,6 +24,8 @@ class CartScreen extends StatefulWidget {
   final List<Meal> selectedMeals;
   final bool isExpressOrder;
   final String mealType;
+  final double? breakfastPrice;
+  final double? lunchPrice;
 
   const CartScreen({
     Key? key,
@@ -37,6 +39,8 @@ class CartScreen extends StatefulWidget {
     required this.selectedMeals,
     required this.isExpressOrder,
     required this.mealType,
+    this.breakfastPrice,
+    this.lunchPrice,
   }) : super(key: key);
 
   @override
@@ -106,10 +110,12 @@ class _CartScreenState extends State<CartScreen> {
 
   void _checkMealTypesInCart() {
     setState(() {
-      _hasBreakfastInCart = _cartItems.any((item) =>
-          item['mealType'] == 'breakfast' || item['mealType'] == 'both');
-      _hasLunchInCart = _cartItems.any(
-          (item) => item['mealType'] == 'lunch' || item['mealType'] == 'both');
+      // Check if we have breakfast in cart
+      _hasBreakfastInCart =
+          _cartItems.any((item) => item['mealType'] == 'breakfast');
+
+      // Check if we have lunch in cart
+      _hasLunchInCart = _cartItems.any((item) => item['mealType'] == 'lunch');
 
       // Update static variables for cross-screen communication
       MealSelectionManager.hasBreakfastInCart = _hasBreakfastInCart;
@@ -130,40 +136,130 @@ class _CartScreenState extends State<CartScreen> {
       return;
     }
 
-    // Create a cart item from the current selection
-    final cartItem = {
-      'planType': widget.planType,
-      'isCustomPlan': widget.isCustomPlan,
-      'selectedWeekdays': widget.selectedWeekdays,
-      'startDate': widget.startDate,
-      'endDate': widget.endDate,
-      'mealDates': widget.mealDates,
-      'totalAmount': widget.totalAmount,
-      'selectedMeals': widget.selectedMeals,
-      'isExpressOrder': widget.isExpressOrder,
-      'mealType': widget.mealType,
-    };
+    // Handle the special case of breakfast_and_lunch meal type
+    if (widget.mealType == 'breakfast_and_lunch') {
+      // Split the meals by category
+      List<Meal> breakfastMeals = [];
+      List<Meal> lunchMeals = [];
 
-    setState(() {
-      // Check if we already have this meal type
-      int existingItemIndex = -1;
-      for (int i = 0; i < _cartItems.length; i++) {
-        if (_cartItems[i]['mealType'] == widget.mealType) {
-          existingItemIndex = i;
-          break;
+      for (var meal in widget.selectedMeals) {
+        if (meal.categories.contains(MealCategory.breakfast)) {
+          breakfastMeals.add(meal);
+        } else if (meal.categories.contains(MealCategory.lunch)) {
+          lunchMeals.add(meal);
         }
       }
 
-      // If we have an existing item, update it; otherwise add a new one
-      if (existingItemIndex >= 0) {
-        _cartItems[existingItemIndex] = cartItem;
-      } else {
-        _cartItems.add(cartItem);
+      // Use the passed-in combined prices instead of calculating them
+      double breakfastCost = widget.breakfastPrice ?? 0.0;
+      double lunchCost = widget.lunchPrice ?? 0.0;
+
+      // Create separate cart items for breakfast and lunch
+      if (breakfastMeals.isNotEmpty) {
+        final breakfastItem = {
+          'planType': widget.planType,
+          'isCustomPlan': widget.isCustomPlan,
+          'selectedWeekdays': widget.selectedWeekdays,
+          'startDate': widget.startDate,
+          'endDate': widget.endDate,
+          'mealDates': widget.mealDates,
+          'totalAmount': breakfastCost,
+          'selectedMeals': breakfastMeals,
+          'isExpressOrder': widget.isExpressOrder,
+          'mealType': 'breakfast',
+        };
+
+        // Check if we already have breakfast in cart
+        int existingBreakfastIndex = -1;
+        for (int i = 0; i < _cartItems.length; i++) {
+          if (_cartItems[i]['mealType'] == 'breakfast') {
+            existingBreakfastIndex = i;
+            break;
+          }
+        }
+
+        // Update or add breakfast item
+        setState(() {
+          if (existingBreakfastIndex >= 0) {
+            _cartItems[existingBreakfastIndex] = breakfastItem;
+          } else {
+            _cartItems.add(breakfastItem);
+          }
+        });
       }
-    });
+
+      if (lunchMeals.isNotEmpty) {
+        final lunchItem = {
+          'planType': widget.planType,
+          'isCustomPlan': widget.isCustomPlan,
+          'selectedWeekdays': widget.selectedWeekdays,
+          'startDate': widget.startDate,
+          'endDate': widget.endDate,
+          'mealDates': widget.mealDates,
+          'totalAmount': lunchCost,
+          'selectedMeals': lunchMeals,
+          'isExpressOrder': widget.isExpressOrder,
+          'mealType': 'lunch',
+        };
+
+        // Check if we already have lunch in cart
+        int existingLunchIndex = -1;
+        for (int i = 0; i < _cartItems.length; i++) {
+          if (_cartItems[i]['mealType'] == 'lunch') {
+            existingLunchIndex = i;
+            break;
+          }
+        }
+
+        // Update or add lunch item
+        setState(() {
+          if (existingLunchIndex >= 0) {
+            _cartItems[existingLunchIndex] = lunchItem;
+          } else {
+            _cartItems.add(lunchItem);
+          }
+        });
+      }
+    } else {
+      // Handle single meal type as before
+      // Create a cart item from the current selection
+      final cartItem = {
+        'planType': widget.planType,
+        'isCustomPlan': widget.isCustomPlan,
+        'selectedWeekdays': widget.selectedWeekdays,
+        'startDate': widget.startDate,
+        'endDate': widget.endDate,
+        'mealDates': widget.mealDates,
+        'totalAmount': widget.totalAmount,
+        'selectedMeals': widget.selectedMeals,
+        'isExpressOrder': widget.isExpressOrder,
+        'mealType': widget.mealType,
+      };
+
+      setState(() {
+        // Check if we already have this meal type
+        int existingItemIndex = -1;
+        for (int i = 0; i < _cartItems.length; i++) {
+          if (_cartItems[i]['mealType'] == widget.mealType) {
+            existingItemIndex = i;
+            break;
+          }
+        }
+
+        // If we have an existing item, update it; otherwise add a new one
+        if (existingItemIndex >= 0) {
+          _cartItems[existingItemIndex] = cartItem;
+        } else {
+          _cartItems.add(cartItem);
+        }
+      });
+    }
 
     // Save to storage
     _saveCartItems();
+
+    // Update meal types in cart
+    _checkMealTypesInCart();
   }
 
   void _removeFromCart(int index) async {
@@ -493,6 +589,57 @@ class _CartScreenState extends State<CartScreen> {
                 ? _buildEmptyCartState()
                 : _buildCartItemsList(),
           ),
+          // Combined price section when both breakfast and lunch are in cart - HIDDEN FOR CART SCREEN
+          // if (hasBothMealTypesInCart && _cartItems.length >= 2)
+          //   Container(
+          //     margin: const EdgeInsets.symmetric(horizontal: 16.0),
+          //     padding: const EdgeInsets.all(16),
+          //     decoration: BoxDecoration(
+          //       color: AppTheme.purple.withOpacity(0.05),
+          //       borderRadius: BorderRadius.circular(16),
+          //       border: Border.all(color: AppTheme.purple.withOpacity(0.2)),
+          //     ),
+          //     child: Column(
+          //       crossAxisAlignment: CrossAxisAlignment.start,
+          //       children: [
+          //         Text(
+          //           'Combined Meal Price Summary',
+          //           style: GoogleFonts.poppins(
+          //             fontSize: 16,
+          //             fontWeight: FontWeight.w600,
+          //             color: AppTheme.purple,
+          //           ),
+          //         ),
+          //         const SizedBox(height: 12),
+          //         // Find breakfast and lunch items
+          //         ..._buildCombinedPriceBreakdown(),
+          //         const Divider(height: 24),
+          //         Row(
+          //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //           children: [
+          //             Text(
+          //               'Total Combined Price',
+          //               style: GoogleFonts.poppins(
+          //                 fontSize: 16,
+          //                 fontWeight: FontWeight.w600,
+          //                 color: AppTheme.textDark,
+          //               ),
+          //             ),
+          //             Text(
+          //               '₹${_getTotalCartPrice().toStringAsFixed(0)}',
+          //               style: GoogleFonts.poppins(
+          //                 fontSize: 18,
+          //                 fontWeight: FontWeight.w700,
+          //                 color: AppTheme.purple,
+          //               ),
+          //             ),
+          //           ],
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // if (hasBothMealTypesInCart && _cartItems.length >= 2)
+          //   const SizedBox(height: 16),
           // Bottom section with proceed button
           Container(
             padding: const EdgeInsets.all(16.0),
@@ -506,90 +653,47 @@ class _CartScreenState extends State<CartScreen> {
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                // Buy More button
-                Expanded(
-                  flex: 2,
-                  child: Container(
-                    height: 60,
-                    margin: const EdgeInsets.only(right: 12),
-                    child: ElevatedButton(
-                      onPressed:
-                          hasBothMealTypesInCart ? null : _navigateToMealPlan,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.purple,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                          side: BorderSide(
-                            color: hasBothMealTypesInCart
-                                ? Colors.grey.withOpacity(0.5)
-                                : AppTheme.purple,
-                            width: 1.5,
-                          ),
-                        ),
-                        padding: EdgeInsets.zero,
-                        disabledBackgroundColor: Colors.white,
-                        disabledForegroundColor: Colors.grey,
-                      ),
-                      child: Text(
-                        'Buy More',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+            child: SizedBox(
+              width: double.infinity, // Increased width to full width
+              height: 60,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(50),
+                  gradient: AppTheme.purpleToDeepPurple,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.deepPurple.withOpacity(0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                      spreadRadius: -4,
                     ),
-                  ),
+                  ],
                 ),
-                // Proceed button
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    height: 60,
-                    decoration: BoxDecoration(
+                child: ElevatedButton(
+                  onPressed:
+                      _cartItems.isEmpty ? null : _proceedToStudentSelection,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(50),
-                      gradient: AppTheme.purpleToDeepPurple,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.deepPurple.withOpacity(0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                          spreadRadius: -4,
-                        ),
-                      ],
                     ),
-                    child: ElevatedButton(
-                      onPressed: _cartItems.isEmpty
-                          ? null
-                          : _proceedToStudentSelection,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        padding: EdgeInsets.zero,
-                        disabledBackgroundColor: Colors.transparent,
-                        disabledForegroundColor: Colors.white.withOpacity(0.6),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Proceed',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                    padding: EdgeInsets.zero,
+                    disabledBackgroundColor: Colors.transparent,
+                    disabledForegroundColor: Colors.white.withOpacity(0.6),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Proceed',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -1021,5 +1125,87 @@ class _CartScreenState extends State<CartScreen> {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildCombinedPriceBreakdown() {
+    List<Widget> breakdown = [];
+
+    // Find breakfast and lunch items
+    Map<String, dynamic>? breakfastItem;
+    Map<String, dynamic>? lunchItem;
+
+    for (var item in _cartItems) {
+      if (item['mealType'] == 'breakfast') {
+        breakfastItem = item;
+      } else if (item['mealType'] == 'lunch') {
+        lunchItem = item;
+      }
+    }
+
+    // Add breakfast breakdown
+    if (breakfastItem != null) {
+      breakdown.add(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Breakfast Plan',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textDark,
+              ),
+            ),
+            Text(
+              '₹${breakfastItem['totalAmount'].toStringAsFixed(0)}',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ],
+        ),
+      );
+      breakdown.add(const SizedBox(height: 8));
+    }
+
+    // Add lunch breakdown
+    if (lunchItem != null) {
+      breakdown.add(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Lunch Plan',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textDark,
+              ),
+            ),
+            Text(
+              '₹${lunchItem['totalAmount'].toStringAsFixed(0)}',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ],
+        ),
+      );
+      breakdown.add(const SizedBox(height: 8));
+    }
+
+    return breakdown;
+  }
+
+  double _getTotalCartPrice() {
+    double total = 0;
+    for (var item in _cartItems) {
+      total += item['totalAmount'];
+    }
+    return total;
   }
 }

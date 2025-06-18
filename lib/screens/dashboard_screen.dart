@@ -881,130 +881,196 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
 
-                          // Feature Highlights Section
+                          // Footer Note - HIDDEN (now integrated inside About StartWell card)
+                          // if (_showFooter)
+                          //   _buildAnimatedSection(
+                          //     margin: 0,
+                          //     animation: _fadeAnimation,
+                          //     slideAnimation: _slideAnimation,
+                          //     delay: 0.5,
+                          //     child: const FooterNote(),
+                          //   ),
+
+                          // About StartWell Section - moved below footer note
                           _buildAnimatedSection(
                             animation: _fadeAnimation,
                             slideAnimation: _slideAnimation,
-                            delay: 0.4,
+                            delay:
+                                0.6, // Increased delay since it's now after footer
                             margin: isSmall ? 15 : 18,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SectionTitle(
-                                  title: 'About StartWell',
-                                  actionText: null,
-                                  onActionPressed: null,
-                                ),
-                                SizedBox(height: isSmall ? 8 : 12),
+                                // About StartWell label - HIDDEN
+                                // SectionTitle(
+                                //   title: 'About StartWell',
+                                //   actionText: null,
+                                //   onActionPressed: null,
+                                // ),
+                                // SizedBox(height: isSmall ? 8 : 12),
                                 Card(
                                   elevation: 5,
                                   shadowColor: Colors.grey.withOpacity(0.3),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
-                                  child: InkWell(
-                                    onTap: () {
-                                      HapticFeedback.lightImpact();
-                                      _showFeatureDetailsDialog(
-                                          context, isSmall);
-                                    },
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding:
-                                          EdgeInsets.all(isSmall ? 14 : 18),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[50],
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // Row 1: First two features
-                                          Row(
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.all(isSmall ? 14 : 18),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Footer section card at the top
+                                        Container(
+                                          width: double.infinity,
+                                          padding:
+                                              EdgeInsets.all(isSmall ? 16 : 20),
+                                          margin: EdgeInsets.only(
+                                              bottom: isSmall ? 16 : 20),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            border: Border.all(
+                                                color: AppTheme.purple
+                                                    .withOpacity(0.2)),
+                                            image: const DecorationImage(
+                                              image: AssetImage(
+                                                  'assets/images/background_footer.png'),
+                                              fit: BoxFit.cover,
+                                              opacity:
+                                                  0.8, // Make it slightly transparent so text remains readable
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppTheme.purple
+                                                    .withOpacity(0.1),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
                                             children: [
-                                              Expanded(
-                                                child: _buildFeatureItem(
-                                                  icon:
-                                                      Icons.book_online_rounded,
-                                                  description:
-                                                      'Book, Swap or Cancel Orders',
-                                                  color: AppTheme.purple,
-                                                  isSmall: isSmall,
+                                              // First line: Trusted by parents
+                                              Text(
+                                                'Trusted by parents',
+                                                textAlign: TextAlign.center,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: isSmall ? 22 : 26,
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      const Color(0xFF7F8285),
                                                 ),
                                               ),
-                                              SizedBox(
-                                                  width: isSmall ? 12 : 16),
-                                              Expanded(
-                                                child: _buildFeatureItem(
-                                                  icon: Icons.eco_rounded,
-                                                  description:
-                                                      '100% Natural and Fresh Ingredients',
-                                                  color: AppTheme.success,
-                                                  isSmall: isSmall,
+                                              SizedBox(height: isSmall ? 4 : 6),
+                                              // Second line: Loved by kids!
+                                              Text(
+                                                'Loved by kids!',
+                                                textAlign: TextAlign.center,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: isSmall ? 22 : 26,
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      const Color(0xFF7F8285),
                                                 ),
                                               ),
                                             ],
                                           ),
-                                          SizedBox(height: isSmall ? 12 : 16),
+                                        ),
 
-                                          // Row 2: Next two features
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: _buildFeatureItem(
-                                                  icon: Icons.spa_rounded,
-                                                  description:
-                                                      '100% Veg Indian and International',
-                                                  color: Colors.green,
-                                                  isSmall: isSmall,
-                                                ),
+                                        // Row 1: First two features
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: _buildDetailedFeatureItem(
+                                                icon: Icons.book_online_rounded,
+                                                title:
+                                                    'Online Order Management',
+                                                description:
+                                                    'Book, swap, or cancel your orders online anytime until midnight. Our flexible system allows you to manage your meals conveniently.',
+                                                color: AppTheme.purple,
+                                                isSmall: isSmall,
                                               ),
-                                              SizedBox(
-                                                  width: isSmall ? 12 : 16),
-                                              Expanded(
-                                                child: _buildFeatureItem(
-                                                  icon: Icons
-                                                      .calendar_month_rounded,
-                                                  description:
-                                                      'Flexible Plans with Multiple Options',
-                                                  color: AppTheme.orange,
-                                                  isSmall: isSmall,
-                                                ),
+                                            ),
+                                            SizedBox(width: isSmall ? 12 : 16),
+                                            Expanded(
+                                              child: _buildDetailedFeatureItem(
+                                                icon: Icons.eco_rounded,
+                                                title: 'Natural Ingredients',
+                                                description:
+                                                    '100% natural and fresh ingredients sourced from trusted suppliers. We prioritize quality in every meal we prepare.',
+                                                color: AppTheme.success,
+                                                isSmall: isSmall,
                                               ),
-                                            ],
-                                          ),
-                                          SizedBox(height: isSmall ? 12 : 16),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: isSmall ? 12 : 16),
 
-                                          // Row 3: Last two features
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: _buildFeatureItem(
-                                                  icon: Icons
-                                                      .health_and_safety_rounded,
-                                                  description:
-                                                      'Designed by Nutritionists',
-                                                  color: Colors.deepPurple,
-                                                  isSmall: isSmall,
-                                                ),
+                                        // Row 2: Next two features
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: _buildDetailedFeatureItem(
+                                                icon: Icons.spa_rounded,
+                                                title: 'Vegetarian Options',
+                                                description:
+                                                    'We offer 100% vegetarian meals with both Indian and International cuisines to cater to diverse tastes and preferences.',
+                                                color: Colors.green,
+                                                isSmall: isSmall,
                                               ),
-                                              SizedBox(
-                                                  width: isSmall ? 12 : 16),
-                                              Expanded(
-                                                child: _buildFeatureItem(
-                                                  icon: Icons.verified_rounded,
-                                                  description:
-                                                      'FSSAI Certified Hygienic Kitchen',
-                                                  color: Colors.blue,
-                                                  isSmall: isSmall,
-                                                ),
+                                            ),
+                                            SizedBox(width: isSmall ? 12 : 16),
+                                            Expanded(
+                                              child: _buildDetailedFeatureItem(
+                                                icon: Icons
+                                                    .calendar_month_rounded,
+                                                title:
+                                                    'Flexible Subscription Plans',
+                                                description:
+                                                    'Choose from single-day, weekly, monthly, quarterly, and annual subscription options to fit your schedule and budget.',
+                                                color: AppTheme.orange,
+                                                isSmall: isSmall,
                                               ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: isSmall ? 12 : 16),
+
+                                        // Row 3: Last two features
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: _buildDetailedFeatureItem(
+                                                icon: Icons
+                                                    .health_and_safety_rounded,
+                                                title: 'Expert Preparation',
+                                                description:
+                                                    'Our meals are designed by professional nutritionists and prepared by skilled chefs with the care and attention of home cooking.',
+                                                color: Colors.deepPurple,
+                                                isSmall: isSmall,
+                                              ),
+                                            ),
+                                            SizedBox(width: isSmall ? 12 : 16),
+                                            Expanded(
+                                              child: _buildDetailedFeatureItem(
+                                                icon: Icons.verified_rounded,
+                                                title: 'Certified Quality',
+                                                description:
+                                                    'FSSAI certified hygienic central kitchen facility ensures that all meals are prepared in a clean and safe environment.',
+                                                color: Colors.blue,
+                                                isSmall: isSmall,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -1012,15 +1078,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                           ),
 
-                          // Footer Note - only show when scrolled to the bottom
-                          if (_showFooter)
-                            _buildAnimatedSection(
-                              margin: 0,
-                              animation: _fadeAnimation,
-                              slideAnimation: _slideAnimation,
-                              delay: 0.5,
-                              child: const FooterNote(),
-                            ),
                           if (!_showFooter)
                             SizedBox(height: isSmall ? 80 : 120),
                         ],
@@ -1198,279 +1255,78 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildFeatureItem({
-    required IconData icon,
-    required String description,
-    required Color color,
-    required bool isSmall,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          padding: EdgeInsets.all(isSmall ? 6 : 8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: isSmall ? 16 : 18,
-          ),
-        ),
-        SizedBox(width: isSmall ? 10 : 12),
-        Expanded(
-          child: Text(
-            description,
-            style: GoogleFonts.poppins(
-              fontSize: isSmall ? 11 : 12,
-              height: 1.3,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.textMedium,
-              letterSpacing: 0.1,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showFeatureDetailsDialog(BuildContext context, bool isSmall) {
-    final size = MediaQuery.of(context).size;
-    final maxHeight = size.height * 0.8; // Maximum 80% of screen height
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutQuad,
-            constraints: BoxConstraints(
-              maxHeight: maxHeight,
-              maxWidth: size.width * 0.9,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header with gradient background
-                Container(
-                  padding: EdgeInsets.all(isSmall ? 16 : 20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.purple.withOpacity(0.8),
-                        AppTheme.deepPurple.withOpacity(0.9),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.info_outline,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'About StartWell',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Feature list with scrollable content
-                Flexible(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.all(isSmall ? 16 : 20),
-                    child: Column(
-                      children: [
-                        _buildDetailFeatureItem(
-                          icon: Icons.book_online_rounded,
-                          title: 'Online Order Management',
-                          description:
-                              'Book, swap, or cancel your orders online anytime until midnight. Our flexible system allows you to manage your meals conveniently.',
-                          color: AppTheme.purple,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDetailFeatureItem(
-                          icon: Icons.eco_rounded,
-                          title: 'Natural Ingredients',
-                          description:
-                              '100% natural and fresh ingredients sourced from trusted suppliers. We prioritize quality in every meal we prepare.',
-                          color: AppTheme.success,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDetailFeatureItem(
-                          icon: Icons.spa_rounded,
-                          title: 'Vegetarian Options',
-                          description:
-                              'We offer 100% vegetarian meals with both Indian and International cuisines to cater to diverse tastes and preferences.',
-                          color: Colors.green,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDetailFeatureItem(
-                          icon: Icons.calendar_month_rounded,
-                          title: 'Flexible Subscription Plans',
-                          description:
-                              'Choose from single-day, weekly, monthly, quarterly, and annual subscription options to fit your schedule and budget.',
-                          color: AppTheme.orange,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDetailFeatureItem(
-                          icon: Icons.health_and_safety_rounded,
-                          title: 'Expert Preparation',
-                          description:
-                              'Our meals are designed by professional nutritionists and prepared by skilled chefs with the care and attention of home cooking.',
-                          color: Colors.deepPurple,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDetailFeatureItem(
-                          icon: Icons.verified_rounded,
-                          title: 'Certified Quality',
-                          description:
-                              'FSSAI certified hygienic central kitchen facility ensures that all meals are prepared in a clean and safe environment.',
-                          color: Colors.blue,
-                        ),
-
-                        // Footer button with margin
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Container(
-                            width: double.infinity,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              gradient: AppTheme.purpleToDeepPurple,
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(25),
-                                ),
-                              ),
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: Text(
-                                'Close',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailFeatureItem({
+  Widget _buildDetailedFeatureItem({
     required IconData icon,
     required String title,
     required String description,
     required Color color,
+    required bool isSmall,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
+    return Container(
+      height: isSmall ? 140 : 160, // Increased height for detailed content
+      padding: EdgeInsets.all(isSmall ? 8 : 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      color: Colors.grey[50],
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon and title row
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isSmall ? 6 : 8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: isSmall ? 16 : 18,
+                ),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textDark,
-                      letterSpacing: 0.2,
-                    ),
+              SizedBox(width: isSmall ? 8 : 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: isSmall ? 12 : 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    description,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: AppTheme.textMedium,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                ],
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+            ],
+          ),
+          SizedBox(height: isSmall ? 8 : 10),
+          // Description
+          Expanded(
+            child: Text(
+              description,
+              style: GoogleFonts.poppins(
+                fontSize: isSmall ? 10 : 11,
+                height: 1.3,
+                fontWeight: FontWeight.w400,
+                color: AppTheme.textMedium,
+                letterSpacing: 0.1,
+              ),
+              maxLines: 6, // Allow up to 6 lines for detailed description
+              overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
